@@ -1,0 +1,159 @@
+"""Línea de comandos de Ops Central.
+
+  ops-central iniciar-almacen          Crea las tablas (desarrollo) o muestra el DDL de PostgreSQL
+  ops-central ddl-postgres             Escribe db/postgres/001_esquema.sql
+  ops-central api [--puerto 8000]      Levanta la API
+  ops-central worker <cola>            Worker de una cola: bd | cm | ingesta | ml
+  ops-central planificador             Tareas periódicas
+  ops-central dev                      API + workers + planificador en un proceso (solo desarrollo)
+  ops-central sembrar-demo             Series sintéticas para ver predicciones en simulación
+  ops-central verificar-auditoria      Revisa la cadena de hash
+"""
+from __future__ import annotations
+
+import argparse
+import logging
+import signal
+import sys
+import threading
+from datetime import timedelta
+
+from .config import RAIZ, cargar
+
+
+def _log():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+
+def cmd_iniciar_almacen(a):
+    from .almacen import Almacen
+    cfg = cargar()
+    Almacen(cfg.url_almacen()).crear_esquema()
+    print("Almacén listo:", cfg.url_almacen())
+
+
+def cmd_ddl(a):
+    from .almacen import ddl_postgres
+    ruta = RAIZ / "db" / "postgres" / "001_esquema.sql"
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text("-- Generado desde src/opscentral/almacen.py (no editar a mano)\n\n" + ddl_postgres(), encoding="utf-8")
+    print("Escrito", ruta)
+
+
+def cmd_api(a):
+    import uvicorn
+    from .api import crear_app
+    uvicorn.run(crear_app(), host=a.host, port=a.puerto, log_level="info")
+
+
+def _esperar(detener: threading.Event):
+    signal.signal(signal.SIGINT, lambda *_: detener.set())
+    signal.signal(signal.SIGTERM, lambda *_: detener.set())
+    while not detener.is_set():
+        detener.wait(1)
+
+
+def cmd_worker(a):
+    _log()
+    from .workers import Worker
+    detener = threading.Event()
+    hilos = [threading.Thread(target=Worker(a.cola).correr, args=(detener,), daemon=True) for _ in range(a.hilos)]
+    for h in hilos:
+        h.start()
+    _esperar(detener)
+
+
+def cmd_planificador(a):
+    _log()
+    from .planificador import Planificador
+    detener = threading.Event()
+    threading.Thread(target=Planificador().correr, args=(detener,), daemon=True).start()
+    _esperar(detener)
+
+
+def cmd_dev(a):
+    _log()
+    cfg = cargar()
+    if cfg.es_produccion:
+        sys.exit("el modo dev no se usa en producción")
+    import uvicorn
+    from .api import crear_app
+    from .planificador import Planificador
+    from .workers import iniciar_hilos
+    detener = threading.Event()
+    iniciar_hilos(["bd", "cm", "ml"], detener)
+    if not a.sin_planificador:
+        threading.Thread(target=Planificador().correr, args=(detener,), daemon=True).start()
+    try:
+        uvicorn.run(crear_app(cfg), host="127.0.0.1", port=a.puerto, log_level="info")
+    finally:
+        detener.set()
+
+
+def cmd_sembrar(a):
+    from .almacen import Almacen, serie_punto
+    from .ml.llenado import serie_sintetica
+    cfg = cargar()
+    if not cfg.simulacion:
+        sys.exit("sembrar-demo solo se permite en simulación")
+    from .bd import simulador
+    alm = Almacen(cfg.url_almacen())
+    alm.crear_esquema()
+
+    def hasta_simulador(base: str, clave: str, nombre: str, pendiente: float, semilla: int):
+        # Las series ts:/asm: también las escribe la recolección con el valor del simulador.
+        # La historia sintética termina en ese mismo nivel; si no, el primer punto real parece
+        # un cambio de nivel y el modelo deja de predecir (datos_insuficientes).
+        final = simulador._estado(base)[clave][nombre]
+        return serie_sintetica(20, final - pendiente * 20, pendiente, semilla=semilla)
+
+    series = {
+        "ts:CORPRD:APP_DATA": hasta_simulador("CORPRD", "ts_pct", "APP_DATA", 3.2, 1),  # ~6 días al 100 %
+        "asm:CORPRD:DATA": hasta_simulador("CORPRD", "dg_pct", "DATA", 0.55, 2),
+        "fra:CRMPRD": serie_sintetica(20, 40, 2.5, purgas_cada_h=96, salto_purga=9, semilla=3),
+        "fs:AP23SBCC04:/oracle": serie_sintetica(20, 66, 0.9, semilla=4),
+        "heap:AP23SBCC09:Clientes1": serie_sintetica(20, 52, 1.2, ruido=3, semilla=5),
+        "ts:CORTST:USERS": hasta_simulador("CORTST", "ts_pct", "USERS", 0.05, 6),
+    }
+    with alm.tx() as con:
+        for s, pts in series.items():
+            con.execute(serie_punto.delete().where(serie_punto.c.serie == s))
+            con.execute(serie_punto.insert(), [{"serie": s, "ts": p.ts, "valor": p.valor} for p in pts])
+    print(f"{len(series)} series sintéticas cargadas ({sum(len(p) for p in series.values())} puntos)")
+
+
+def cmd_verificar(a):
+    from .almacen import Almacen
+    from .auditoria import Auditoria
+    cfg = cargar()
+    ok, n, msg = Auditoria(Almacen(cfg.url_almacen())).verificar()
+    print(f"{msg} ({n} registros)")
+    sys.exit(0 if ok else 1)
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="ops-central", description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    s = p.add_subparsers(dest="cmd", required=True)
+    s.add_parser("iniciar-almacen").set_defaults(f=cmd_iniciar_almacen)
+    s.add_parser("ddl-postgres").set_defaults(f=cmd_ddl)
+    x = s.add_parser("api")
+    x.add_argument("--host", default="127.0.0.1")
+    x.add_argument("--puerto", type=int, default=8000)
+    x.set_defaults(f=cmd_api)
+    x = s.add_parser("worker")
+    x.add_argument("cola", choices=["bd", "cm", "ingesta", "ml"])
+    x.add_argument("--hilos", type=int, default=1)
+    x.set_defaults(f=cmd_worker)
+    s.add_parser("planificador").set_defaults(f=cmd_planificador)
+    x = s.add_parser("dev")
+    x.add_argument("--puerto", type=int, default=8000)
+    x.add_argument("--sin-planificador", action="store_true")
+    x.set_defaults(f=cmd_dev)
+    s.add_parser("sembrar-demo").set_defaults(f=cmd_sembrar)
+    s.add_parser("verificar-auditoria").set_defaults(f=cmd_verificar)
+    a = p.parse_args(argv)
+    a.f(a)
+
+
+if __name__ == "__main__":
+    main()

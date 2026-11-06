@@ -1,0 +1,1226 @@
+# Catálogo de acciones de Ops Central — FUENTE ÚNICA
+# Generado desde 02_FUNCIONES_Y_FLUJOS.md y mantenido aquí desde ahora.
+# clase: L lectura · O operativa · C cambio · X bloqueada · N sin riesgo (meta) · V según paso
+# perfiles: ejecuta | ve   (dba, cm, lid, con, adm)
+# cuenta_bd: consulta -> OPS_CONSULTA · dba -> OPS_DBA (solo PKG_OPS_CENTRAL)
+# estado: implementada (tiene lógica en ops-central) | catalogada (pendiente)
+version: 1
+acciones:
+- id: com.buscar
+  nombre: Buscador global (host, base, dominio, CHG, INC)
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.inv.servidores
+  nombre: Inventario de servidores (182) con ambientes y dominios
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.inv.bases
+  nombre: Inventario de bases (182) con ambiente, criticidad, dueño
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.inv.relaciones
+  nombre: Relación servidor → dominio → datasource → base
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.inv.probar_bd
+  nombre: Probar conexión a una base
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.itsm.listar
+  nombre: Incidentes y cambios por sistema/ambiente/estado
+  motor: itsm
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.itsm.detalle
+  nombre: Detalle, comentarios e historial de un ticket
+  motor: itsm
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.itsm.comentar
+  nombre: Publicar evidencia o resumen en el ticket
+  motor: itsm
+  clase: O
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.itsm.transicion
+  nombre: Mover el ticket de estado
+  motor: itsm
+  clase: O
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.cmdb.activo
+  nombre: Resolver activo afectado del CMDB
+  motor: itsm
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.vc.abrir
+  nombre: Abrir ventana de cambio desde un CHG y plantilla
+  motor: portal
+  clase: O
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.vc.paso
+  nombre: Ejecutar / marcar un paso de la ventana
+  motor: portal
+  clase: V
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.vc.cerrar
+  nombre: Cerrar la ventana y consolidar evidencia
+  motor: portal
+  clase: O
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.evidencia.exportar
+  nombre: Paquete de evidencia (ZIP/PDF) por número de cambio
+  motor: portal
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.aprob.solicitar
+  nombre: Crear solicitud de aprobación (formulario human-review)
+  motor: portal
+  clase: N
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: com.aprob.resolver
+  nombre: Aprobar / rechazar con comentario
+  motor: portal
+  clase: N
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: sys.conectividad
+  nombre: Probar conexión SSH
+  motor: cm
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: &id001
+      tipo: texto
+      requerido: false
+    hosts: &id002
+      tipo: texto
+      requerido: false
+    dominios: &id003
+      tipo: texto
+      requerido: false
+  parametros_libres: true
+  estado: implementada
+- id: rec.recolectar
+  nombre: Recolectar SO, CPU, memoria, discos, Java, dominios WL
+  motor: cm
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.status
+  nombre: Estado de dominios (AdminServer + Managed Servers)
+  motor: cm
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.verificar
+  nombre: Verificar credenciales y propietarios
+  motor: cm
+  clase: L
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.credenciales
+  nombre: Registrar credenciales Node Manager / consola
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.inventory
+  nombre: Snapshot de Managed Servers
+  motor: cm
+  clase: O
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.stop
+  nombre: Bajar dominios (orden correcto, snapshot previo)
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: orq.start
+  nombre: Subir dominios
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: usr.listar
+  nombre: Listar usuarios del realm
+  motor: cm
+  clase: L
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: usr.preparar
+  nombre: Preparar dominio (truststore + credenciales)
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: usr.aplicar
+  nombre: Crear / eliminar / admin / grupo
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: frm.validar
+  nombre: frmweb huérfanos (dry-run)
+  motor: cm
+  clase: L
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: frm.mitigar
+  nombre: Mitigar frmweb huérfanos por lotes
+  motor: cm
+  clase: C
+  perfiles:
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    host: *id001
+    hosts: *id002
+    dominios: *id003
+  parametros_libres: true
+  estado: implementada
+- id: cm.bd_relacionada
+  nombre: Estado de las bases que usa un dominio (instancia, sesiones de la app, bloqueos)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: cm.stuck_threads
+  nombre: Hilos atascados por Managed Server (JMX/WLST)
+  motor: cm
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+- id: cm.datasources
+  nombre: 'Datasources por dominio: URL, pool, conexiones activas/en espera'
+  motor: cm
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+- id: bd.snap.tomar
+  nombre: Tomar snapshot (ANTES o DESPUÉS) asociado a un cambio
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+    con: ve
+  parametros:
+    base: &id004
+      tipo: base
+      requerido: true
+    cambio:
+      tipo: cambio
+      requerido: true
+    momento:
+      tipo: enum
+      valores:
+      - ANTES
+      - DESPUES
+      - FINAL
+      requerido: true
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.snap.comparar
+  nombre: Comparar ANTES vs DESPUÉS vs línea base
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+    con: ve
+  parametros:
+    base: *id004
+    cambio:
+      tipo: cambio
+      requerido: true
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.inv.listar
+  nombre: Objetos inválidos actuales (excluye `BIN$` opcional)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+    con: ve
+  plantilla: invalidos
+  parametros: &id005
+    base: *id004
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.inv.generar
+  nombre: Generar sentencias de recompilación por plantilla
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  parametros:
+    base: *id004
+    cambio:
+      tipo: cambio
+      requerido: true
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.inv.recompilar
+  nombre: Recompilar solo los nuevos por el cambio + snapshot automático posterior
+  motor: bd
+  clase: O
+  clase_prod: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: RECOMPILAR_OBJETO
+  parametros:
+    base: *id004
+    cambio:
+      tipo: cambio
+      requerido: true
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.inv.utlrp
+  nombre: Recompilación completa de un esquema (`DBMS_UTILITY.COMPILE_SCHEMA(compile_all=>FALSE)`)
+  motor: bd
+  clase: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: COMPILAR_ESQUEMA
+  parametros:
+    base: *id004
+    esquema:
+      tipo: identificador
+      requerido: true
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.lb.ver
+  nombre: Ver línea base de inválidos conocidos
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  plantilla: linea_base
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.lb.actualizar
+  nombre: Agregar/retirar objetos de la línea base con justificación
+  motor: bd
+  clase: O
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: ACTUALIZAR_LINEA_BASE
+  parametros:
+    base: *id004
+    operacion:
+      tipo: enum
+      valores:
+      - AGREGAR
+      - RETIRAR
+      requerido: true
+    propietario:
+      tipo: identificador
+      requerido: true
+    objeto:
+      tipo: identificador
+      requerido: true
+    tipo_objeto:
+      tipo: tipo_objeto
+      requerido: true
+    justificacion:
+      tipo: texto
+      requerido: true
+      min: 15
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.ses.bloqueos
+  nombre: Árbol de bloqueo de una base (raíz, bloqueados, segundos, SQL_ID, objeto, programa, módulo, máquina)
+  motor: bd
+  clase: L
+  nota: Capa Media ve solo sesiones de sus servidores (filtro por machine)
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+    con: ve
+  plantilla: bloqueos
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.ses.flota
+  nombre: Bloqueos en toda la flota por ambiente
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+    con: ve
+  parametros:
+    ambiente:
+      tipo: enum
+      valores:
+      - PROD
+      - DRP
+      - QA
+      - TEST
+      - DESA
+      requerido: false
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.ses.activas
+  nombre: Sesiones activas con SQL actual
+  motor: bd
+  clase: L
+  nota: Capa Media ve solo sesiones de sus servidores (filtro por machine)
+  perfiles:
+    dba: ejecuta
+    cm: ve
+    lid: ejecuta
+  plantilla: sesiones_activas
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.ses.sql
+  nombre: Texto y plan del SQL de la sesión raíz
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  plantilla: sql_texto
+  parametros:
+    base: *id004
+    sql_id:
+      tipo: sql_id
+      requerido: true
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.ses.terminar
+  nombre: Terminar sesión raíz
+  motor: bd
+  clase: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: TERMINAR_SESION
+  parametros:
+    base: *id004
+    sid:
+      tipo: entero
+      requerido: true
+      min: 1
+    serial:
+      tipo: entero
+      requerido: true
+      min: 1
+    inst_id:
+      tipo: entero
+      requerido: false
+      min: 1
+      defecto: 1
+    motivo:
+      tipo: texto
+      requerido: true
+      min: 10
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.ses.idle_tx
+  nombre: Sesiones inactivas con transacción abierta
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.flota
+  nombre: Mapa de calor consolidado por base
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  parametros:
+    ambiente:
+      tipo: enum
+      valores:
+      - PROD
+      - DRP
+      - QA
+      - TEST
+      - DESA
+      requerido: false
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.salud.instancia
+  nombre: Versión, uptime, SGA/PGA, sesiones
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  plantilla: salud_instancia
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.salud.tablespaces
+  nombre: Uso por tablespace con WARNING/CRITICAL; vista de flota
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  plantilla: tablespaces
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.salud.fra
+  nombre: FRA y generación de archivelogs por hora
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.dataguard
+  nombre: Rol, lag de transporte y aplicación, gaps
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.rman
+  nombre: Último backup por tipo y fallidos (7 días)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.jobs
+  nombre: Jobs de scheduler fallidos o deshabilitados
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.undo_temp
+  nombre: UNDO (ORA-01555) y TEMP por sesión
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.alertlog
+  nombre: Errores ORA- del alert log (24 h)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.esperas
+  nombre: Eventos de espera por base y correlación en flota
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.salud.parametros
+  nombre: Parámetros de inicialización; deriva primaria vs standby
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.usr.estado
+  nombre: Estado de una cuenta (bloqueada, expirada, perfil, último login)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  plantilla: usuario_estado
+  parametros:
+    base: *id004
+    usuario:
+      tipo: identificador
+      requerido: true
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.usr.por_expirar
+  nombre: Cuentas de aplicación que expiran en ≤ 15 días (alerta preventiva para Capa Media)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    cm: ve
+  plantilla: usuarios_por_expirar
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.usr.desbloquear
+  nombre: Desbloquear cuenta
+  motor: bd
+  clase: C
+  requiere_ticket: true
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: DESBLOQUEAR_USUARIO
+  parametros:
+    base: *id004
+    usuario:
+      tipo: identificador
+      requerido: true
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.usr.reset
+  nombre: Restablecer clave (se entrega por canal seguro, no en pantalla)
+  motor: bd
+  clase: C
+  requiere_ticket: true
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  bloqueo_impl: Requiere canal seguro para entregar la clave (pendiente de definir)
+  cuenta_bd: dba
+- id: bd.usr.privilegios
+  nombre: Auditoría de roles y privilegios
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.ts.crecimiento
+  nombre: Crecimiento 30 días y proyección de llenado
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.ts.agregar_df
+  nombre: Agregar datafile / ampliar (respeta ASM y `MAXSIZE`)
+  motor: bd
+  clase: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: AGREGAR_DATAFILE
+  parametros:
+    base: *id004
+    tablespace:
+      tipo: identificador
+      requerido: true
+    diskgroup:
+      tipo: identificador
+      requerido: true
+    tamano_gb:
+      tipo: entero
+      requerido: true
+      min: 1
+      max: 32
+    maximo_gb:
+      tipo: entero
+      requerido: true
+      min: 1
+      max: 32
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.ts.shrink
+  nombre: Candidatos a *shrink* (Segment Advisor)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.asm.diskgroups
+  nombre: Ocupación de diskgroups ASM
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  plantilla: diskgroups
+  parametros: *id005
+  estado: implementada
+  cuenta_bd: consulta
+- id: bd.grp.crear
+  nombre: Punto de restauración garantizado antes de un cambio
+  motor: bd
+  clase: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  bloqueo_impl: 'CREATE RESTORE POINT ... GUARANTEE exige SYSDBA/SYSBACKUP: no cabe en OPS_DBA (pendiente de decisión)'
+  cuenta_bd: dba
+- id: bd.grp.borrar
+  nombre: Borrar punto de restauración al cerrar el cambio
+  motor: bd
+  clase: O
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  bloqueo_impl: Igual que bd.grp.crear
+  cuenta_bd: dba
+- id: bd.perf.topsql
+  nombre: Top SQL por CPU / elapsed / buffer gets
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.perf.plan
+  nombre: Cambio de plan de un SQL_ID (planes históricos AWR)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.perf.longops
+  nombre: Operaciones largas en curso
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.stats.obsoletas
+  nombre: Tablas con estadísticas obsoletas
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.stats.recolectar
+  nombre: Recolectar estadísticas de una tabla/esquema
+  motor: bd
+  clase: O
+  clase_prod: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: RECOLECTAR_ESTADISTICAS
+  parametros:
+    base: *id004
+    esquema:
+      tipo: identificador
+      requerido: true
+    tabla:
+      tipo: identificador
+      requerido: false
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.job.reintentar
+  nombre: Reintentar job fallido
+  motor: bd
+  clase: O
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: EJECUTAR_JOB
+  parametros:
+    base: *id004
+    propietario:
+      tipo: identificador
+      requerido: true
+    job:
+      tipo: identificador
+      requerido: true
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.job.pausar
+  nombre: Deshabilitar / habilitar jobs durante la ventana
+  motor: bd
+  clase: C
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  procedimiento: CAMBIAR_ESTADO_JOB
+  parametros:
+    base: *id004
+    propietario:
+      tipo: identificador
+      requerido: true
+    job:
+      tipo: identificador
+      requerido: true
+    habilitar:
+      tipo: booleano
+      requerido: true
+  estado: implementada
+  cuenta_bd: dba
+- id: bd.papelera
+  nombre: Objetos en `BIN$` por esquema
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.parches
+  nombre: Parches aplicados
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.esquema.diff
+  nombre: Diferencias de objetos entre dos bases (QA vs PROD)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.rep.hoja_vida
+  nombre: Hoja de vida de BD (snapshot de inventario y estado)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.rep.analisis
+  nombre: Análisis y plan de acción (Top-N, veredictos)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.rep.diskgroups
+  nombre: Diskgroups ASM por servidor
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.rep.sql_costosas
+  nombre: Sentencias costosas con detalle por `sql_id`
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: bd.rep.programar
+  nombre: Programar cualquiera de los anteriores (diario/semanal)
+  motor: bd
+  clase: L
+  perfiles:
+    dba: ejecuta
+    lid: ejecuta
+    con: ve
+  estado: catalogada
+  cuenta_bd: consulta
+- id: ia.preguntar
+  nombre: Pregunta en lenguaje natural con fuentes
+  motor: rag
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: ia.prediagnostico
+  nombre: Prediagnóstico de un incidente
+  motor: rag
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: ia.herramienta
+  nombre: El LLM invoca herramientas de solo lectura permitidas al perfil
+  motor: rag
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: ia.proponer
+  nombre: Convertir una sugerencia en propuesta de acción (va a aprobación)
+  motor: rag
+  clase: N
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: ia.resumir
+  nombre: Resumir un ticket, una ejecución o una ventana de cambio
+  motor: rag
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: ia.feedback
+  nombre: Calificar respuesta / reportar vacío
+  motor: rag
+  clase: N
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+    con: ejecuta
+  estado: catalogada
+- id: com.refresco
+  nombre: 'Refresco a demanda de un objeto. Límite: 1 cada 2 min por objeto; los pedidos simultáneos se unen en uno.'
+  motor: refresco
+  clase: L
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  parametros:
+    objeto:
+      tipo: texto
+      requerido: true
+  estado: implementada
+- id: zbx.evento.recibir
+  nombre: Recibir un problema o recuperación de Zabbix por webhook y asociarlo al inventario
+  motor: zabbix
+  clase: N
+  perfiles: {}
+  estado: catalogada
+- id: zbx.evento.correlacionar
+  nombre: Agrupar eventos en un episodio usando el grafo servidor → dominio → base y una ventana de 15 min
+  motor: zabbix
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ve
+    lid: ve
+    con: ve
+  estado: catalogada
+- id: zbx.problemas
+  nombre: Leer problemas abiertos (respaldo por si se pierde un webhook)
+  motor: zabbix
+  clase: L
+  sistema: true
+  perfiles: {}
+  estado: catalogada
+- id: zbx.trends
+  nombre: Leer el agregado horario de las series para gráficos y ML
+  motor: zabbix
+  clase: L
+  sistema: true
+  perfiles: {}
+  estado: catalogada
+- id: zbx.publicar
+  nombre: Publicar predicciones y datos propios como ítems trapper
+  motor: zabbix
+  clase: O
+  sistema: true
+  perfiles: {}
+  estado: catalogada
+- id: zbx.mantenimiento
+  nombre: Crear y cerrar el mantenimiento de los hosts de un CHG
+  motor: zabbix
+  clase: O
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: ml.predicciones
+  nombre: Ranking de tiempo hasta llenarse con intervalo P10–P90 y explicación
+  motor: ml
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ve
+    lid: ve
+    con: ve
+  estado: catalogada
+- id: ml.anomalias
+  nombre: Anomalías frente a la línea normal por hora de la semana
+  motor: ml
+  clase: L
+  perfiles:
+    dba: ve
+    cm: ve
+    lid: ve
+    con: ve
+  estado: catalogada
+- id: ml.feedback
+  nombre: Marcar una predicción como "útil" o "falsa alarma"
+  motor: ml
+  clase: N
+  perfiles:
+    dba: ejecuta
+    cm: ejecuta
+    lid: ejecuta
+  estado: catalogada
+- id: ml.scoring
+  nombre: Calcular predicciones (cada hora)
+  motor: ml
+  clase: L
+  sistema: true
+  perfiles: {}
+  estado: catalogada
+- id: ml.entrenar
+  nombre: Reentrenar y hacer backtest contra el baseline; promover solo si mejora (nocturno)
+  motor: ml
+  clase: L
+  sistema: true
+  perfiles:
+    adm: ve
+  estado: catalogada

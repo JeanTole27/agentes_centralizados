@@ -1,0 +1,84 @@
+# Ops Central — configuración de ejemplo.
+# Copiar a config/ops-central.toml (o indicar la ruta con OPS_CENTRAL_CONFIG).
+# Ninguna clave va en este archivo: solo REFERENCIAS a rutas del gestor de secretos (*_ref).
+
+[general]
+modo = "desarrollo"          # desarrollo | produccion
+simulacion = true            # true: los motores no tocan servidores ni bases reales
+
+[almacen]
+url = "sqlite:///datos/ops-central.db"
+# Producción: url = "postgresql+psycopg://ops_central@pg-ops:5432/ops_central"  (clave en secretos: almacen/postgres)
+
+[evidencia]
+ruta = "datos/evidencia"     # Producción: almacén de objetos con retención (S3 Object Lock o recurso compartido)
+
+[auth]
+proveedor = "dev"            # dev (solo modo desarrollo) | oidc | ldaps
+inactividad_min = 30
+duracion_max_h = 8
+stepup_vigencia_min = 5      # MFA reciente exigido para aprobar clase C o ejecutar en PROD
+intentos_max = 5             # solo LDAPS
+bloqueo_min = 15
+
+[auth.grupos]                # grupo de AD -> perfil de Ops Central
+GG_OPS_DBA = "dba"
+GG_OPS_CM = "cm"
+GG_OPS_LIDER = "lid"
+GG_OPS_CONSULTA = "con"
+GG_OPS_ADMIN = "adm"
+
+[auth.oidc]
+issuer = "https://login.microsoftonline.com/<tenant>/v2.0"
+client_id = "<client-id>"
+client_secret_ref = "auth/oidc_client_secret"
+redirect_uri = "https://ops-central.empresa.local/api/auth/oidc/callback"
+claim_grupos = "groups"
+acr_mfa = ["mfa", "http://schemas.microsoft.com/claims/multipleauthn"]
+
+[aprobaciones]
+clave_firma_ref = "ops/firma_aprobaciones"
+vigencia_min = 120
+aprobacion_c_no_prod = true  # clase C pide segunda persona también fuera de PROD
+
+[secretos]
+proveedor = "archivo"        # archivo (solo desarrollo) | vault
+archivo = "config/secretos.dev.json"
+vault_url = "https://vault.empresa.local:8200"
+vault_kv = "secret"          # montaje KV v2
+vault_ssh = "ssh-client-signer"
+vault_ssh_rol = "ops-central-cm"
+
+[bd]
+cuenta_consulta = "OPS_CONSULTA"
+cuenta_dba = "OPS_DBA"
+paquete = "ADMINBD.PKG_OPS_CENTRAL"
+call_timeout_s = 20
+max_paralelo = 10
+sesiones_por_base = 1
+refresco_min_s = 120
+circuito_fallos = 3
+circuito_espera_s = 600
+ruta_kit_oracle = "../oracle-agent-kiro-master"
+
+[cm]
+ruta_cmops = "../capa-media-ops"
+python_cmops = "python"      # en el servidor: python3 (3.6+)
+ttl_certificado_min = 10
+timeout_s = 3600
+
+[zabbix]
+url = "https://zabbix.empresa.local/api_jsonrpc.php"
+token_ref = "zabbix/token_lectura"
+secreto_webhook_ref = "zabbix/secreto_webhook"
+servidor_trapper = "zabbix.empresa.local"
+puerto_trapper = 10051
+ventana_episodio_min = 15
+
+[ml]
+umbrales = [85, 95, 100]
+ventana_dias = 14
+min_puntos = 24
+
+[inventario]
+archivo = "config/inventario.ejemplo.json"

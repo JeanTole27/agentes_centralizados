@@ -1,0 +1,15 @@
+/* Ajustes propios de la interfaz real sobre los estilos de la demo. */
+.nav-it { text-decoration: none; }
+.side .nav-it.active { background: var(--side2); color: #fff; }
+.carga { color: var(--muted); padding: 30px; text-align: center; }
+.fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fila.entre { justify-content: space-between; }
+.chart-box { width: 100%; height: 320px; }
+.mono-sm { font-family: Consolas, "Cascadia Mono", ui-monospace, monospace; font-size: 11.5px; }
+.json { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 0; }
+.ctl { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.err-campo { color: var(--crit); font-size: 12px; margin-top: 8px; }
+.sombra { border: 1px dashed var(--warn); }
+@media (max-width: 900px) {
+  .side.open { transform: none; }
+}

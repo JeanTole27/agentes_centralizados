@@ -1,0 +1,26 @@
+{
+  "_descripcion": "Inventario maestro de ejemplo (H4). En E2 se genera desde servidores.json de Capa Media, databases.json del kit Oracle y la CMDB.",
+  "servidores": [
+    {"id": "WLPC02SBCC04", "ip": "10.1.7.100", "ambiente": "DESA", "zabbix_host": "WLPC02SBCC04", "equipo": "cm"},
+    {"id": "AP23SBCC04", "ip": "10.1.23.4", "ambiente": "PROD", "zabbix_host": "AP23SBCC04", "equipo": "cm"},
+    {"id": "AP23SBCC09", "ip": "10.1.23.9", "ambiente": "PROD", "zabbix_host": "AP23SBCC09", "equipo": "cm"},
+    {"id": "DBPRD01", "ip": "10.2.0.11", "ambiente": "PROD", "zabbix_host": "DBPRD01", "equipo": "dba"},
+    {"id": "DBTST01", "ip": "10.2.9.21", "ambiente": "TEST", "zabbix_host": "DBTST01", "equipo": "dba"}
+  ],
+  "dominios": [
+    {"id": "simondesa", "servidor": "WLPC02SBCC04", "ambiente": "DESA"},
+    {"id": "clientesprd", "servidor": "AP23SBCC04", "ambiente": "PROD"},
+    {"id": "creditoprd", "servidor": "AP23SBCC09", "ambiente": "PROD"}
+  ],
+  "bases": [
+    {"id": "CORPRD", "servidor": "DBPRD01", "ambiente": "PROD", "criticidad": "alta", "dsn": "dbprd01:1521/CORPRD", "zabbix_host": "CORPRD"},
+    {"id": "CRMPRD", "servidor": "DBPRD01", "ambiente": "PROD", "criticidad": "alta", "dsn": "dbprd01:1521/CRMPRD", "zabbix_host": "CRMPRD"},
+    {"id": "CORTST", "servidor": "DBTST01", "ambiente": "TEST", "criticidad": "media", "dsn": "dbtst01:1521/CORTST", "zabbix_host": "CORTST"}
+  ],
+  "relaciones": [
+    {"dominio": "clientesprd", "base": "CORPRD", "datasource": "jdbc/CoreDS"},
+    {"dominio": "creditoprd", "base": "CORPRD", "datasource": "jdbc/CoreDS"},
+    {"dominio": "creditoprd", "base": "CRMPRD", "datasource": "jdbc/CrmDS"},
+    {"dominio": "simondesa", "base": "CORTST", "datasource": "jdbc/CoreDS"}
+  ]
+}
