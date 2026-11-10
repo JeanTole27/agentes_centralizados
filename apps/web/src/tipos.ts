@@ -5,8 +5,8 @@ export type Yo = {
   perfiles: string[];
   equipo: string | null;
   mfa_reciente: boolean;
+  nombres_perfil?: string[];
   menu: { grupo: string; pantallas: Pantalla[] }[];
-  simulacion: boolean;
 };
 
 export type EspParam = {
@@ -41,6 +41,25 @@ export type Evaluacion = {
   requiere_cambio: boolean;
   requiere_aprobacion: boolean;
   requiere_segundo_factor: boolean;
+  ejecucion_directa?: boolean;
+};
+
+/** Caso de Jira asociado (opcional) y los valores que propone para la acción. */
+export type Caso = {
+  clave: string;
+  resumen: string;
+  estado: string;
+  tipo: string;
+  prioridad: string;
+  asignado: string;
+  informante?: string;
+  proyecto: string;
+  url: string;
+  descripcion?: string;
+  etiquetas?: string[];
+  componentes?: string[];
+  actualizado: string;
+  sugeridos: Record<string, unknown>;
 };
 
 export type Ejecucion = {

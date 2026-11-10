@@ -1,0 +1,5944 @@
+{
+  "_descripcion": "Generado por 'python -m opscentral generar-inventario' desde los insumos reales. No editar a mano: regenerar.",
+  "servidores": [
+    {
+      "id": "AP05SBCC01",
+      "ip": "10.1.0.184",
+      "ambiente": "DESA",
+      "zabbix_host": "AP05SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP07SBCC01",
+      "ip": "10.1.0.186",
+      "ambiente": "PROD",
+      "zabbix_host": "AP07SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP09SBCC01",
+      "ip": "10.1.0.187",
+      "ambiente": "PROD",
+      "zabbix_host": "AP09SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP101SBCC04",
+      "ip": "10.6.4.134",
+      "ambiente": "PROD",
+      "zabbix_host": "AP101SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP102SBCC04",
+      "ip": "10.6.4.136",
+      "ambiente": "PROD",
+      "zabbix_host": "AP102SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP102SBCC05",
+      "ip": "10.6.7.3",
+      "ambiente": "QA",
+      "zabbix_host": "AP102SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "AP102SBCC09",
+      "ip": "10.17.6.136",
+      "ambiente": "DRP",
+      "zabbix_host": "AP102SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP104SBCC04",
+      "ip": "10.6.4.138",
+      "ambiente": "PROD",
+      "zabbix_host": "AP104SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP104SBCC09",
+      "ip": "10.17.6.138",
+      "ambiente": "DRP",
+      "zabbix_host": "AP104SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP105SBCC04",
+      "ip": "10.6.4.139",
+      "ambiente": "PROD",
+      "zabbix_host": "AP105SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP105SBCC09",
+      "ip": "10.17.6.139",
+      "ambiente": "DRP",
+      "zabbix_host": "AP105SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP106SBCC04",
+      "ip": "10.7.6.23",
+      "ambiente": "PROD",
+      "zabbix_host": "AP106SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP106SBCC09",
+      "ip": "10.17.6.23",
+      "ambiente": "DRP",
+      "zabbix_host": "AP106SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP107SBCC04",
+      "ip": "10.7.6.24",
+      "ambiente": "PROD",
+      "zabbix_host": "AP107SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP107SBCC05",
+      "ip": "10.6.7.2",
+      "ambiente": "QA",
+      "zabbix_host": "AP107SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "AP107SBCC09",
+      "ip": "10.17.6.24",
+      "ambiente": "DRP",
+      "zabbix_host": "AP107SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP108SBCC04",
+      "ip": "10.7.6.25",
+      "ambiente": "PROD",
+      "zabbix_host": "AP108SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP108SBCC09",
+      "ip": "10.17.6.25",
+      "ambiente": "DRP",
+      "zabbix_host": "AP108SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP109SBCC04",
+      "ip": "10.7.6.32",
+      "ambiente": "PROD",
+      "zabbix_host": "AP109SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP109SBCC05",
+      "ip": "10.6.7.10",
+      "ambiente": "QA",
+      "zabbix_host": "AP109SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "AP109SBCC09",
+      "ip": "10.17.6.32",
+      "ambiente": "DRP",
+      "zabbix_host": "AP109SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP111SBCC04",
+      "ip": "10.6.4.135",
+      "ambiente": "PROD",
+      "zabbix_host": "AP111SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP111SBCC09",
+      "ip": "10.17.6.135",
+      "ambiente": "DRP",
+      "zabbix_host": "AP111SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP112SBCC04",
+      "ip": "10.7.6.62",
+      "ambiente": "PROD",
+      "zabbix_host": "AP112SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP112SBCC09",
+      "ip": "10.17.6.62",
+      "ambiente": "DRP",
+      "zabbix_host": "AP112SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP113SBCC04",
+      "ip": "10.1.5.170",
+      "ambiente": "PROD",
+      "zabbix_host": "AP113SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP113SBCC09",
+      "ip": "10.11.5.128",
+      "ambiente": "DRP",
+      "zabbix_host": "AP113SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP113SBCC09-DRP",
+      "ip": "10.11.5.170",
+      "ambiente": "DRP",
+      "zabbix_host": "AP113SBCC09-DRP",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP115SBCC04",
+      "ip": "10.1.5.171",
+      "ambiente": "PROD",
+      "zabbix_host": "AP115SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP115SBCC09",
+      "ip": "10.11.5.171",
+      "ambiente": "DRP",
+      "zabbix_host": "AP115SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP116SBCC04",
+      "ip": "10.1.5.172",
+      "ambiente": "PROD",
+      "zabbix_host": "AP116SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP117SBCC04",
+      "ip": "10.1.5.173",
+      "ambiente": "PROD",
+      "zabbix_host": "AP117SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP17SBCC04",
+      "ip": "10.1.5.129",
+      "ambiente": "PROD",
+      "zabbix_host": "AP17SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP17SBCC05",
+      "ip": "10.6.7.5",
+      "ambiente": "QA",
+      "zabbix_host": "AP17SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "AP17SBCC09",
+      "ip": "10.11.5.129",
+      "ambiente": "DRP",
+      "zabbix_host": "AP17SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP18SBCC04",
+      "ip": "10.1.5.139",
+      "ambiente": "PROD",
+      "zabbix_host": "AP18SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP18SBCC09",
+      "ip": "10.11.5.139",
+      "ambiente": "DRP",
+      "zabbix_host": "AP18SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP19SBCC04",
+      "ip": "10.1.5.99",
+      "ambiente": "PROD",
+      "zabbix_host": "AP19SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP19SBCC09",
+      "ip": "10.11.5.99",
+      "ambiente": "DRP",
+      "zabbix_host": "AP19SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP20SBCC01",
+      "ip": "10.1.20.12",
+      "ambiente": "TEST",
+      "zabbix_host": "AP20SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP20SBCC04",
+      "ip": "10.7.0.82",
+      "ambiente": "PROD",
+      "zabbix_host": "AP20SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP20SBCC09",
+      "ip": "10.17.0.82",
+      "ambiente": "DRP",
+      "zabbix_host": "AP20SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP21SBCC04",
+      "ip": "10.1.5.148",
+      "ambiente": "PROD",
+      "zabbix_host": "AP21SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP22SBCC04",
+      "ip": "10.1.5.46",
+      "ambiente": "PROD",
+      "zabbix_host": "AP22SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP23SBCC04",
+      "ip": "10.1.5.47",
+      "ambiente": "PROD",
+      "zabbix_host": "AP23SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP23SBCC05",
+      "ip": "10.6.7.4",
+      "ambiente": "QA",
+      "zabbix_host": "AP23SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "AP23SBCC09",
+      "ip": "10.11.5.46",
+      "ambiente": "DRP",
+      "zabbix_host": "AP23SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP25SBCC08",
+      "ip": "10.1.20.44",
+      "ambiente": "TEST",
+      "zabbix_host": "AP25SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP27SBCC04",
+      "ip": "10.1.5.81",
+      "ambiente": "PROD",
+      "zabbix_host": "AP27SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP27SBCC09",
+      "ip": "10.11.5.81",
+      "ambiente": "DRP",
+      "zabbix_host": "AP27SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP28SBCC04",
+      "ip": "10.1.5.88",
+      "ambiente": "PROD",
+      "zabbix_host": "AP28SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP28SBCC09",
+      "ip": "10.11.5.88",
+      "ambiente": "DRP",
+      "zabbix_host": "AP28SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP29SBCC06",
+      "ip": "10.1.7.84",
+      "ambiente": "DESA",
+      "zabbix_host": "AP29SBCC06",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP32SBCC01",
+      "ip": "10.1.1.113",
+      "ambiente": "PROD",
+      "zabbix_host": "AP32SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP33SBCC01",
+      "ip": "10.1.1.114",
+      "ambiente": "PROD",
+      "zabbix_host": "AP33SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP36SBCC01",
+      "ip": "10.1.1.117",
+      "ambiente": "PROD",
+      "zabbix_host": "AP36SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP37SBCC04",
+      "ip": "10.1.5.42",
+      "ambiente": "PROD",
+      "zabbix_host": "AP37SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP37SBCC09",
+      "ip": "10.11.5.42",
+      "ambiente": "DRP",
+      "zabbix_host": "AP37SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP38SBCC04",
+      "ip": "10.1.5.43",
+      "ambiente": "PROD",
+      "zabbix_host": "AP38SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP38SBCC09",
+      "ip": "10.11.5.43",
+      "ambiente": "DRP",
+      "zabbix_host": "AP38SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP41SBCC04",
+      "ip": "10.1.6.219",
+      "ambiente": "DESA",
+      "zabbix_host": "AP41SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP42SBCC04",
+      "ip": "10.1.3.49",
+      "ambiente": "PROD",
+      "zabbix_host": "AP42SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP42SBCC09",
+      "ip": "10.11.3.49",
+      "ambiente": "DRP",
+      "zabbix_host": "AP42SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP46SBCC04",
+      "ip": "10.1.5.95",
+      "ambiente": "PROD",
+      "zabbix_host": "AP46SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP46SBCC09",
+      "ip": "10.11.5.47",
+      "ambiente": "DRP",
+      "zabbix_host": "AP46SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP51SBCC04",
+      "ip": "10.7.6.58",
+      "ambiente": "PROD",
+      "zabbix_host": "AP51SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP52SBCC04",
+      "ip": "10.7.6.55",
+      "ambiente": "PROD",
+      "zabbix_host": "AP52SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP52SBCC08",
+      "ip": "10.1.20.83",
+      "ambiente": "TEST",
+      "zabbix_host": "AP52SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP54SBCC04",
+      "ip": "10.7.6.57",
+      "ambiente": "PROD",
+      "zabbix_host": "AP54SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP54SBCC06",
+      "ip": "10.1.7.76",
+      "ambiente": "DESA",
+      "zabbix_host": "AP54SBCC06",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP54SBCC08",
+      "ip": "10.1.20.84",
+      "ambiente": "TEST",
+      "zabbix_host": "AP54SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP55SBCC08",
+      "ip": "10.1.20.85",
+      "ambiente": "TEST",
+      "zabbix_host": "AP55SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP56SBCC04",
+      "ip": "10.7.6.53",
+      "ambiente": "PROD",
+      "zabbix_host": "AP56SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP56SBCC08",
+      "ip": "10.1.20.86",
+      "ambiente": "TEST",
+      "zabbix_host": "AP56SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP57SBCC08",
+      "ip": "10.1.1.174",
+      "ambiente": "TEST",
+      "zabbix_host": "AP57SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP60SBCC04",
+      "ip": "10.7.6.54",
+      "ambiente": "PROD",
+      "zabbix_host": "AP60SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP61SBCC01",
+      "ip": "10.1.2.10",
+      "ambiente": "PROD",
+      "zabbix_host": "AP61SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP62SBCC01",
+      "ip": "10.1.2.11",
+      "ambiente": "PROD",
+      "zabbix_host": "AP62SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP66SBCC01",
+      "ip": "10.1.2.82",
+      "ambiente": "PROD",
+      "zabbix_host": "AP66SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP67SBCC01",
+      "ip": "10.1.2.85",
+      "ambiente": "PROD",
+      "zabbix_host": "AP67SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP69SBCC08",
+      "ip": "10.1.20.14",
+      "ambiente": "TEST",
+      "zabbix_host": "AP69SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP70SBCC08",
+      "ip": "10.1.20.15",
+      "ambiente": "TEST",
+      "zabbix_host": "AP70SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP72SBCC08",
+      "ip": "10.7.5.20",
+      "ambiente": "QA",
+      "zabbix_host": "AP72SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA",
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC08",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC09",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC10",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC10",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC11",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC11",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC12",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC12",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC13",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC13",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC14",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC14",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP73SBCC15",
+      "ip": "10.7.5.21",
+      "ambiente": "TEST",
+      "zabbix_host": "AP73SBCC15",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "AP78SBCC01",
+      "ip": "10.1.5.158",
+      "ambiente": "PROD",
+      "zabbix_host": "AP78SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP83SBCC06",
+      "ip": "10.1.7.77",
+      "ambiente": "DESA",
+      "zabbix_host": "AP83SBCC06",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP86SBCC04",
+      "ip": "10.7.6.8",
+      "ambiente": "PROD",
+      "zabbix_host": "AP86SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP86SBCC08",
+      "ip": "10.7.5.11",
+      "ambiente": "DESA",
+      "zabbix_host": "AP86SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "AP86SBCC09",
+      "ip": "10.17.6.8",
+      "ambiente": "DRP",
+      "zabbix_host": "AP86SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP94SBCC04",
+      "ip": "10.1.5.112",
+      "ambiente": "PROD",
+      "zabbix_host": "AP94SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP94SBCC09",
+      "ip": "10.11.5.112",
+      "ambiente": "DRP",
+      "zabbix_host": "AP94SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP95SBCC04",
+      "ip": "10.1.5.113",
+      "ambiente": "PROD",
+      "zabbix_host": "AP95SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "AP95SBCC09",
+      "ip": "10.11.5.113",
+      "ambiente": "DRP",
+      "zabbix_host": "AP95SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AP97SBCC04",
+      "ip": "10.6.4.132",
+      "ambiente": "PROD",
+      "zabbix_host": "AP97SBCC04",
+      "equipo": "cm",
+      "ssh_port": 6625,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "ASTB01SBCC04",
+      "ip": "10.1.5.188",
+      "ambiente": "PROD",
+      "zabbix_host": "ASTB01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "ASTB01SBCC09",
+      "ip": "10.11.5.188",
+      "ambiente": "DRP",
+      "zabbix_host": "ASTB01SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "ASTB02SBCC04",
+      "ip": "10.1.5.189",
+      "ambiente": "PROD",
+      "zabbix_host": "ASTB02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "ASTB02SBCC09",
+      "ip": "10.11.5.189",
+      "ambiente": "DRP",
+      "zabbix_host": "ASTB02SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "AV01SBCC06",
+      "ip": "10.7.8.5",
+      "ambiente": "DESA",
+      "zabbix_host": "AV01SBCC06",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "BD-10.1.20.23",
+      "ip": "10.1.20.23",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.5",
+      "ip": "10.1.20.5",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.6",
+      "ip": "10.1.20.6",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.7",
+      "ip": "10.1.20.7",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.8",
+      "ip": "10.1.20.8",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.90",
+      "ip": "10.1.20.90",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.20.98",
+      "ip": "10.1.20.98",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.17.0.34",
+      "ip": "10.17.0.34",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.67.32.129",
+      "ip": "10.67.32.129",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.67.32.134",
+      "ip": "10.67.32.134",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.34",
+      "ip": "10.7.0.34",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.36",
+      "ip": "10.7.0.36",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.45",
+      "ip": "10.7.0.45",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.49",
+      "ip": "10.7.0.49",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.55",
+      "ip": "10.7.0.55",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.56",
+      "ip": "10.7.0.56",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.63",
+      "ip": "10.7.0.63",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.69",
+      "ip": "10.7.0.69",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.70",
+      "ip": "10.7.0.70",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.89",
+      "ip": "10.7.0.89",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.0.90",
+      "ip": "10.7.0.90",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.2.14",
+      "ip": "10.7.2.14",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.2.3",
+      "ip": "10.7.2.3",
+      "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-192.168.27.16",
+      "ip": "192.168.27.16",
+      "ambiente": "PROD",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD05SBCC04",
+      "ip": "10.7.0.62",
+      "ambiente": "PROD",
+      "zabbix_host": "BD05SBCC04",
+      "equipo": "dba"
+    },
+    {
+      "id": "BD16SBCC04",
+      "ip": "10.1.5.168",
+      "ambiente": "PROD",
+      "zabbix_host": "BD16SBCC04",
+      "equipo": "dba"
+    },
+    {
+      "id": "BD24SBCC04",
+      "ip": "10.7.0.47",
+      "ambiente": "PROD",
+      "zabbix_host": "BD24SBCC04",
+      "equipo": "dba"
+    },
+    {
+      "id": "BD34SBCC04",
+      "ip": "10.1.5.6",
+      "ambiente": "PROD",
+      "zabbix_host": "BD34SBCC04",
+      "equipo": "dba"
+    },
+    {
+      "id": "BD39SBCC04",
+      "ip": "10.7.0.35",
+      "ambiente": "PROD",
+      "zabbix_host": "BD39SBCC04",
+      "equipo": "dba"
+    },
+    {
+      "id": "BIZ01SBCC04",
+      "ip": "10.1.5.73",
+      "ambiente": "PROD",
+      "zabbix_host": "BIZ01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "BIZ02SBCC04",
+      "ip": "10.1.5.76",
+      "ambiente": "PROD",
+      "zabbix_host": "BIZ02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "BIZDESASBCC04",
+      "ip": "10.1.20.17",
+      "ambiente": "DESA",
+      "zabbix_host": "BIZDESASBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "BIZTESTSBCC04",
+      "ip": "10.1.20.18",
+      "ambiente": "TEST",
+      "zabbix_host": "BIZTESTSBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "CPE01SBCC04",
+      "ip": "10.1.3.161",
+      "ambiente": "PROD",
+      "zabbix_host": "CPE01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "CPE02SBCC04",
+      "ip": "10.1.3.162",
+      "ambiente": "PROD",
+      "zabbix_host": "CPE02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "CPEDESASBCC02",
+      "ip": "10.1.3.152",
+      "ambiente": "DESA",
+      "zabbix_host": "CPEDESASBCC02",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "CPEDTESTBCC02",
+      "ip": "10.1.20.35",
+      "ambiente": "TEST",
+      "zabbix_host": "CPEDTESTBCC02",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "DESAIAS2",
+      "ip": "10.1.20.80",
+      "ambiente": "TEST",
+      "zabbix_host": "DESAIAS2",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "DESAIAS2-DESARROLLO",
+      "ip": "10.1.20.45",
+      "ambiente": "DESA",
+      "zabbix_host": "DESAIAS2-DESARROLLO",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "EXE01SBCC01",
+      "ip": "10.1.3.84",
+      "ambiente": "PROD",
+      "zabbix_host": "EXE01SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "EXE02SBCC01",
+      "ip": "10.1.3.85",
+      "ambiente": "PROD",
+      "zabbix_host": "EXE02SBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "EXEDESASBCC01",
+      "ip": "10.1.3.62",
+      "ambiente": "DESA",
+      "zabbix_host": "EXEDESASBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "EXETESTSBCC01",
+      "ip": "10.1.20.25",
+      "ambiente": "TEST",
+      "zabbix_host": "EXETESTSBCC01",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "FOR01SBCC04",
+      "ip": "10.1.3.100",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR01SBCC05",
+      "ip": "10.6.7.9",
+      "ambiente": "QA",
+      "zabbix_host": "FOR01SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "FOR01SBCC09",
+      "ip": "10.11.3.100",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR01SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR02SBCC04",
+      "ip": "10.1.3.101",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR02SBCC09",
+      "ip": "10.11.3.101",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR02SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR03SBCC04",
+      "ip": "10.1.3.102",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR03SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR03SBCC09",
+      "ip": "10.11.3.102",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR03SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR04SBCC04",
+      "ip": "10.1.3.103",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR04SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR04SBCC04-DRP",
+      "ip": "10.11.3.103",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR04SBCC04-DRP",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR05SBCC04",
+      "ip": "10.1.3.104",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR05SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR05SBCC09",
+      "ip": "10.11.3.104",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR05SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR06SBCC04",
+      "ip": "10.1.3.105",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR06SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR06SBCC04-DRP",
+      "ip": "10.11.3.105",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR06SBCC04-DRP",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR07SBCC04",
+      "ip": "10.1.3.144",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR07SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR07SBCC09",
+      "ip": "10.11.3.144",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR07SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "FOR08SBCC04",
+      "ip": "10.1.3.145",
+      "ambiente": "PROD",
+      "zabbix_host": "FOR08SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "FOR08SBCC09",
+      "ip": "10.11.3.145",
+      "ambiente": "DRP",
+      "zabbix_host": "FOR08SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "IHS01SBCC04",
+      "ip": "10.1.3.165",
+      "ambiente": "PROD",
+      "zabbix_host": "IHS01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IHS02SBCC04",
+      "ip": "10.1.3.166",
+      "ambiente": "PROD",
+      "zabbix_host": "IHS02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IHSTESTSBCC02",
+      "ip": "10.1.20.37",
+      "ambiente": "TEST",
+      "zabbix_host": "IHSTESTSBCC02",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "INTRADESA",
+      "ip": "10.1.4.223",
+      "ambiente": "TEST",
+      "zabbix_host": "INTRADESA",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA",
+        "TEST"
+      ]
+    },
+    {
+      "id": "IP-10-67-33-113.SEGUROSBOLIVAR.COM",
+      "ip": "10.67.33.113",
+      "ambiente": "PROD",
+      "zabbix_host": "IP-10-67-33-113.SEGUROSBOLIVAR.COM",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IPMSTORAGE",
+      "ip": "10.1.0.185",
+      "ambiente": "PROD",
+      "zabbix_host": "IPMSTORAGE",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IPMSTORAGE_B",
+      "ip": "10.1.2.118",
+      "ambiente": "PROD",
+      "zabbix_host": "IPMSTORAGE_B",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IPMSTORAGE_C",
+      "ip": "10.1.0.106",
+      "ambiente": "PROD",
+      "zabbix_host": "IPMSTORAGE_C",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IPMSTORAGE_D",
+      "ip": "10.1.2.129",
+      "ambiente": "PROD",
+      "zabbix_host": "IPMSTORAGE_D",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "IPMTESTR3_2008",
+      "ip": "10.1.20.27",
+      "ambiente": "TEST",
+      "zabbix_host": "IPMTESTR3_2008",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "IPMWEB-TESTR3",
+      "ip": "10.1.20.28",
+      "ambiente": "TEST",
+      "zabbix_host": "IPMWEB-TESTR3",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "OAS-ADF",
+      "ip": "10.1.1.193",
+      "ambiente": "PROD",
+      "zabbix_host": "OAS-ADF",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "OAS-ADF2",
+      "ip": "10.1.5.66",
+      "ambiente": "PROD",
+      "zabbix_host": "OAS-ADF2",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "OASDESA",
+      "ip": "10.1.7.78",
+      "ambiente": "TEST",
+      "zabbix_host": "OASDESA",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA",
+        "TEST"
+      ]
+    },
+    {
+      "id": "ORACLECCMS",
+      "ip": "10.1.5.41",
+      "ambiente": "PROD",
+      "zabbix_host": "ORACLECCMS",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SAISVR01SBCC04",
+      "ip": "10.7.6.61",
+      "ambiente": "PROD",
+      "zabbix_host": "SAISVR01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SAISVR01SBCC09",
+      "ip": "10.17.6.61",
+      "ambiente": "DRP",
+      "zabbix_host": "SAISVR01SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "SAITEST",
+      "ip": "10.1.20.39",
+      "ambiente": "TEST",
+      "zabbix_host": "SAITEST",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA",
+        "TEST"
+      ]
+    },
+    {
+      "id": "SERVER-1",
+      "ip": "10.1.2.125",
+      "ambiente": "PROD",
+      "zabbix_host": "SERVER-1",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SERVER-1-STAGE",
+      "ip": "10.1.20.12",
+      "ambiente": "QA",
+      "zabbix_host": "SERVER-1-STAGE",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "SERVER-10",
+      "ip": "10.7.6.56",
+      "ambiente": "PROD",
+      "zabbix_host": "SERVER-10",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SERVER-2",
+      "ip": "10.1.0.246",
+      "ambiente": "PROD",
+      "zabbix_host": "SERVER-2",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SERVER-6",
+      "ip": "10.1.7.79",
+      "ambiente": "DESA",
+      "zabbix_host": "SERVER-6",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "SERVER-7",
+      "ip": "10.1.7.80",
+      "ambiente": "DESA",
+      "zabbix_host": "SERVER-7",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "SERVER-8",
+      "ip": "10.7.6.59",
+      "ambiente": "PROD",
+      "zabbix_host": "SERVER-8",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SERVER-8-PRUEBAS",
+      "ip": "10.1.20.87",
+      "ambiente": "TEST",
+      "zabbix_host": "SERVER-8-PRUEBAS",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "SERVER-9",
+      "ip": "10.1.20.88",
+      "ambiente": "TEST",
+      "zabbix_host": "SERVER-9",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "SOA01SBCC04",
+      "ip": "10.7.6.39",
+      "ambiente": "PROD",
+      "zabbix_host": "SOA01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SOA01SBCC06",
+      "ip": "10.7.8.4",
+      "ambiente": "DESA",
+      "zabbix_host": "SOA01SBCC06",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "SOA01SBCC09",
+      "ip": "10.17.6.39",
+      "ambiente": "DRP",
+      "zabbix_host": "SOA01SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "SOA02SBCC04",
+      "ip": "10.7.6.42",
+      "ambiente": "PROD",
+      "zabbix_host": "SOA02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SOA02SBCC09",
+      "ip": "10.17.6.42",
+      "ambiente": "DRP",
+      "zabbix_host": "SOA02SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "SOA03SBCC04",
+      "ip": "10.7.6.45",
+      "ambiente": "PROD",
+      "zabbix_host": "SOA03SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SOA03SBCC08",
+      "ip": "10.7.5.30",
+      "ambiente": "TEST",
+      "zabbix_host": "SOA03SBCC08",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "SOA03SBCC09",
+      "ip": "10.17.6.45",
+      "ambiente": "DRP",
+      "zabbix_host": "SOA03SBCC09",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DRP"
+      ]
+    },
+    {
+      "id": "SOA04SBCC05",
+      "ip": "10.6.7.6",
+      "ambiente": "QA",
+      "zabbix_host": "SOA04SBCC05",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "QA"
+      ]
+    },
+    {
+      "id": "SUNSERVERA",
+      "ip": "10.1.3.154",
+      "ambiente": "PROD",
+      "zabbix_host": "SUNSERVERA",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "SUNTEST",
+      "ip": "10.1.20.38",
+      "ambiente": "TEST",
+      "zabbix_host": "SUNTEST",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "WAS01SBCC04",
+      "ip": "10.1.3.161",
+      "ambiente": "PROD",
+      "zabbix_host": "WAS01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "WAS02SBCC04",
+      "ip": "10.1.3.162",
+      "ambiente": "PROD",
+      "zabbix_host": "WAS02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "WASDESASBCC02",
+      "ip": "10.1.3.153",
+      "ambiente": "DESA",
+      "zabbix_host": "WASDESASBCC02",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "WASTESTSBCC02",
+      "ip": "10.1.20.36",
+      "ambiente": "TEST",
+      "zabbix_host": "WASTESTSBCC02",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "TEST"
+      ]
+    },
+    {
+      "id": "WLPC02SBCC04",
+      "ip": "10.1.7.100",
+      "ambiente": "DESA",
+      "zabbix_host": "WLPC02SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "DESA"
+      ]
+    },
+    {
+      "id": "WLPR01SBCC04",
+      "ip": "10.7.6.5",
+      "ambiente": "PROD",
+      "zabbix_host": "WLPR01SBCC04",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    },
+    {
+      "id": "WWW.SEGUROSBOLIVAR.COM",
+      "ip": "10.1.4.116",
+      "ambiente": "PROD",
+      "zabbix_host": "WWW.SEGUROSBOLIVAR.COM",
+      "equipo": "cm",
+      "ssh_port": 22,
+      "ambientes": [
+        "PROD"
+      ]
+    }
+  ],
+  "dominios": [
+    {
+      "id": "ARL_Web_12213_Dev",
+      "nombre": "ARL_Web_12213_Dev",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "ATGCPROD (DRP)",
+      "nombre": "ATGCPROD",
+      "servidor": "AP104SBCC09",
+      "servidores": [
+        "AP104SBCC09",
+        "AP105SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "ATGCPROD (PROD)",
+      "nombre": "ATGCPROD",
+      "servidor": "AP104SBCC04",
+      "servidores": [
+        "AP104SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "ATGCPROD (QA)",
+      "nombre": "ATGCPROD",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Asistencia",
+      "nombre": "Asistencia",
+      "servidor": "FOR01SBCC04",
+      "servidores": [
+        "FOR01SBCC04",
+        "FOR02SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Bizagi (DESA)",
+      "nombre": "Bizagi",
+      "servidor": "BIZDESASBCC04",
+      "servidores": [
+        "BIZDESASBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Bizagi (PROD)",
+      "nombre": "Bizagi",
+      "servidor": "BIZ01SBCC04",
+      "servidores": [
+        "BIZ01SBCC04",
+        "BIZ02SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Bizagi (TEST)",
+      "nombre": "Bizagi",
+      "servidor": "BIZTESTSBCC04",
+      "servidores": [
+        "BIZTESTSBCC04"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "CONCISO/CONCILIA (PROD)",
+      "nombre": "CONCISO/CONCILIA",
+      "servidor": "FOR05SBCC04",
+      "servidores": [
+        "FOR05SBCC04",
+        "FOR06SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "CONCISO/CONCILIA (TEST)",
+      "nombre": "CONCISO/CONCILIA",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Cen_frm_stg",
+      "nombre": "Cen_frm_stg",
+      "servidor": "FOR01SBCC05",
+      "servidores": [
+        "FOR01SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Datamart - biee_domain",
+      "nombre": "Datamart - biee_domain",
+      "servidor": "SERVER-1",
+      "servidores": [
+        "SERVER-1"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Desaias",
+      "nombre": "Desaias",
+      "servidor": "DESAIAS2-DESARROLLO",
+      "servidores": [
+        "DESAIAS2-DESARROLLO"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Ellenton (PROD)",
+      "nombre": "Ellenton",
+      "servidor": "AP109SBCC04",
+      "servidores": [
+        "AP109SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Ellenton (TEST)",
+      "nombre": "Ellenton",
+      "servidor": "AP72SBCC08",
+      "servidores": [
+        "AP72SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Externos14 (DESA)",
+      "nombre": "Externos14",
+      "servidor": "AP41SBCC04",
+      "servidores": [
+        "AP41SBCC04",
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Externos14 (DRP)",
+      "nombre": "Externos14",
+      "servidor": "AP42SBCC09",
+      "servidores": [
+        "AP42SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Externos14 (PROD)",
+      "nombre": "Externos14",
+      "servidor": "AP42SBCC04",
+      "servidores": [
+        "AP42SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Externosprod (DRP)",
+      "nombre": "Externosprod",
+      "servidor": "AP106SBCC09",
+      "servidores": [
+        "AP106SBCC09",
+        "AP86SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Externosprod (PROD)",
+      "nombre": "Externosprod",
+      "servidor": "AP106SBCC04",
+      "servidores": [
+        "AP106SBCC04",
+        "AP86SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Externosprod (QA)",
+      "nombre": "Externosprod",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Filenet (DESA)",
+      "nombre": "Filenet",
+      "servidor": "CPEDESASBCC02",
+      "servidores": [
+        "CPEDESASBCC02",
+        "WASDESASBCC02"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Filenet (PROD)",
+      "nombre": "Filenet",
+      "servidor": "CPE01SBCC04",
+      "servidores": [
+        "CPE01SBCC04",
+        "CPE02SBCC04",
+        "IHS01SBCC04",
+        "IHS02SBCC04",
+        "WAS01SBCC04",
+        "WAS02SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Filenet (TEST)",
+      "nombre": "Filenet",
+      "servidor": "CPEDTESTBCC02",
+      "servidores": [
+        "CPEDTESTBCC02",
+        "IHSTESTSBCC02",
+        "WASTESTSBCC02"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Forms_Cen_Test",
+      "nombre": "Forms_Cen_Test",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Forms_SAI (DESA)",
+      "nombre": "Forms_SAI",
+      "servidor": "AP29SBCC06",
+      "servidores": [
+        "AP29SBCC06",
+        "SAITEST"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Forms_SAI (TEST)",
+      "nombre": "Forms_SAI",
+      "servidor": "SAITEST",
+      "servidores": [
+        "SAITEST"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Forms_testias",
+      "nombre": "Forms_testias",
+      "servidor": "AP25SBCC08",
+      "servidores": [
+        "AP25SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "GCDomain",
+      "nombre": "GCDomain",
+      "servidor": "ORACLECCMS",
+      "servidores": [
+        "ORACLECCMS"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Glassfish Firma Digital Wssign",
+      "nombre": "Glassfish Firma Digital Wssign",
+      "servidor": "AP37SBCC04",
+      "servidores": [
+        "AP37SBCC04",
+        "AP38SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "IPM Stellent (PROD)",
+      "nombre": "IPM Stellent",
+      "servidor": "AP07SBCC01",
+      "servidores": [
+        "AP07SBCC01",
+        "AP09SBCC01",
+        "AP32SBCC01",
+        "AP33SBCC01",
+        "AP36SBCC01",
+        "AP61SBCC01",
+        "AP62SBCC01",
+        "AP78SBCC01",
+        "IPMSTORAGE",
+        "IPMSTORAGE_B",
+        "IPMSTORAGE_C",
+        "IPMSTORAGE_D"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "IPM Stellent (TEST)",
+      "nombre": "IPM Stellent",
+      "servidor": "IPMTESTR3_2008",
+      "servidores": [
+        "IPMTESTR3_2008",
+        "IPMWEB-TESTR3"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Intranet",
+      "nombre": "Intranet",
+      "servidor": "SERVER-2",
+      "servidores": [
+        "SERVER-2",
+        "WWW.SEGUROSBOLIVAR.COM"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "OAS (DESA)",
+      "nombre": "OAS",
+      "servidor": "OASDESA",
+      "servidores": [
+        "OASDESA"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "OAS (PROD)",
+      "nombre": "OAS",
+      "servidor": "OAS-ADF",
+      "servidores": [
+        "OAS-ADF",
+        "OAS-ADF2"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "OAS (TEST)",
+      "nombre": "OAS",
+      "servidor": "OASDESA",
+      "servidores": [
+        "OASDESA"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "PARP",
+      "nombre": "PARP",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "PElectronica_stg",
+      "nombre": "PElectronica_stg",
+      "servidor": "AP109SBCC05",
+      "servidores": [
+        "AP109SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "PRESTAMOS",
+      "nombre": "PRESTAMOS",
+      "servidor": "AP25SBCC08",
+      "servidores": [
+        "AP25SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Pagos",
+      "nombre": "Pagos",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Parp_frm_stg",
+      "nombre": "Parp_frm_stg",
+      "servidor": "FOR01SBCC05",
+      "servidores": [
+        "FOR01SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Prodias_frm (DRP)",
+      "nombre": "Prodias_frm",
+      "servidor": "AP27SBCC09",
+      "servidores": [
+        "AP27SBCC09",
+        "AP28SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Prodias_frm (PROD)",
+      "nombre": "Prodias_frm",
+      "servidor": "AP27SBCC04",
+      "servidores": [
+        "AP27SBCC04",
+        "AP28SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Psai_frm_prod (DRP)",
+      "nombre": "Psai_frm_prod",
+      "servidor": "AP112SBCC09",
+      "servidores": [
+        "AP112SBCC09",
+        "SAISVR01SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Psai_frm_prod (PROD)",
+      "nombre": "Psai_frm_prod",
+      "servidor": "AP112SBCC04",
+      "servidores": [
+        "AP112SBCC04",
+        "SAISVR01SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Psai_frm_stg",
+      "nombre": "Psai_frm_stg",
+      "servidor": "FOR01SBCC05",
+      "servidores": [
+        "FOR01SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "SAGUI",
+      "nombre": "SAGUI",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "SALUDPROD (DRP)",
+      "nombre": "SALUDPROD",
+      "servidor": "AP107SBCC09",
+      "servidores": [
+        "AP107SBCC09",
+        "AP109SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "SALUDPROD (QA)",
+      "nombre": "SALUDPROD",
+      "servidor": "AP109SBCC05",
+      "servidores": [
+        "AP109SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "SIAB",
+      "nombre": "SIAB",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "SIAB_frm_preprod",
+      "nombre": "SIAB_frm_preprod",
+      "servidor": "SERVER-1-STAGE",
+      "servidores": [
+        "SERVER-1-STAGE"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "SIMON 12C",
+      "nombre": "SIMON 12C",
+      "servidor": "AP21SBCC04",
+      "servidores": [
+        "AP21SBCC04",
+        "AP22SBCC04",
+        "AP23SBCC04",
+        "AP46SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "SIMON 14C",
+      "nombre": "SIMON 14C",
+      "servidor": "AP113SBCC04",
+      "servidores": [
+        "AP113SBCC04",
+        "AP115SBCC04",
+        "AP116SBCC04",
+        "AP117SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "SVPA (PROD)",
+      "nombre": "SVPA",
+      "servidor": "FOR05SBCC04",
+      "servidores": [
+        "FOR05SBCC04",
+        "FOR06SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "SVPA (TEST)",
+      "nombre": "SVPA",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Servicios_stg",
+      "nombre": "Servicios_stg",
+      "servidor": "AP109SBCC05",
+      "servidores": [
+        "AP109SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Serviciosprod",
+      "nombre": "Serviciosprod",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Siebel (DESA)",
+      "nombre": "Siebel",
+      "servidor": "AP54SBCC06",
+      "servidores": [
+        "AP54SBCC06",
+        "AP83SBCC06",
+        "SERVER-6",
+        "SERVER-7"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Siebel (PROD)",
+      "nombre": "Siebel",
+      "servidor": "AP51SBCC04",
+      "servidores": [
+        "AP51SBCC04",
+        "AP52SBCC04",
+        "AP54SBCC04",
+        "AP56SBCC04",
+        "AP60SBCC04",
+        "SERVER-10",
+        "SERVER-8"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Siebel (TEST)",
+      "nombre": "Siebel",
+      "servidor": "AP52SBCC08",
+      "servidores": [
+        "AP52SBCC08",
+        "AP54SBCC08",
+        "AP55SBCC08",
+        "AP56SBCC08",
+        "SERVER-8-PRUEBAS",
+        "SERVER-9"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Siebel_Forms",
+      "nombre": "Siebel_Forms",
+      "servidor": "AP57SBCC08",
+      "servidores": [
+        "AP57SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Simon",
+      "nombre": "Simon",
+      "servidor": "AP113SBCC09",
+      "servidores": [
+        "AP113SBCC09",
+        "AP113SBCC09-DRP",
+        "AP115SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Simon 14C",
+      "nombre": "Simon 14C",
+      "servidor": "AP73SBCC15",
+      "servidores": [
+        "AP73SBCC15"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Simon_14",
+      "nombre": "Simon_14",
+      "servidor": "AP86SBCC08",
+      "servidores": [
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Sunsystem (PROD)",
+      "nombre": "Sunsystem",
+      "servidor": "SUNSERVERA",
+      "servidores": [
+        "SUNSERVERA"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Sunsystem (TEST)",
+      "nombre": "Sunsystem",
+      "servidor": "SUNTEST",
+      "servidores": [
+        "SUNTEST"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Svpa_frm_stg",
+      "nombre": "Svpa_frm_stg",
+      "servidor": "FOR01SBCC05",
+      "servidores": [
+        "FOR01SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "TERCEROS",
+      "nombre": "TERCEROS",
+      "servidor": "AP25SBCC08",
+      "servidores": [
+        "AP25SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "Terceros_desa",
+      "nombre": "Terceros_desa",
+      "servidor": "AP86SBCC08",
+      "servidores": [
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Terceros_desa_14",
+      "nombre": "Terceros_desa_14",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Tercerosprod",
+      "nombre": "Tercerosprod",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Transversales_stg",
+      "nombre": "Transversales_stg",
+      "servidor": "AP109SBCC05",
+      "servidores": [
+        "AP109SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "Transversalesprod",
+      "nombre": "Transversalesprod",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "TronForms",
+      "nombre": "TronForms",
+      "servidor": "DESAIAS2-DESARROLLO",
+      "servidores": [
+        "DESAIAS2-DESARROLLO"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Tronador Cobol (DESA)",
+      "nombre": "Tronador Cobol",
+      "servidor": "DESAIAS2-DESARROLLO",
+      "servidores": [
+        "DESAIAS2-DESARROLLO"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "Tronador Cobol (DRP)",
+      "nombre": "Tronador Cobol",
+      "servidor": "AP20SBCC09",
+      "servidores": [
+        "AP20SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "Tronador Cobol (PROD)",
+      "nombre": "Tronador Cobol",
+      "servidor": "AP20SBCC04",
+      "servidores": [
+        "AP20SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "Tronador Cobol (TEST)",
+      "nombre": "Tronador Cobol",
+      "servidor": "DESAIAS2",
+      "servidores": [
+        "DESAIAS2"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "WLP12110JR6_ASISTE_BOL_DESA",
+      "nombre": "WLP12110JR6_ASISTE_BOL_DESA",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "WLP12110JR6_ASISTE_BOL_JA (DRP)",
+      "nombre": "WLP12110JR6_ASISTE_BOL_JA",
+      "servidor": "ASTB01SBCC09",
+      "servidores": [
+        "ASTB01SBCC09",
+        "ASTB02SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "WLP12110JR6_ASISTE_BOL_JA (PROD)",
+      "nombre": "WLP12110JR6_ASISTE_BOL_JA",
+      "servidor": "ASTB01SBCC04",
+      "servidores": [
+        "ASTB01SBCC04",
+        "ASTB02SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "WLP12110JR6_ASISTE_BOL_JA (QA)",
+      "nombre": "WLP12110JR6_ASISTE_BOL_JA",
+      "servidor": "AP72SBCC08",
+      "servidores": [
+        "AP72SBCC08"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "WLP12110JR6_ASISTE_BOL_JA (TEST)",
+      "nombre": "WLP12110JR6_ASISTE_BOL_JA",
+      "servidor": "AP72SBCC08",
+      "servidores": [
+        "AP72SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "acci_desa",
+      "nombre": "acci_desa",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "acci_test",
+      "nombre": "acci_test",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "aplics_domain",
+      "nombre": "aplics_domain",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "atgcdesa (DESA)",
+      "nombre": "atgcdesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01",
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "atgcdesa (TEST)",
+      "nombre": "atgcdesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "atgcprod",
+      "nombre": "atgcprod",
+      "servidor": "AP73SBCC14",
+      "servidores": [
+        "AP73SBCC14"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "avaluos_prod (DESA)",
+      "nombre": "avaluos_prod",
+      "servidor": "AV01SBCC06",
+      "servidores": [
+        "AV01SBCC06"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "avaluos_prod (TEST)",
+      "nombre": "avaluos_prod",
+      "servidor": "AP73SBCC12",
+      "servidores": [
+        "AP73SBCC12"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "avaluosprod (DRP)",
+      "nombre": "avaluosprod",
+      "servidor": "AP106SBCC09",
+      "servidores": [
+        "AP106SBCC09",
+        "AP86SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "avaluosprod (PROD)",
+      "nombre": "avaluosprod",
+      "servidor": "AP106SBCC04",
+      "servidores": [
+        "AP106SBCC04",
+        "AP86SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "cambios_frm_test",
+      "nombre": "cambios_frm_test",
+      "servidor": "AP20SBCC01",
+      "servidores": [
+        "AP20SBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "capitalizacion (PROD)",
+      "nombre": "capitalizacion",
+      "servidor": "AP27SBCC04",
+      "servidores": [
+        "AP27SBCC04",
+        "AP28SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "capitalizacion (TEST)",
+      "nombre": "capitalizacion",
+      "servidor": "AP25SBCC08",
+      "servidores": [
+        "AP25SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "cen_frm_prod (DRP)",
+      "nombre": "cen_frm_prod",
+      "servidor": "FOR07SBCC09",
+      "servidores": [
+        "FOR07SBCC09",
+        "FOR08SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "cen_frm_prod (PROD)",
+      "nombre": "cen_frm_prod",
+      "servidor": "FOR07SBCC04",
+      "servidores": [
+        "FOR07SBCC04",
+        "FOR08SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "exstreamdesa",
+      "nombre": "exstreamdesa",
+      "servidor": "EXEDESASBCC01",
+      "servidores": [
+        "EXEDESASBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "exstreamprod",
+      "nombre": "exstreamprod",
+      "servidor": "EXE01SBCC01",
+      "servidores": [
+        "EXE01SBCC01",
+        "EXE02SBCC01"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "exstreamtest",
+      "nombre": "exstreamtest",
+      "servidor": "EXETESTSBCC01",
+      "servidores": [
+        "EXETESTSBCC01"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "externosdesa (DESA)",
+      "nombre": "externosdesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01",
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "externosdesa (TEST)",
+      "nombre": "externosdesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "externosdesa_12213",
+      "nombre": "externosdesa_12213",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "externosprod (DRP)",
+      "nombre": "externosprod",
+      "servidor": "AP37SBCC09",
+      "servidores": [
+        "AP37SBCC09",
+        "AP38SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "externosprod (PROD)",
+      "nombre": "externosprod",
+      "servidor": "AP101SBCC04",
+      "servidores": [
+        "AP101SBCC04",
+        "AP37SBCC04",
+        "AP38SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "externosprod (TEST)",
+      "nombre": "externosprod",
+      "servidor": "AP73SBCC11",
+      "servidores": [
+        "AP73SBCC11"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "externostest",
+      "nombre": "externostest",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "iasbpel.oas-adf (DESA)",
+      "nombre": "iasbpel.oas-adf",
+      "servidor": "INTRADESA",
+      "servidores": [
+        "INTRADESA"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "iasbpel.oas-adf (PROD)",
+      "nombre": "iasbpel.oas-adf",
+      "servidor": "SERVER-2",
+      "servidores": [
+        "SERVER-2",
+        "WWW.SEGUROSBOLIVAR.COM"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "iasbpel.oas-adf (TEST)",
+      "nombre": "iasbpel.oas-adf",
+      "servidor": "INTRADESA",
+      "servidores": [
+        "INTRADESA"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "parp_frm_prod (DRP)",
+      "nombre": "parp_frm_prod",
+      "servidor": "FOR03SBCC09",
+      "servidores": [
+        "FOR03SBCC09",
+        "FOR04SBCC04-DRP"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "parp_frm_prod (PROD)",
+      "nombre": "parp_frm_prod",
+      "servidor": "FOR03SBCC04",
+      "servidores": [
+        "FOR03SBCC04",
+        "FOR04SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "prestamos",
+      "nombre": "prestamos",
+      "servidor": "AP27SBCC04",
+      "servidores": [
+        "AP27SBCC04",
+        "AP28SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "proc_juridicos_prod",
+      "nombre": "proc_juridicos_prod",
+      "servidor": "WLPR01SBCC04",
+      "servidores": [
+        "WLPR01SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "prodias_frm_stg",
+      "nombre": "prodias_frm_stg",
+      "servidor": "AP17SBCC05",
+      "servidores": [
+        "AP17SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "saghi",
+      "nombre": "saghi",
+      "servidor": "FOR07SBCC04",
+      "servidores": [
+        "FOR07SBCC04",
+        "FOR08SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "saluddesa_12213",
+      "nombre": "saluddesa_12213",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "saludprod (DESA)",
+      "nombre": "saludprod",
+      "servidor": "AP86SBCC08",
+      "servidores": [
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "saludprod (DRP)",
+      "nombre": "saludprod",
+      "servidor": "AP37SBCC09",
+      "servidores": [
+        "AP37SBCC09",
+        "AP38SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "saludprod (PROD)",
+      "nombre": "saludprod",
+      "servidor": "AP107SBCC04",
+      "servidores": [
+        "AP107SBCC04",
+        "AP109SBCC04",
+        "AP37SBCC04",
+        "AP38SBCC04",
+        "IP-10-67-33-113.SEGUROSBOLIVAR.COM"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "saludprod (TEST)",
+      "nombre": "saludprod",
+      "servidor": "AP72SBCC08",
+      "servidores": [
+        "AP72SBCC08",
+        "AP73SBCC10"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "saludtest",
+      "nombre": "saludtest",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "serviciosdesa (DESA)",
+      "nombre": "serviciosdesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01",
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "serviciosdesa (TEST)",
+      "nombre": "serviciosdesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "serviciosdesa_12213",
+      "nombre": "serviciosdesa_12213",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "serviciosprod (DRP)",
+      "nombre": "serviciosprod",
+      "servidor": "AP102SBCC09",
+      "servidores": [
+        "AP102SBCC09",
+        "AP107SBCC09",
+        "AP111SBCC09",
+        "AP37SBCC09",
+        "AP38SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "serviciosprod (PROD)",
+      "nombre": "serviciosprod",
+      "servidor": "AP102SBCC04",
+      "servidores": [
+        "AP102SBCC04",
+        "AP107SBCC04",
+        "AP111SBCC04",
+        "AP37SBCC04",
+        "AP38SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "serviciosprod (QA)",
+      "nombre": "serviciosprod",
+      "servidor": "AP102SBCC05",
+      "servidores": [
+        "AP102SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "serviciosprod (TEST)",
+      "nombre": "serviciosprod",
+      "servidor": "AP73SBCC08",
+      "servidores": [
+        "AP73SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "serviciostest",
+      "nombre": "serviciostest",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "siab_frm_prod (DRP)",
+      "nombre": "siab_frm_prod",
+      "servidor": "FOR01SBCC09",
+      "servidores": [
+        "FOR01SBCC09",
+        "FOR02SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "siab_frm_prod (PROD)",
+      "nombre": "siab_frm_prod",
+      "servidor": "FOR01SBCC04",
+      "servidores": [
+        "FOR01SBCC04",
+        "FOR02SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "siebel",
+      "nombre": "siebel",
+      "servidor": "FOR07SBCC04",
+      "servidores": [
+        "FOR07SBCC04",
+        "FOR08SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "simon (DRP)",
+      "nombre": "simon",
+      "servidor": "AP23SBCC09",
+      "servidores": [
+        "AP23SBCC09",
+        "AP46SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "simon (QA)",
+      "nombre": "simon",
+      "servidor": "AP107SBCC05",
+      "servidores": [
+        "AP107SBCC05",
+        "AP23SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "simondesa_12213",
+      "nombre": "simondesa_12213",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "sipla",
+      "nombre": "sipla",
+      "servidor": "FOR07SBCC04",
+      "servidores": [
+        "FOR07SBCC04",
+        "FOR08SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "sitri",
+      "nombre": "sitri",
+      "servidor": "FOR07SBCC04",
+      "servidores": [
+        "FOR07SBCC04",
+        "FOR08SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "sitri_form",
+      "nombre": "sitri_form",
+      "servidor": "AP57SBCC08",
+      "servidores": [
+        "AP57SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "soa_domain",
+      "nombre": "soa_domain",
+      "servidor": "SOA04SBCC05",
+      "servidores": [
+        "SOA04SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "soa_domain_dev",
+      "nombre": "soa_domain_dev",
+      "servidor": "SOA01SBCC06",
+      "servidores": [
+        "SOA01SBCC06"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "soa_domain_prod",
+      "nombre": "soa_domain_prod",
+      "servidor": "SOA01SBCC09",
+      "servidores": [
+        "SOA01SBCC09",
+        "SOA02SBCC09",
+        "SOA03SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "soa_domain_test",
+      "nombre": "soa_domain_test",
+      "servidor": "SOA03SBCC08",
+      "servidores": [
+        "SOA03SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "soadoma",
+      "nombre": "soadoma",
+      "servidor": "SOA01SBCC04",
+      "servidores": [
+        "SOA01SBCC04",
+        "SOA02SBCC04",
+        "SOA03SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "svpa_frm_prod (DRP)",
+      "nombre": "svpa_frm_prod",
+      "servidor": "FOR05SBCC09",
+      "servidores": [
+        "FOR05SBCC09",
+        "FOR06SBCC04-DRP"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "svpa_frm_prod (PROD)",
+      "nombre": "svpa_frm_prod",
+      "servidor": "FOR05SBCC04",
+      "servidores": [
+        "FOR05SBCC04",
+        "FOR06SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "terceros",
+      "nombre": "terceros",
+      "servidor": "AP27SBCC04",
+      "servidores": [
+        "AP27SBCC04",
+        "AP28SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "terceros_prod (DRP)",
+      "nombre": "terceros_prod",
+      "servidor": "AP37SBCC09",
+      "servidores": [
+        "AP37SBCC09",
+        "AP38SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "terceros_prod (PROD)",
+      "nombre": "terceros_prod",
+      "servidor": "AP37SBCC04",
+      "servidores": [
+        "AP37SBCC04",
+        "AP38SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "terceros_test",
+      "nombre": "terceros_test",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "tercerosdesa (DESA)",
+      "nombre": "tercerosdesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "tercerosdesa (TEST)",
+      "nombre": "tercerosdesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "tercerosprod (DRP)",
+      "nombre": "tercerosprod",
+      "servidor": "AP104SBCC09",
+      "servidores": [
+        "AP104SBCC09",
+        "AP105SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "tercerosprod (PROD)",
+      "nombre": "tercerosprod",
+      "servidor": "AP104SBCC04",
+      "servidores": [
+        "AP104SBCC04",
+        "AP105SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "tercerosprod (TEST)",
+      "nombre": "tercerosprod",
+      "servidor": "AP73SBCC13",
+      "servidores": [
+        "AP73SBCC13"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "transversalesdesa (DESA)",
+      "nombre": "transversalesdesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01",
+        "AP86SBCC08"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "transversalesdesa (TEST)",
+      "nombre": "transversalesdesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "transversalesdesa_12213",
+      "nombre": "transversalesdesa_12213",
+      "servidor": "WLPC02SBCC04",
+      "servidores": [
+        "WLPC02SBCC04"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "transversalesprod (DRP)",
+      "nombre": "transversalesprod",
+      "servidor": "AP108SBCC09",
+      "servidores": [
+        "AP108SBCC09",
+        "AP37SBCC09",
+        "AP38SBCC09",
+        "AP86SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "transversalesprod (PROD)",
+      "nombre": "transversalesprod",
+      "servidor": "AP108SBCC04",
+      "servidores": [
+        "AP108SBCC04",
+        "AP111SBCC04",
+        "AP37SBCC04",
+        "AP38SBCC04",
+        "AP86SBCC04",
+        "AP94SBCC04",
+        "AP95SBCC04",
+        "AP97SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "transversalesprod (TEST)",
+      "nombre": "transversalesprod",
+      "servidor": "AP72SBCC08",
+      "servidores": [
+        "AP72SBCC08",
+        "AP73SBCC09"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "transversalesprod_122 (DRP)",
+      "nombre": "transversalesprod_122",
+      "servidor": "AP94SBCC09",
+      "servidores": [
+        "AP94SBCC09",
+        "AP95SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "transversalesprod_122 (PROD)",
+      "nombre": "transversalesprod_122",
+      "servidor": "AP94SBCC04",
+      "servidores": [
+        "AP94SBCC04",
+        "AP95SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "transversalestest",
+      "nombre": "transversalestest",
+      "servidor": "AP69SBCC08",
+      "servidores": [
+        "AP69SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "tron_frm_stg",
+      "nombre": "tron_frm_stg",
+      "servidor": "AP17SBCC05",
+      "servidores": [
+        "AP17SBCC05"
+      ],
+      "ambiente": "QA"
+    },
+    {
+      "id": "tronador_frm_drp",
+      "nombre": "tronador_frm_drp",
+      "servidor": "AP17SBCC09",
+      "servidores": [
+        "AP17SBCC09",
+        "AP18SBCC09",
+        "AP19SBCC09"
+      ],
+      "ambiente": "DRP"
+    },
+    {
+      "id": "tronador_frm_prod",
+      "nombre": "tronador_frm_prod",
+      "servidor": "AP17SBCC04",
+      "servidores": [
+        "AP17SBCC04",
+        "AP18SBCC04",
+        "AP19SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "tronador_frm_test",
+      "nombre": "tronador_frm_test",
+      "servidor": "AP25SBCC08",
+      "servidores": [
+        "AP25SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "wldesa (DESA)",
+      "nombre": "wldesa",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "wldesa (TEST)",
+      "nombre": "wldesa",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "wldesa12c",
+      "nombre": "wldesa12c",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "wldesaAF (DESA)",
+      "nombre": "wldesaAF",
+      "servidor": "AP05SBCC01",
+      "servidores": [
+        "AP05SBCC01"
+      ],
+      "ambiente": "DESA"
+    },
+    {
+      "id": "wldesaAF (TEST)",
+      "nombre": "wldesaAF",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    },
+    {
+      "id": "wlprod",
+      "nombre": "wlprod",
+      "servidor": "AP37SBCC04",
+      "servidores": [
+        "AP37SBCC04",
+        "AP38SBCC04"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "wlprodAF",
+      "nombre": "wlprodAF",
+      "servidor": "AP66SBCC01",
+      "servidores": [
+        "AP66SBCC01",
+        "AP67SBCC01"
+      ],
+      "ambiente": "PROD"
+    },
+    {
+      "id": "wltest12c",
+      "nombre": "wltest12c",
+      "servidor": "AP70SBCC08",
+      "servidores": [
+        "AP70SBCC08"
+      ],
+      "ambiente": "TEST"
+    }
+  ],
+  "bases": [
+    {
+      "id": "ABBYY",
+      "alias": "abbyy",
+      "servicio": "ABBYY",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/ABBYY",
+      "zabbix_host": null
+    },
+    {
+      "id": "ADEB",
+      "alias": "adeb",
+      "servicio": "ADEB",
+      "servidor": "BD-10.67.32.129",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.67.32.129:1521/ADEB",
+      "zabbix_host": null
+    },
+    {
+      "id": "ADEBOL",
+      "alias": "adebol",
+      "servicio": "ADEBOL",
+      "servidor": "BD-10.67.32.129",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.67.32.129:1521/ADEBOL",
+      "zabbix_host": null
+    },
+    {
+      "id": "ADEBOLLX",
+      "alias": "adebollx",
+      "servicio": "ADEBOLLX",
+      "servidor": "BD-10.67.32.129",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.67.32.129:1521/ADEBOLLX",
+      "zabbix_host": null
+    },
+    {
+      "id": "ARCGIS",
+      "alias": "prod_arcgis",
+      "servicio": "ARCGIS",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/arcgis",
+      "zabbix_host": null
+    },
+    {
+      "id": "ASTB",
+      "alias": "astb",
+      "servicio": "ASTB",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/ASTB",
+      "zabbix_host": null
+    },
+    {
+      "id": "AUDIO",
+      "alias": "audio",
+      "servicio": "AUDIO",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/AUDIO",
+      "zabbix_host": null
+    },
+    {
+      "id": "AVALUOS",
+      "alias": "avaluos",
+      "servicio": "AVALUOS",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/AVALUOS",
+      "zabbix_host": null
+    },
+    {
+      "id": "AVALUOSW",
+      "alias": "prod_avaluosw",
+      "servicio": "AVALUOSW",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/avaluosw",
+      "zabbix_host": null
+    },
+    {
+      "id": "BIEE",
+      "alias": "biee",
+      "servicio": "BIEE",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/BIEE",
+      "zabbix_host": null
+    },
+    {
+      "id": "BIZAGI",
+      "alias": "bizagi",
+      "servicio": "BIZAGI",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/BIZAGI",
+      "zabbix_host": null
+    },
+    {
+      "id": "CAPI",
+      "alias": "capi",
+      "servicio": "CAPI",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/CAPI",
+      "zabbix_host": null
+    },
+    {
+      "id": "CATALOG",
+      "alias": "catalog",
+      "servicio": "CATALOG",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/CATALOG",
+      "zabbix_host": null
+    },
+    {
+      "id": "CATALOG19C",
+      "alias": "catalog19c",
+      "servicio": "CATALOG19C",
+      "servidor": "BD-10.7.0.34",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.0.34:1521/CATALOG19C",
+      "zabbix_host": null
+    },
+    {
+      "id": "CDBFORMS",
+      "alias": "prod_cdbforms",
+      "servicio": "CDBFORMS",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/cdbforms",
+      "zabbix_host": null
+    },
+    {
+      "id": "CDBGEN",
+      "alias": "prod_cdbgen",
+      "servicio": "CDBGEN",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/cdbgen",
+      "zabbix_host": null
+    },
+    {
+      "id": "CDB_ROOT",
+      "alias": "prod_cdb$root",
+      "servicio": "CDB$ROOT",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/cdb$root",
+      "zabbix_host": null
+    },
+    {
+      "id": "CICS",
+      "alias": "prod_cics",
+      "servicio": "CICS",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/cics",
+      "zabbix_host": null
+    },
+    {
+      "id": "CONC",
+      "alias": "conc",
+      "servicio": "CONC",
+      "servidor": "BD-10.1.20.7",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.7:1521/CONC",
+      "zabbix_host": null
+    },
+    {
+      "id": "CONCILIA",
+      "alias": "concilia",
+      "servicio": "CONCILIA",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/CONCILIA",
+      "zabbix_host": null
+    },
+    {
+      "id": "CONCISO",
+      "alias": "conciso",
+      "servicio": "CONCISO",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/CONCISO",
+      "zabbix_host": null
+    },
+    {
+      "id": "CONTRALO",
+      "alias": "contralo",
+      "servicio": "CONTRALO",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/CONTRALO",
+      "zabbix_host": null
+    },
+    {
+      "id": "CRYPTOV",
+      "alias": "cryptov",
+      "servicio": "CRYPTOV",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/CRYPTOV",
+      "zabbix_host": null
+    },
+    {
+      "id": "DATAINT",
+      "alias": "prod_dataint",
+      "servicio": "DATAINT",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/dataint",
+      "zabbix_host": null
+    },
+    {
+      "id": "DBADMIN",
+      "alias": "prod_dbadmin",
+      "servicio": "DBADMIN",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/dbadmin",
+      "zabbix_host": null
+    },
+    {
+      "id": "DBNAM1",
+      "alias": "dbnam1",
+      "servicio": "DBNAM1",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/DBNAM1",
+      "zabbix_host": null
+    },
+    {
+      "id": "DBNAM2",
+      "alias": "dbnam2",
+      "servicio": "DBNAM2",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/DBNAM2",
+      "zabbix_host": null
+    },
+    {
+      "id": "DGH",
+      "alias": "dgh",
+      "servicio": "DGH",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/DGH",
+      "zabbix_host": null
+    },
+    {
+      "id": "DMCIA",
+      "alias": "dmcia",
+      "servicio": "DMCIA",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/DMCIA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DMVENTAS",
+      "alias": "prod_dmventas",
+      "servicio": "DMVENTAS",
+      "servidor": "BD34SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.6:1521/dmventas",
+      "zabbix_host": null
+    },
+    {
+      "id": "EMREP",
+      "alias": "prod_emrep",
+      "servicio": "EMREP",
+      "servidor": "BD34SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.6:1521/emrep",
+      "zabbix_host": null
+    },
+    {
+      "id": "FILENET",
+      "alias": "filenet",
+      "servicio": "FILENET",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/FILENET",
+      "zabbix_host": null
+    },
+    {
+      "id": "FINA",
+      "alias": "fina",
+      "servicio": "FINA",
+      "servidor": "BD-10.1.20.6",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.6:1521/FINA",
+      "zabbix_host": null
+    },
+    {
+      "id": "FINA1",
+      "alias": "prod_fina1",
+      "servicio": "FINA1",
+      "servidor": "BD-10.7.0.89",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.89:1521/fina1",
+      "zabbix_host": null
+    },
+    {
+      "id": "FINAOPTI",
+      "alias": "finaopti",
+      "servicio": "FINAOPTI",
+      "servidor": "BD-10.1.20.6",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.6:1521/FINAOPTI",
+      "zabbix_host": null
+    },
+    {
+      "id": "FMWINFRA",
+      "alias": "fmwinfra",
+      "servicio": "FMWINFRA",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/FMWINFRA",
+      "zabbix_host": null
+    },
+    {
+      "id": "FONBOL",
+      "alias": "fonbol",
+      "servicio": "FONBOL",
+      "servidor": "BD-10.67.32.129",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.67.32.129:1521/FONBOL",
+      "zabbix_host": null
+    },
+    {
+      "id": "FONDOS",
+      "alias": "prod_fondos",
+      "servicio": "FONDOS",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/fondos",
+      "zabbix_host": null
+    },
+    {
+      "id": "FOO",
+      "alias": "foo",
+      "servicio": "FOO",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/FOO",
+      "zabbix_host": null
+    },
+    {
+      "id": "GADATA",
+      "alias": "gadata",
+      "servicio": "GADATA",
+      "servidor": "BD-10.1.20.7",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.7:1521/GADATA",
+      "zabbix_host": null
+    },
+    {
+      "id": "GPSPRU",
+      "alias": "gpspru",
+      "servicio": "GPSPRU",
+      "servidor": "BD-192.168.27.16",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "192.168.27.16:1521/GPSPRU",
+      "zabbix_host": null
+    },
+    {
+      "id": "GRPBOLIVAR",
+      "alias": "grpbolivar",
+      "servicio": "GRPBOLIVAR",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/GRPBOLIVAR",
+      "zabbix_host": null
+    },
+    {
+      "id": "HPCCENTER",
+      "alias": "hpccenter",
+      "servicio": "HPCCENTER",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/HPCCENTER",
+      "zabbix_host": null
+    },
+    {
+      "id": "HPDENGINE",
+      "alias": "hpdengine",
+      "servicio": "HPDENGINE",
+      "servidor": "BD-10.1.20.6",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.6:1521/HPDENGINE",
+      "zabbix_host": null
+    },
+    {
+      "id": "HPDESIGNER",
+      "alias": "hpdesigner",
+      "servicio": "HPDESIGNER",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/HPDESIGNER",
+      "zabbix_host": null
+    },
+    {
+      "id": "IDMRPTDB",
+      "alias": "idmrptdb",
+      "servicio": "IDMRPTDB",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/IDMRPTDB",
+      "zabbix_host": null
+    },
+    {
+      "id": "INTRANET",
+      "alias": "intranet",
+      "servicio": "INTRANET",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/INTRANET",
+      "zabbix_host": null
+    },
+    {
+      "id": "INVESA",
+      "alias": "prod_invesa",
+      "servicio": "INVESA",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/invesa",
+      "zabbix_host": null
+    },
+    {
+      "id": "IPM",
+      "alias": "ipm",
+      "servicio": "IPM",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/IPM",
+      "zabbix_host": null
+    },
+    {
+      "id": "LINEG",
+      "alias": "lineg",
+      "servicio": "LINEG",
+      "servidor": "BD-10.67.32.129",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.67.32.129:1521/LINEG",
+      "zabbix_host": null
+    },
+    {
+      "id": "LOGERR",
+      "alias": "logerr",
+      "servicio": "LOGERR",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/LOGERR",
+      "zabbix_host": null
+    },
+    {
+      "id": "MONIPLUS",
+      "alias": "moniplus",
+      "servicio": "MONIPLUS",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/MONIPLUS",
+      "zabbix_host": null
+    },
+    {
+      "id": "MRIESGO",
+      "alias": "prod_mriesgo",
+      "servicio": "MRIESGO",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/mriesgo",
+      "zabbix_host": null
+    },
+    {
+      "id": "NOMI",
+      "alias": "nomi",
+      "servicio": "NOMI",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/NOMI",
+      "zabbix_host": null
+    },
+    {
+      "id": "NOVELL",
+      "alias": "novell",
+      "servicio": "NOVELL",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/NOVELL",
+      "zabbix_host": null
+    },
+    {
+      "id": "ODIREP",
+      "alias": "odirep",
+      "servicio": "ODIREP",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/ODIREP",
+      "zabbix_host": null
+    },
+    {
+      "id": "PARP",
+      "alias": "parp",
+      "servicio": "PARP",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/PARP",
+      "zabbix_host": null
+    },
+    {
+      "id": "PARP1",
+      "alias": "prod_parp1",
+      "servicio": "PARP1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/parp1",
+      "zabbix_host": null
+    },
+    {
+      "id": "PARP2",
+      "alias": "prod_parp2",
+      "servicio": "PARP2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/parp2",
+      "zabbix_host": null
+    },
+    {
+      "id": "PDBCONTROL",
+      "alias": "pdbcontrol",
+      "servicio": "PDBCONTROL",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/PDBCONTROL",
+      "zabbix_host": null
+    },
+    {
+      "id": "PRES",
+      "alias": "pres",
+      "servicio": "PRES",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/PRES",
+      "zabbix_host": null
+    },
+    {
+      "id": "PRES1",
+      "alias": "prod_pres1",
+      "servicio": "PRES1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/pres1",
+      "zabbix_host": null
+    },
+    {
+      "id": "PRES2",
+      "alias": "prod_pres2",
+      "servicio": "PRES2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/pres2",
+      "zabbix_host": null
+    },
+    {
+      "id": "PRE_ASTB",
+      "alias": "pre_astb",
+      "servicio": "PRE_ASTB",
+      "servidor": "BD-10.7.2.14",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.14:1521/PRE_ASTB",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD11",
+      "alias": "prod11",
+      "servicio": "PROD11",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/PROD11",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_ADEB",
+      "alias": "prod_adeb",
+      "servicio": "ADEB",
+      "servidor": "BD-10.67.32.134",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.67.32.134:1521/adeb",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_ADEBOL",
+      "alias": "prod_adebol",
+      "servicio": "ADEBOL",
+      "servidor": "BD-10.67.32.134",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.67.32.134:1521/adebol",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_ANALITIC",
+      "alias": "prod_analitic",
+      "servicio": "TRON",
+      "servidor": "BD-10.17.0.34",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.17.0.34:1521/tron",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_ASTB1",
+      "alias": "prod_astb1",
+      "servicio": "ASTB",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/astb",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_ASTB2",
+      "alias": "prod_astb2",
+      "servicio": "ASTB",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/astb",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_AUDIO",
+      "alias": "prod_audio",
+      "servicio": "AUDIO",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/audio",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_BIEE",
+      "alias": "prod_biee",
+      "servicio": "BIEE",
+      "servidor": "BD-10.7.0.89",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.89:1521/biee",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_BIZAGI",
+      "alias": "prod_bizagi",
+      "servicio": "BIZAGI",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/bizagi",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CAPI1",
+      "alias": "prod_capi1",
+      "servicio": "CAPI",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/capi",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CAPI2",
+      "alias": "prod_capi2",
+      "servicio": "CAPI",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/capi",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CATALOG",
+      "alias": "prod_catalog",
+      "servicio": "CATALOG",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/catalog",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CONCILIA",
+      "alias": "prod_concilia",
+      "servicio": "CONCILIA",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/concilia",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CONCISO",
+      "alias": "prod_conciso",
+      "servicio": "CONCISO",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/conciso",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CONTRALO",
+      "alias": "prod_contralo",
+      "servicio": "CONTRALO",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/contralo",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_CRYPTOV",
+      "alias": "prod_cryptov",
+      "servicio": "CRYPTOV",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/cryptov",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_DBNAM1",
+      "alias": "prod_dbnam1",
+      "servicio": "DBNAM1",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/dbnam1",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_DBNAM2",
+      "alias": "prod_dbnam2",
+      "servicio": "DBNAM2",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/dbnam2",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_DGH",
+      "alias": "prod_dgh",
+      "servicio": "DGH",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/dgh",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_DMCIA",
+      "alias": "prod_dmcia",
+      "servicio": "DMCIA",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/dmcia",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_FILENET1",
+      "alias": "prod_filenet1",
+      "servicio": "FILENET",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/filenet",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_FILENET2",
+      "alias": "prod_filenet2",
+      "servicio": "FILENET",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/filenet",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_FONBOL",
+      "alias": "prod_fonbol",
+      "servicio": "FONBOL",
+      "servidor": "BD-10.67.32.134",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.67.32.134:1521/fonbol",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_GADATA1",
+      "alias": "prod_gadata1",
+      "servicio": "GADATA",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/gadata",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_GRPBOLIVAR",
+      "alias": "prod_grpbolivar",
+      "servicio": "GRPBOLIVAR",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/grpbolivar",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_HPCCENTER",
+      "alias": "prod_hpccenter",
+      "servicio": "HPCCENTER",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/hpccenter",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_IDMRPTDB",
+      "alias": "prod_idmrptdb",
+      "servicio": "IDMRPTDB",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/idmrptdb",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_INFRABOL1",
+      "alias": "prod_infrabol1",
+      "servicio": "INFRABOL",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/infrabol",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_INFRABOL2",
+      "alias": "prod_infrabol2",
+      "servicio": "INFRABOL",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/infrabol",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_INTRANET1",
+      "alias": "prod_intranet1",
+      "servicio": "INTRANET",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/intranet",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_INTRANET2",
+      "alias": "prod_intranet2",
+      "servicio": "INTRANET",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/intranet",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_IPM1",
+      "alias": "prod_ipm1",
+      "servicio": "IPM",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/ipm",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_IPM2",
+      "alias": "prod_ipm2",
+      "servicio": "IPM",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/ipm",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_LINEG",
+      "alias": "prod_lineg",
+      "servicio": "LINEG",
+      "servidor": "BD-10.67.32.134",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.67.32.134:1521/lineg",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_LOGERR1",
+      "alias": "prod_logerr1",
+      "servicio": "LOGERR",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/logerr",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_LOGERR2",
+      "alias": "prod_logerr2",
+      "servicio": "LOGERR",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/logerr",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_MONIPLUS",
+      "alias": "prod_moniplus",
+      "servicio": "MONIPLUS",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/moniplus",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_NOMI",
+      "alias": "prod_nomi",
+      "servicio": "NOMI",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/nomi",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_NOVELL",
+      "alias": "prod_novell",
+      "servicio": "NOVELL",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/novell",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PROD111",
+      "alias": "prod_prod111",
+      "servicio": "PROD11",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/prod11",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PROD112",
+      "alias": "prod_prod112",
+      "servicio": "PROD11",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/prod11",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PSAI1",
+      "alias": "prod_psai1",
+      "servicio": "PSAI",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/psai",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PSAI2",
+      "alias": "prod_psai2",
+      "servicio": "PSAI",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/psai",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PSAIJ1",
+      "alias": "prod_psaij1",
+      "servicio": "PSAIJ",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/psaij",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_PSAIJ2",
+      "alias": "prod_psaij2",
+      "servicio": "PSAIJ",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/psaij",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_RCUFORMSPROD1",
+      "alias": "prod_rcuformsprod1",
+      "servicio": "RCUFORMSPROD",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/rcuformsprod",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_RCUFORMSPROD2",
+      "alias": "prod_rcuformsprod2",
+      "servicio": "RCUFORMSPROD",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/rcuformsprod",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_RIGHTNOW1",
+      "alias": "prod_rightnow1",
+      "servicio": "RIGHTNOW",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/rightnow",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_RIGHTNOW2",
+      "alias": "prod_rightnow2",
+      "servicio": "RIGHTNOW",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/rightnow",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SALU1",
+      "alias": "prod_salu1",
+      "servicio": "SALU",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/salu",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SALU2",
+      "alias": "prod_salu2",
+      "servicio": "SALU",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/salu",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SALUDARP1",
+      "alias": "prod_saludarp1",
+      "servicio": "SALUDARP",
+      "servidor": "BD05SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.62:1521/saludarp",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SALUDARP2",
+      "alias": "prod_saludarp2",
+      "servicio": "SALUDARP",
+      "servidor": "BD-10.7.0.63",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.63:1521/saludarp",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SANT1",
+      "alias": "prod_sant1",
+      "servicio": "SANT",
+      "servidor": "BD-10.7.0.89",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.89:1521/sant",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIAR",
+      "alias": "prod_siar",
+      "servicio": "SIAR",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/siar",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIEBEL",
+      "alias": "prod_siebel",
+      "servicio": "SIEBEL",
+      "servidor": "BD-10.7.0.89",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.89:1521/siebel",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIFV",
+      "alias": "prod_sifv",
+      "servicio": "SIFV",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/sifv",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIGLA",
+      "alias": "prod_sigla",
+      "servicio": "SIGLA",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/sigla",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIMASOL",
+      "alias": "prod_simasol",
+      "servicio": "SIMASOL",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/simasol",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIPLA",
+      "alias": "prod_sipla",
+      "servicio": "SIPLA",
+      "servidor": "BD34SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.6:1521/sipla",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SIPN",
+      "alias": "prod_sipn",
+      "servicio": "SIPN",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/sipn",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SOAP1",
+      "alias": "prod_soap1",
+      "servicio": "SOAP",
+      "servidor": "BD-10.7.0.69",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.69:1521/soap",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SOAP2",
+      "alias": "prod_soap2",
+      "servicio": "SOAP",
+      "servidor": "BD-10.7.0.70",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.70:1521/soap",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SPYG",
+      "alias": "prod_spyg",
+      "servicio": "SPYG",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/spyg",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TERCEROS1",
+      "alias": "prod_terceros1",
+      "servicio": "TERCEROS",
+      "servidor": "BD-10.7.0.34",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.34:1521/terceros",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TERCEROS2",
+      "alias": "prod_terceros2",
+      "servicio": "TERCEROS",
+      "servidor": "BD39SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.35:1521/terceros",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TERCEROS3",
+      "alias": "prod_terceros3",
+      "servicio": "TERCEROS",
+      "servidor": "BD-10.7.0.36",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.36:1521/terceros",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TRON",
+      "alias": "prod_tron",
+      "servicio": "TRON",
+      "servidor": "BD-10.7.0.90",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.90:1521/tron",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TRON1",
+      "alias": "prod_tron1",
+      "servicio": "TRON",
+      "servidor": "BD-10.7.0.34",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.34:1521/tron",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TRON2",
+      "alias": "prod_tron2",
+      "servicio": "TRON",
+      "servidor": "BD39SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.35:1521/tron",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_TRON3",
+      "alias": "prod_tron3",
+      "servicio": "TRON",
+      "servidor": "BD-10.7.0.36",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.36:1521/tron",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_USERAPP",
+      "alias": "prod_userapp",
+      "servicio": "USERAPP",
+      "servidor": "BD-10.7.0.45",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.45:1521/userapp",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_VENTAS",
+      "alias": "prod_ventas",
+      "servicio": "VENTAS",
+      "servidor": "BD34SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.6:1521/ventas",
+      "zabbix_host": null
+    },
+    {
+      "id": "PSAI",
+      "alias": "psai",
+      "servicio": "PSAI",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/PSAI",
+      "zabbix_host": null
+    },
+    {
+      "id": "PSAIJ",
+      "alias": "psaij",
+      "servicio": "PSAIJ",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/PSAIJ",
+      "zabbix_host": null
+    },
+    {
+      "id": "RCUFORMS",
+      "alias": "rcuforms",
+      "servicio": "RCUFORMS",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/RCUFORMS",
+      "zabbix_host": null
+    },
+    {
+      "id": "RIGHTNOW",
+      "alias": "rightnow",
+      "servicio": "RIGHTNOW",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/RIGHTNOW",
+      "zabbix_host": null
+    },
+    {
+      "id": "SAGHI",
+      "alias": "saghi",
+      "servicio": "SAGHI",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/SAGHI",
+      "zabbix_host": null
+    },
+    {
+      "id": "SAGHI1",
+      "alias": "prod_saghi1",
+      "servicio": "SAGHI1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/saghi1",
+      "zabbix_host": null
+    },
+    {
+      "id": "SAGHI2",
+      "alias": "prod_saghi2",
+      "servicio": "SAGHI2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/saghi2",
+      "zabbix_host": null
+    },
+    {
+      "id": "SAIFORMS",
+      "alias": "prod_saiforms",
+      "servicio": "SAIFORMS",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/saiforms",
+      "zabbix_host": null
+    },
+    {
+      "id": "SALU",
+      "alias": "salu",
+      "servicio": "SALU",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/SALU",
+      "zabbix_host": null
+    },
+    {
+      "id": "SALUDARP",
+      "alias": "saludarp",
+      "servicio": "SALUDARP",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SALUDARP",
+      "zabbix_host": null
+    },
+    {
+      "id": "SANT",
+      "alias": "sant",
+      "servicio": "SANT",
+      "servidor": "BD-10.7.2.14",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.14:1521/SANT",
+      "zabbix_host": null
+    },
+    {
+      "id": "SBRPAQA",
+      "alias": "sbrpaqa",
+      "servicio": "SBRPAQA",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/SBRPAQA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIAR",
+      "alias": "siar",
+      "servicio": "SIAR",
+      "servidor": "BD-10.1.20.5",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.5:1521/SIAR",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIEBEL",
+      "alias": "siebel",
+      "servicio": "SIEBEL",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/SIEBEL",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIFV",
+      "alias": "sifv",
+      "servicio": "SIFV",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SIFV",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIG",
+      "alias": "prod_sig",
+      "servicio": "SIG",
+      "servidor": "BD-10.67.32.134",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.67.32.134:1521/sig",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIGLA",
+      "alias": "sigla",
+      "servicio": "SIGLA",
+      "servidor": "BD-10.1.20.23",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.23:1521/SIGLA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIGSB",
+      "alias": "prod_sigsb",
+      "servicio": "SIGSB",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/sigsb",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIMASOL",
+      "alias": "simasol",
+      "servicio": "SIMASOL",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SIMASOL",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIMON",
+      "alias": "simon",
+      "servicio": "SIMON",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/SIMON",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIPAB",
+      "alias": "sipab",
+      "servicio": "SIPAB",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SIPAB",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIPAB1",
+      "alias": "prod_sipab1",
+      "servicio": "SIPAB1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/sipab1",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIPAB2",
+      "alias": "prod_sipab2",
+      "servicio": "SIPAB2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/sipab2",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIPLA",
+      "alias": "sipla",
+      "servicio": "SIPLA",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/SIPLA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SIPN",
+      "alias": "sipn",
+      "servicio": "SIPN",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SIPN",
+      "zabbix_host": null
+    },
+    {
+      "id": "SITR",
+      "alias": "sitr",
+      "servicio": "SITR",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/SITR",
+      "zabbix_host": null
+    },
+    {
+      "id": "SITR1",
+      "alias": "prod_sitr1",
+      "servicio": "SITR1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/sitr1",
+      "zabbix_host": null
+    },
+    {
+      "id": "SITR2",
+      "alias": "prod_sitr2",
+      "servicio": "SITR2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/sitr2",
+      "zabbix_host": null
+    },
+    {
+      "id": "SOA",
+      "alias": "soa",
+      "servicio": "SOA",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/SOA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SOA_2",
+      "alias": "soa_2",
+      "servicio": "SOA",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/SOA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SPYG",
+      "alias": "spyg",
+      "servicio": "SPYG",
+      "servidor": "BD-10.1.20.5",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.5:1521/SPYG",
+      "zabbix_host": null
+    },
+    {
+      "id": "STDALONE",
+      "alias": "stdalone",
+      "servicio": "STDALONE",
+      "servidor": "BD-10.1.20.5",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.5:1521/STDALONE",
+      "zabbix_host": null
+    },
+    {
+      "id": "SUNDB",
+      "alias": "sundb",
+      "servicio": "SUNDB",
+      "servidor": "BD-10.1.20.5",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.5:1521/SUNDB",
+      "zabbix_host": null
+    },
+    {
+      "id": "SVPA",
+      "alias": "svpa",
+      "servicio": "SVPA",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.90:1521/SVPA",
+      "zabbix_host": null
+    },
+    {
+      "id": "SVPA1",
+      "alias": "prod_svpa1",
+      "servicio": "SVPA1",
+      "servidor": "BD-10.7.0.55",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.55:1521/svpa1",
+      "zabbix_host": null
+    },
+    {
+      "id": "SVPA2",
+      "alias": "prod_svpa2",
+      "servicio": "SVPA2",
+      "servidor": "BD-10.7.0.56",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.56:1521/svpa2",
+      "zabbix_host": null
+    },
+    {
+      "id": "TERCCRT",
+      "alias": "terccrt",
+      "servicio": "TERCCRT",
+      "servidor": "BD-10.7.2.3",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.3:1521/TERCCRT",
+      "zabbix_host": null
+    },
+    {
+      "id": "TERCEROS",
+      "alias": "terceros",
+      "servicio": "TERCEROS",
+      "servidor": "BD-10.7.2.14",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.14:1521/TERCEROS",
+      "zabbix_host": null
+    },
+    {
+      "id": "TERCEROS_2",
+      "alias": "terceros_2",
+      "servicio": "TERCEROS",
+      "servidor": "BD-10.1.20.5",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.5:1521/TERCEROS",
+      "zabbix_host": null
+    },
+    {
+      "id": "TNAF",
+      "alias": "prod_tnaf",
+      "servicio": "TNAF",
+      "servidor": "BD16SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.5.168:1521/tnaf",
+      "zabbix_host": null
+    },
+    {
+      "id": "TRON",
+      "alias": "tron",
+      "servicio": "TRON",
+      "servidor": "BD-10.7.2.14",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.14:1521/TRON",
+      "zabbix_host": null
+    },
+    {
+      "id": "TRONCR",
+      "alias": "troncr",
+      "servicio": "TRONCR",
+      "servidor": "BD-10.7.2.3",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.7.2.3:1521/TRONCR",
+      "zabbix_host": null
+    },
+    {
+      "id": "USERAPP",
+      "alias": "userapp",
+      "servicio": "USERAPP",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.8:1521/USERAPP",
+      "zabbix_host": null
+    },
+    {
+      "id": "VENTAS",
+      "alias": "ventas",
+      "servicio": "VENTAS",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "media",
+      "equipo_dueno": "dba-aoc",
+      "dsn": "10.1.20.98:1521/VENTAS",
+      "zabbix_host": null
+    },
+    {
+      "id": "WFLOW",
+      "alias": "prod_wflow",
+      "servicio": "WFLOW",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/wflow",
+      "zabbix_host": null
+    }
+  ],
+  "relaciones": []
+}

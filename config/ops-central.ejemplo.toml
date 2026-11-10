@@ -4,7 +4,6 @@
 
 [general]
 modo = "desarrollo"          # desarrollo | produccion
-simulacion = true            # true: los motores no tocan servidores ni bases reales
 
 [almacen]
 url = "sqlite:///datos/ops-central.db"
@@ -14,7 +13,7 @@ url = "sqlite:///datos/ops-central.db"
 ruta = "datos/evidencia"     # Producción: almacén de objetos con retención (S3 Object Lock o recurso compartido)
 
 [auth]
-proveedor = "dev"            # dev (solo modo desarrollo) | oidc | ldaps
+proveedor = "demo"           # demo: registro con nombre + perfil, sin contraseña (solo desarrollo) | dev | oidc | ldaps
 inactividad_min = 30
 duracion_max_h = 8
 stepup_vigencia_min = 5      # MFA reciente exigido para aprobar clase C o ejecutar en PROD
@@ -40,6 +39,20 @@ acr_mfa = ["mfa", "http://schemas.microsoft.com/claims/multipleauthn"]
 clave_firma_ref = "ops/firma_aprobaciones"
 vigencia_min = 120
 aprobacion_c_no_prod = true  # clase C pide segunda persona también fuera de PROD
+ejecucion_directa = true     # quien tiene permiso 'ejecuta' ejecuta sin cola de aprobación (BD y Capa Media); queda en el log
+exigir_referencia_prod = false  # true: los cambios en PROD/DRP exigen un caso asociado (por defecto es opcional)
+
+[jira]
+# Casos opcionales: si una ejecución se asocia a un caso, se trae de Jira para completar los datos.
+url = ""                     # p. ej. https://empresa.atlassian.net (vacío = Jira deshabilitado)
+credencial_ref = "jira/api"  # secreto con {"usuario": "<correo>", "token": "<api token>"}
+jql_abiertos = "statusCategory != Done ORDER BY updated DESC"
+max_resultados = 25
+verificar_tls = true
+
+[jira.campos]                # parámetro de la acción -> campo de Jira (opcional; si falta se busca en el texto)
+# base = "customfield_10050"
+# host = "customfield_10051"
 
 [secretos]
 proveedor = "archivo"        # archivo (solo desarrollo) | vault
@@ -74,6 +87,14 @@ secreto_webhook_ref = "zabbix/secreto_webhook"
 servidor_trapper = "zabbix.empresa.local"
 puerto_trapper = 10051
 ventana_episodio_min = 15
+verificar_tls = true          # o la ruta al certificado de la CA interna; false solo en pruebas
+timeout_s = 30
+user_agent = "OpsCentral/0.1" # si un WAF interno bloquea clientes que no reconoce, poner aquí el UA permitido
+severidad_min = 2             # problemas desde "warning" para el respaldo del webhook
+dias_trends = 30              # historia que se trae la primera vez; luego es incremental
+max_items_host = 40           # tope de series de capacidad por servidor
+# Token de API (Users > API tokens) de un usuario de SOLO LECTURA: va en el gestor de secretos
+# bajo token_ref, nunca en este archivo. Prueba de conexión: python -m opscentral zabbix-probar
 
 [ml]
 umbrales = [85, 95, 100]
@@ -81,4 +102,11 @@ ventana_dias = 14
 min_puntos = 24
 
 [inventario]
-archivo = "config/inventario.ejemplo.json"
+archivo = "config/inventario.json"   # lo escribe: python -m opscentral generar-inventario
+
+[inventario.insumos]
+servidores_cm = "../capa-media-ops/inventario/servidores.json"
+bases         = "../oracle-agent-kiro-master/config/databases.json"
+bases_csv     = "../oracle-agent-kiro-master/docs/databases.csv"
+mapa_oracle   = "../zabbix-capacity-mcp-main/capacity-watchdog/config/oracle_map.yaml"
+relaciones    = "config/relaciones.json"   # opcional: [{"dominio": "...", "base": "...", "datasource": "..."}]

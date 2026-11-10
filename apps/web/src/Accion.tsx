@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, mensajeError } from "./api";
 import { Clase, Consola, Modal, Resultado, useAccion, useSegundoFactor, useSesion } from "./comun";
-import type { EspParam, Evaluacion, Ejecucion, Inventario } from "./tipos";
+import type { Caso, EspParam, Evaluacion, Ejecucion, Inventario } from "./tipos";
 
 type Props = {
   accion: string;
@@ -14,7 +14,7 @@ type Props = {
 };
 
 const NOMBRES: Record<string, string> = {
-  base: "Base", cambio: "N.º de cambio", momento: "Momento", esquema: "Esquema", usuario: "Usuario",
+  base: "Base", cambio: "Referencia", momento: "Momento", esquema: "Esquema", usuario: "Usuario",
   sid: "SID", serial: "Serial#", inst_id: "Instancia", motivo: "Motivo", host: "Servidor", hosts: "Servidores",
   dominios: "Dominios", tablespace: "Tablespace", diskgroup: "Diskgroup", tamano_gb: "Tamaño (GB)",
   maximo_gb: "Máximo (GB)", propietario: "Propietario", objeto: "Objeto", tipo_objeto: "Tipo de objeto",
@@ -24,14 +24,19 @@ const NOMBRES: Record<string, string> = {
 const TIPOS_OBJETO = ["PACKAGE", "PACKAGE BODY", "PROCEDURE", "FUNCTION", "TRIGGER", "VIEW", "TYPE", "TYPE BODY",
   "SYNONYM", "MATERIALIZED VIEW"];
 
+const RE_REFERENCIA = /^[A-Za-z0-9][A-Za-z0-9_\-/.]{2,39}$/;
+const RE_CLAVE_JIRA = /^[A-Z][A-Z0-9_]{1,19}-[0-9]{1,9}$/;
+
 /** Formulario genérico: se construye con el esquema de parámetros del catálogo.
- *  Flujo: evaluar → confirmar con los controles exigidos → ejecutar → consola en vivo. */
+ *  Flujo: (caso opcional de Jira) → evaluar → confirmar → ejecutar directo → consola en vivo.
+ *  Cada ejecución queda en el log de ejecuciones con su evidencia. */
 export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta, compacto, alTerminar }: Props) {
   const acc = useAccion(accion);
   const { yo, avisar } = useSesion();
   const qc = useQueryClient();
   const conSegundoFactor = useSegundoFactor();
   const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
+  const salud = useQuery({ queryKey: ["salud"], queryFn: () => api.get<{ jira?: boolean }>("/api/salud"), staleTime: 300_000 });
   const [valores, setValores] = useState<Record<string, unknown>>(() => ({ ...iniciales }));
   const [ev, setEv] = useState<Evaluacion | null>(null);
   const [cambio, setCambio] = useState("");
@@ -40,10 +45,49 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
   const [ocupado, setOcupado] = useState(false);
   const [ejec, setEjec] = useState<Ejecucion | null>(null);
   const [final, setFinal] = useState<Ejecucion | null>(null);
+  const [caso, setCaso] = useState<Caso | null>(null);
+  const [errorCaso, setErrorCaso] = useState("");
+  const [buscandoCaso, setBuscandoCaso] = useState(false);
 
   if (!acc) return null;
   const v = { ...valores, ...iniciales }; // lo que fija la pantalla manda
   const puede = acc.permiso === "ejecuta" && acc.estado === "implementada";
+  // La referencia del caso va en el parámetro 'cambio' si la acción lo declara (snapshots); si no, aparte.
+  const refEnParams = "cambio" in acc.parametros;
+  const referencia = refEnParams ? String(v.cambio ?? "") : cambio;
+  const ponerReferencia = (x: string) => (refEnParams ? setValores((p) => ({ ...p, cambio: x })) : setCambio(x));
+  const verCaso = puede && !("cambio" in iniciales);
+
+  async function traerCaso() {
+    const clave = referencia.trim().toUpperCase();
+    setErrorCaso("");
+    if (!RE_CLAVE_JIRA.test(clave)) {
+      setErrorCaso("Escribe una clave de Jira (PROYECTO-123) para traer el caso.");
+      return;
+    }
+    setBuscandoCaso(true);
+    try {
+      const c = await api.get<Caso>(`/api/casos/${encodeURIComponent(clave)}?accion=${encodeURIComponent(accion)}`);
+      setCaso(c);
+      ponerReferencia(c.clave);
+      // Completa solo lo que está vacío: lo que escribió la persona o fija la pantalla manda.
+      setValores((p) => {
+        const n = { ...p };
+        for (const [k, x] of Object.entries(c.sugeridos)) {
+          if (k === "cambio" || !(k in acc!.parametros) || k in iniciales) continue;
+          if (n[k] === undefined || n[k] === "") n[k] = x;
+        }
+        return n;
+      });
+      const m = c.sugeridos.motivo ?? c.sugeridos.justificacion;
+      if (m && !motivo) setMotivo(String(m));
+    } catch (e) {
+      setCaso(null);
+      setErrorCaso(mensajeError(e));
+    } finally {
+      setBuscandoCaso(false);
+    }
+  }
 
   function params() {
     const p: Record<string, unknown> = {};
@@ -64,8 +108,8 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
         setError(r.motivo);
         return;
       }
-      setCambio(String(v.cambio ?? ""));
-      setMotivo(String(v.motivo ?? v.justificacion ?? ""));
+      if (refEnParams) setCambio(String(v.cambio ?? ""));
+      if (!motivo) setMotivo(String(v.motivo ?? v.justificacion ?? ""));
       setEv(r);
     } catch (e) {
       setError(mensajeError(e));
@@ -88,6 +132,7 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
       qc.invalidateQueries({ queryKey: ["inicio"] });
       qc.invalidateQueries({ queryKey: ["ejecuciones"] });
       if (r.estado === "pendiente_aprobacion") avisar("Solicitud enviada: queda pendiente de aprobación.");
+      else avisar(`Ejecución ${r.id} en curso: queda registrada en el log de ejecuciones.`);
     } catch (e) {
       setError(mensajeError(e));
     } finally {
@@ -126,6 +171,26 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
             <Campo key={k} nombre={k} esp={esp} valor={v[k]} inv={inv.data} disabled={!puede}
                    cambiar={(x) => setValores((p) => ({ ...p, [k]: x }))} />
           ))}
+        </div>
+      )}
+      {verCaso && (
+        <div className="mt">
+          <label className="lb" htmlFor={`caso-${accion}`}>Caso asociado (opcional: Jira, incidente, cambio, tarea…)</label>
+          <div className="fila">
+            <input id={`caso-${accion}`} className="f" style={{ flex: 1, minWidth: 180 }} value={referencia} maxLength={40}
+                   placeholder="OPS-123 o cualquier referencia" onChange={(e) => { ponerReferencia(e.target.value.toUpperCase().trim()); setCaso(null); }} />
+            {salud.data?.jira && (
+              <button type="button" className="btn ghost" disabled={buscandoCaso || !referencia} onClick={traerCaso}>
+                {buscandoCaso ? "Consultando…" : "Traer de Jira"}
+              </button>
+            )}
+          </div>
+          {salud.data && !salud.data.jira && referencia && (
+            <div className="muted small mt">Jira no está configurado: la referencia queda registrada como texto libre.</div>
+          )}
+          {referencia && !RE_REFERENCIA.test(referencia) && <div className="err-campo">3 a 40 caracteres: letras, números, - _ . /</div>}
+          {errorCaso && <div className="err-campo">{errorCaso}</div>}
+          {caso && <TarjetaCaso c={caso} />}
         </div>
       )}
       {acc.estado !== "implementada" && <div className="info mt">Catalogada: se implementa en una etapa posterior.</div>}
@@ -178,12 +243,18 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
           {ev.requiere_segundo_factor && !yo.mfa_reciente && (
             <div className="warnbox mt">Se pedirá segundo factor al confirmar.</div>
           )}
-          {(ev.requiere_cambio || cambio) && !("cambio" in acc.parametros) && (
+          {!ev.requiere_aprobacion && (
+            <div className="info mt">Ejecución directa con tu permiso de ejecución: queda registrada en el log de
+              ejecuciones con su evidencia.</div>
+          )}
+          {!refEnParams && (
             <>
-              <label className="lb mt">N.º de cambio o ticket {ev.requiere_cambio && "(obligatorio)"}</label>
-              <input className="f" value={cambio} placeholder="CHG0012345" onChange={(e) => setCambio(e.target.value.toUpperCase())} />
+              <label className="lb mt">Caso asociado {ev.requiere_cambio ? "(obligatorio por política)" : "(opcional)"}</label>
+              <input className="f" value={cambio} maxLength={40} placeholder="OPS-123 o cualquier referencia"
+                     onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
             </>
           )}
+          {caso && <TarjetaCaso c={caso} />}
           {(ev.clase === "C" || ev.clase === "O") && !("motivo" in acc.parametros) && !("justificacion" in acc.parametros) && (
             <>
               <label className="lb mt">Motivo {ev.clase === "C" && "(obligatorio)"}</label>
@@ -195,6 +266,27 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
           {error && <div className="critbox mt">{error}</div>}
         </Modal>
       )}
+    </div>
+  );
+}
+
+function TarjetaCaso({ c }: { c: Caso }) {
+  return (
+    <div className="caso-box">
+      <div className="fila entre">
+        <b>{c.clave} · {c.resumen}</b>
+        <a className="small" href={c.url} target="_blank" rel="noreferrer">Abrir en Jira ↗</a>
+      </div>
+      <div className="kv small">
+        <span>Tipo / estado</span><b>{c.tipo || "—"} · {c.estado || "—"}</b>
+        <span>Prioridad</span><b>{c.prioridad || "—"}</b>
+        <span>Asignado</span><b>{c.asignado}</b>
+        {Object.keys(c.sugeridos).filter((k) => k !== "cambio").length > 0 && (
+          <><span>Completado</span><b>{Object.entries(c.sugeridos).filter(([k]) => k !== "cambio" && k !== "justificacion")
+            .map(([k, x]) => `${NOMBRES[k] ?? k}: ${String(x)}`).join(" · ")}</b></>
+        )}
+      </div>
+      {c.descripcion && <div className="caso-desc muted">{c.descripcion}</div>}
     </div>
   );
 }

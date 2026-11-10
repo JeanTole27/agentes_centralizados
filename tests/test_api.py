@@ -51,24 +51,77 @@ def test_solicitud_permisos_y_segundo_factor(app):
         "params": {"base": "CORPRD", "sid": 1234, "serial": 5678, "motivo": "lo intenta Capa Media"}, "cambio": "CHG777"})
     assert r.status_code == 403
 
-    prod = {"params": {"base": "CORPRD", "sid": 1234, "serial": 5678, "motivo": "Batch colgado en cierre"},
-            "cambio": "CHG777"}
+    prod = {"params": {"base": "CORPRD", "sid": 1234, "serial": 5678, "motivo": "Batch colgado en cierre"}}
+    # Con permiso: ejecución directa (sin cola de aprobación), sin caso obligatorio, con segundo factor en PROD
     ev = dba.post("/api/acciones/bd.ses.terminar/evaluar", json=prod, headers=H).json()
-    assert ev["requiere_aprobacion"] and ev["requiere_segundo_factor"] and ev["ambiente"] == "PROD"
+    assert not ev["requiere_aprobacion"] and ev["ejecucion_directa"] and ev["requiere_segundo_factor"]
     assert dba.post("/api/acciones/bd.ses.terminar/ejecuciones", json=prod, headers=H).status_code == 428
     dba.post("/api/auth/dev/segundo-factor", headers=H)
     r = dba.post("/api/acciones/bd.ses.terminar/ejecuciones", json=prod, headers=H)
+    assert r.status_code == 202 and r.json()["estado"] == "en_cola" and "token_aprobacion" not in r.json()
+    assert "Ejecución directa" in r.json()["comentario"]
+    dba.post(f"/api/ejecuciones/{r.json()['id']}/cancelar", headers=H)
+
+    # El caso es opcional; si se envía, queda en la ejecución
+    r = dba.post("/api/acciones/bd.ses.terminar/ejecuciones", json={**prod, "cambio": "OPS-123"}, headers=H)
+    assert r.status_code == 202 and r.json()["cambio"] == "OPS-123"
+    dba.post(f"/api/ejecuciones/{r.json()['id']}/cancelar", headers=H)
+    assert dba.post("/api/acciones/bd.ses.terminar/ejecuciones", json={**prod, "cambio": "x"},
+                    headers=H).status_code == 422                       # referencia inválida (muy corta)
+
+
+def test_cuatro_ojos_si_se_apaga_la_ejecucion_directa(cfg, api_n):
+    from opscentral import config
+    cfg2 = config.Config(config._fusionar(cfg, {"aprobaciones": {"ejecucion_directa": False}}))
+    api_n.cfg = api_n.ejecuciones.cfg = cfg2
+    app = crear_app(cfg2, api_n)
+    prod = {"params": {"base": "CORPRD", "sid": 1234, "serial": 5678, "motivo": "Batch colgado en cierre"}}
+    lider, dba = cliente(app, "lider.demo"), cliente(app, "dba.demo")
+    assert "aprobaciones" in {p["id"] for g in lider.get("/api/auth/yo").json()["menu"] for p in g["pantallas"]}
+    lider.post("/api/auth/dev/segundo-factor", headers=H)
+    ev = lider.post("/api/acciones/bd.ses.terminar/evaluar", json=prod, headers=H).json()
+    assert ev["requiere_aprobacion"] and not ev["ejecucion_directa"]
+    r = lider.post("/api/acciones/bd.ses.terminar/ejecuciones", json=prod, headers=H)
     assert r.status_code == 202 and r.json()["estado"] == "pendiente_aprobacion"
     eid = r.json()["id"]
-
-    lider = cliente(app, "lider.demo")
-    assert [p["id"] for p in lider.get("/api/aprobaciones/pendientes").json()] == [eid]
-    assert dba.get("/api/aprobaciones/pendientes").json() == []          # no ve la propia
-    assert lider.post(f"/api/aprobaciones/{eid}/aprobar", json={}, headers=H).status_code == 428
-    lider.post("/api/auth/dev/segundo-factor", headers=H)
-    r = lider.post(f"/api/aprobaciones/{eid}/aprobar", json={"comentario": "ok"}, headers=H)
+    dba.post("/api/auth/dev/segundo-factor", headers=H)
+    assert [p["id"] for p in dba.get("/api/aprobaciones/pendientes").json()] == [eid]
+    assert lider.get("/api/aprobaciones/pendientes").json() == []        # no ve la propia
+    r = dba.post(f"/api/aprobaciones/{eid}/aprobar", json={"comentario": "ok"}, headers=H)
     assert r.status_code == 200 and r.json()["estado"] == "en_cola"
     assert "token_aprobacion" not in r.json()
+
+
+def test_registro_demo_con_perfil(app):
+    c = TestClient(app)
+    perfiles = [p["id"] for p in c.get("/api/auth/demo/perfiles").json()]
+    assert perfiles == ["cm", "dba", "adm", "aut"]
+    assert c.post("/api/auth/demo/registrar", json={"nombre": "Ana", "perfil": "lid"}, headers=H).status_code == 422
+    r = c.post("/api/auth/demo/registrar", json={"nombre": "María José Pérez", "perfil": "cm"}, headers=H)
+    assert r.status_code == 200 and r.json()["login"] == "maria.jose.perez" and r.json()["perfiles"] == ["cm"]
+    pantallas = {p["id"] for g in r.json()["menu"] for p in g["pantallas"]}
+    assert "aprobaciones" not in pantallas and "orquestacion" in pantallas      # sin cola de aprobación
+    # vuelve a entrar con otro perfil: se actualiza
+    r = c.post("/api/auth/demo/registrar", json={"nombre": "María José Pérez", "perfil": "dba"}, headers=H)
+    assert r.json()["perfiles"] == ["dba"]
+    assert [u["login"] for u in c.get("/api/auth/demo/usuarios").json()] == ["maria.jose.perez"]
+
+
+def test_automatizador_ejecuta_y_edita_todo(app):
+    c = TestClient(app)
+    yo = c.post("/api/auth/demo/registrar", json={"nombre": "Bot Automatizador", "perfil": "aut"}, headers=H).json()
+    pantallas = {p["id"]: p["solo_lectura"] for g in yo["menu"] for p in g["pantallas"]}
+    assert pantallas and not any(pantallas.values())                       # todo con edición
+    assert {"orquestacion", "snapshot", "admin", "ejecuciones"} <= set(pantallas)
+    cat = c.get("/api/catalogo").json()
+    assert cat and all(a["permiso"] == "ejecuta" for a in cat)
+    # ejecuta en BD y en Capa Media sin cola de aprobación
+    r = c.post("/api/acciones/bd.ses.bloqueos/ejecuciones", json={"params": {"base": "CORPRD"}}, headers=H)
+    assert r.status_code == 202 and r.json()["estado"] == "en_cola"
+    ev = c.post("/api/acciones/orq.stop/evaluar", headers=H,
+                json={"params": {"host": "WLPC02SBCC04", "dominios": "simondesa"}}).json()
+    assert ev["permitido"] and not ev["requiere_aprobacion"]
+    assert c.get("/api/auditoria/verificar").json()["integra"] is True
 
 
 def test_consulta_no_ejecuta_pero_lee(app, cfg, api_n):

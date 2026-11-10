@@ -31,7 +31,7 @@ CREATE TABLE ejec_ejecucion (
 	destino VARCHAR(120) NOT NULL, 
 	ambiente VARCHAR(10), 
 	params JSONB NOT NULL, 
-	cambio VARCHAR(30), 
+	cambio VARCHAR(40), 
 	motivo TEXT, 
 	solicitante VARCHAR(120) NOT NULL, 
 	estado VARCHAR(24) NOT NULL, 
@@ -51,15 +51,15 @@ CREATE TABLE ejec_ejecucion (
 	PRIMARY KEY (id)
 );
 
-CREATE INDEX ix_ejec_ejecucion_cambio ON ejec_ejecucion (cambio);
-
 CREATE INDEX ix_ejec_ejecucion_accion ON ejec_ejecucion (accion);
-
-CREATE INDEX ix_ejec_ejecucion_estado ON ejec_ejecucion (estado);
 
 CREATE INDEX ix_ejec_ejecucion_solicitante ON ejec_ejecucion (solicitante);
 
+CREATE INDEX ix_ejec_ejecucion_cambio ON ejec_ejecucion (cambio);
+
 CREATE INDEX ix_ejec_ejecucion_destino ON ejec_ejecucion (destino);
+
+CREATE INDEX ix_ejec_ejecucion_estado ON ejec_ejecucion (estado);
 
 CREATE TABLE ejec_linea (
 	id BIGSERIAL NOT NULL, 
@@ -120,9 +120,9 @@ CREATE TABLE evento_zabbix (
 	PRIMARY KEY (eventid)
 );
 
-CREATE INDEX ix_evento_zabbix_episodio_id ON evento_zabbix (episodio_id);
-
 CREATE INDEX ix_evento_zabbix_activo ON evento_zabbix (activo);
+
+CREATE INDEX ix_evento_zabbix_episodio_id ON evento_zabbix (episodio_id);
 
 CREATE TABLE ml_feedback (
 	id BIGSERIAL NOT NULL, 
@@ -193,6 +193,15 @@ CREATE INDEX ix_trabajo_clave ON ops_trabajo (clave_unica, estado);
 
 CREATE INDEX ix_trabajo_cola_estado ON ops_trabajo (cola, estado, ejecutar_desde);
 
+CREATE TABLE ops_usuario_demo (
+	login VARCHAR(60) NOT NULL, 
+	nombre VARCHAR(200) NOT NULL, 
+	perfil VARCHAR(10) NOT NULL, 
+	creado TIMESTAMP WITH TIME ZONE NOT NULL, 
+	ultimo_ingreso TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (login)
+);
+
 CREATE TABLE serie_punto_1h (
 	serie VARCHAR(200) NOT NULL, 
 	ts TIMESTAMP WITH TIME ZONE NOT NULL, 
@@ -203,7 +212,7 @@ CREATE TABLE serie_punto_1h (
 CREATE TABLE snap_snapshot (
 	id VARCHAR(32) NOT NULL, 
 	base VARCHAR(30) NOT NULL, 
-	cambio VARCHAR(30) NOT NULL, 
+	cambio VARCHAR(40) NOT NULL, 
 	momento VARCHAR(10) NOT NULL, 
 	tomado TIMESTAMP WITH TIME ZONE NOT NULL, 
 	datos JSONB NOT NULL, 

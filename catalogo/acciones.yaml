@@ -349,7 +349,9 @@ acciones:
     cm: ejecuta
     lid: ejecuta
     con: ve
-  estado: catalogada
+  parametros:
+    dominio: {tipo: texto, requerido: true, max_largo: 120}
+  estado: implementada
   cuenta_bd: consulta
 - id: cm.stuck_threads
   nombre: Hilos atascados por Managed Server (JMX/WLST)
@@ -372,7 +374,7 @@ acciones:
     con: ve
   estado: catalogada
 - id: bd.snap.tomar
-  nombre: Tomar snapshot (ANTES o DESPUÉS) asociado a un cambio
+  nombre: Tomar snapshot (ANTES o DESPUÉS) asociado a una referencia
   motor: bd
   clase: L
   perfiles:
@@ -441,7 +443,7 @@ acciones:
   estado: implementada
   cuenta_bd: consulta
 - id: bd.inv.recompilar
-  nombre: Recompilar solo los nuevos por el cambio + snapshot automático posterior
+  nombre: Recompilar solo los nuevos desde el snapshot ANTES + snapshot automático posterior
   motor: bd
   clase: O
   clase_prod: C
@@ -613,7 +615,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    min_segundos: {tipo: entero, min: 60, max: 86400, defecto: 300}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.flota
   nombre: Mapa de calor consolidado por base
@@ -671,7 +676,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.dataguard
   nombre: Rol, lag de transporte y aplicación, gaps
@@ -682,7 +689,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.rman
   nombre: Último backup por tipo y fallidos (7 días)
@@ -693,7 +702,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.jobs
   nombre: Jobs de scheduler fallidos o deshabilitados
@@ -704,7 +715,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.undo_temp
   nombre: UNDO (ORA-01555) y TEMP por sesión
@@ -715,7 +728,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.alertlog
   nombre: Errores ORA- del alert log (24 h)
@@ -726,7 +741,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.esperas
   nombre: Eventos de espera por base y correlación en flota
@@ -737,7 +754,9 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.salud.parametros
   nombre: Parámetros de inicialización; deriva primaria vs standby
@@ -748,7 +767,10 @@ acciones:
     lid: ejecuta
     cm: ve
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    base_comparar: {tipo: base}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.usr.estado
   nombre: Estado de una cuenta (bloqueada, expirada, perfil, último login)
@@ -781,7 +803,6 @@ acciones:
   nombre: Desbloquear cuenta
   motor: bd
   clase: C
-  requiere_ticket: true
   perfiles:
     dba: ejecuta
     lid: ejecuta
@@ -797,7 +818,6 @@ acciones:
   nombre: Restablecer clave (se entrega por canal seguro, no en pantalla)
   motor: bd
   clase: C
-  requiere_ticket: true
   perfiles:
     dba: ejecuta
     lid: ejecuta
@@ -811,7 +831,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    usuario: {tipo: identificador, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.ts.crecimiento
   nombre: Crecimiento 30 días y proyección de llenado
@@ -820,7 +843,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  nota: 'Crecimiento desde las series que guarda la recolección horaria (no usa AWR).'
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.ts.agregar_df
   nombre: Agregar datafile / ampliar (respeta ASM y `MAXSIZE`)
@@ -857,7 +883,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  nota: 'Lee las recomendaciones del Segment Advisor automático (DBMS_SPACE.ASA_RECOMMENDATIONS).'
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.asm.diskgroups
   nombre: Ocupación de diskgroups ASM
@@ -897,7 +926,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    criterio: {tipo: enum, valores: [CPU, ELAPSED, GETS], defecto: CPU}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.perf.plan
   nombre: Cambio de plan de un SQL_ID (planes históricos AWR)
@@ -906,7 +938,11 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    sql_id: {tipo: sql_id, requerido: true}
+  nota: 'Usa DBA_HIST_SQLSTAT (AWR): requiere licencia de Diagnostics Pack. Sin ella responde solo el plan actual.'
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.perf.longops
   nombre: Operaciones largas en curso
@@ -915,7 +951,9 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.stats.obsoletas
   nombre: Tablas con estadísticas obsoletas
@@ -924,7 +962,9 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.stats.recolectar
   nombre: Recolectar estadísticas de una tabla/esquema
@@ -991,7 +1031,10 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    esquema: {tipo: identificador}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.parches
   nombre: Parches aplicados
@@ -1000,7 +1043,9 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.esquema.diff
   nombre: Diferencias de objetos entre dos bases (QA vs PROD)
@@ -1009,7 +1054,11 @@ acciones:
   perfiles:
     dba: ejecuta
     lid: ejecuta
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    base_destino: {tipo: base, requerido: true}
+    esquema: {tipo: identificador, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.hoja_vida
   nombre: Hoja de vida de BD (snapshot de inventario y estado)
@@ -1019,7 +1068,9 @@ acciones:
     dba: ejecuta
     lid: ejecuta
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.analisis
   nombre: Análisis y plan de acción (Top-N, veredictos)
@@ -1029,7 +1080,9 @@ acciones:
     dba: ejecuta
     lid: ejecuta
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.diskgroups
   nombre: Diskgroups ASM por servidor
@@ -1039,7 +1092,9 @@ acciones:
     dba: ejecuta
     lid: ejecuta
     con: ve
-  estado: catalogada
+  parametros:
+    servidor: {tipo: texto, requerido: true, max_largo: 120}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.sql_costosas
   nombre: Sentencias costosas con detalle por `sql_id`
@@ -1049,7 +1104,10 @@ acciones:
     dba: ejecuta
     lid: ejecuta
     con: ve
-  estado: catalogada
+  parametros:
+    base: {tipo: base, requerido: true}
+    criterio: {tipo: enum, valores: [CPU, ELAPSED, GETS], defecto: ELAPSED}
+  estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.programar
   nombre: Programar cualquiera de los anteriores (diario/semanal)
@@ -1139,7 +1197,7 @@ acciones:
   motor: zabbix
   clase: N
   perfiles: {}
-  estado: catalogada
+  estado: implementada
 - id: zbx.evento.correlacionar
   nombre: Agrupar eventos en un episodio usando el grafo servidor → dominio → base y una ventana de 15 min
   motor: zabbix
@@ -1149,21 +1207,21 @@ acciones:
     cm: ve
     lid: ve
     con: ve
-  estado: catalogada
+  estado: implementada
 - id: zbx.problemas
   nombre: Leer problemas abiertos (respaldo por si se pierde un webhook)
   motor: zabbix
   clase: L
   sistema: true
   perfiles: {}
-  estado: catalogada
+  estado: implementada
 - id: zbx.trends
   nombre: Leer el agregado horario de las series para gráficos y ML
   motor: zabbix
   clase: L
   sistema: true
   perfiles: {}
-  estado: catalogada
+  estado: implementada
 - id: zbx.publicar
   nombre: Publicar predicciones y datos propios como ítems trapper
   motor: zabbix

@@ -29,7 +29,7 @@ class ConexionOracle:
         self._con = None
 
     def __enter__(self):
-        import oracledb  # import diferido: no se necesita en simulación
+        import oracledb  # import diferido: la API no lo necesita
         dsn = self.base.datos.get("dsn")
         if not dsn:
             raise ErrorBD(f"la base {self.base.id} no tiene DSN en el inventario")
@@ -54,7 +54,7 @@ class ConexionOracle:
         ok, msg = validar_lectura(sql)
         if not ok:
             raise ErrorBD(msg)
-        binds = {k: (params or {})[k] for k in BINDS.get(plantilla, ())}
+        binds = {k: (params or {}).get(k) for k in BINDS.get(plantilla, ())}   # opcionales llegan como NULL
         with self._con.cursor() as cur:
             cur.execute(sql, binds)
             cols = [c[0].lower() for c in cur.description]

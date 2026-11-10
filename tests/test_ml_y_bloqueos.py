@@ -5,7 +5,9 @@ from opscentral.bd.recompilar import plan
 from opscentral.bd.salud import evaluar
 from opscentral.bd.snapshot import armar, comparar
 from opscentral.ml.anomalias import evaluar as anomalia
-from opscentral.ml.llenado import predecir, serie_sintetica
+from opscentral.ml.llenado import predecir
+
+from .dobles.series import serie_sintetica
 
 
 def test_m1_crecimiento_lineal():

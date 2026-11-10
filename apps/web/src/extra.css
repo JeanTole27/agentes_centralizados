@@ -13,3 +13,8 @@
 @media (max-width: 900px) {
   .side.open { transform: none; }
 }
+
+/* Caso asociado (Jira, opcional) */
+.caso-box { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; margin-top: 10px; background: var(--acc-soft); }
+.caso-box .kv { margin-top: 6px; }
+.caso-desc { white-space: pre-wrap; max-height: 140px; overflow: auto; font-size: 12.5px; margin-top: 6px; }

@@ -184,11 +184,15 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
     BEGIN
       EXECUTE IMMEDIATE v_sql;
     EXCEPTION WHEN OTHERS THEN
-      NULL;  -- ORA-24344 (compilado con errores): se informa el estado final
+      IF SQLCODE <> -24344 THEN   -- ORA-24344 = compiló con errores: se informa el estado final
+        -- Cualquier otro error (p. ej. ORA-01031 sin privilegio) no se oculta como si fuera INVALID
+        bitacora('RECOMPILAR_OBJETO', p_ejecucion, v_tipo || ' ' || v_own || '.' || v_obj || ' -> ' || SQLERRM, 'ERROR');
+        RAISE_APPLICATION_ERROR(-20017, 'No se pudo recompilar ' || v_own || '.' || v_obj || ': ' || SQLERRM);
+      END IF;
     END;
     SELECT status INTO v_est FROM dba_objects WHERE owner = v_own AND object_name = v_obj AND object_type = v_tipo;
     p_resultado := v_est;
-    bitacora('RECOMPILAR_OBJETO', p_ejecucion, v_tipo || ' ' || v_own || '.' || v_obj, p_resultado);
+    bitacora('RECOMPILAR_OBJETO', p_ejecucion, v_tipo || ' ' || v_own || '.' || v_obj || ' (' || v_sql || ')', p_resultado);
   END;
 
   PROCEDURE COMPILAR_ESQUEMA(p_esquema IN VARCHAR2, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2) IS
@@ -207,12 +211,18 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
   PROCEDURE ACTUALIZAR_LINEA_BASE(p_operacion IN VARCHAR2, p_propietario IN VARCHAR2, p_objeto IN VARCHAR2,
                                   p_tipo_objeto IN VARCHAR2, p_justificacion IN VARCHAR2,
                                   p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2) IS
+    v_n NUMBER;
   BEGIN
     exigir_ejecucion(p_ejecucion);
     IF p_justificacion IS NULL OR LENGTH(p_justificacion) < 15 THEN
       RAISE_APPLICATION_ERROR(-20015, 'Justificación obligatoria (mínimo 15 caracteres)');
     END IF;
     IF UPPER(p_operacion) = 'AGREGAR' THEN
+      SELECT COUNT(*) INTO v_n FROM dba_objects
+       WHERE owner = UPPER(p_propietario) AND object_name = p_objeto AND object_type = UPPER(p_tipo_objeto);
+      IF v_n = 0 THEN
+        RAISE_APPLICATION_ERROR(-20013, 'El objeto no existe: no se agrega a la línea base');
+      END IF;
       MERGE INTO adminbd.tbl_base_objetos_invalidos t
       USING (SELECT UPPER(p_propietario) o, p_objeto n, UPPER(p_tipo_objeto) ty FROM dual) s
          ON (t.owner = s.o AND t.object_name = s.n AND t.object_type = s.ty)
@@ -247,6 +257,12 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
     EXCEPTION WHEN NO_DATA_FOUND THEN
       RAISE_APPLICATION_ERROR(-20031, 'El usuario no existe');
     END;
+    IF v_est NOT LIKE '%LOCKED%' THEN   -- idempotente: no se toca una cuenta que no está bloqueada
+      p_resultado := v_est;
+      bitacora('DESBLOQUEAR_USUARIO', p_ejecucion, p_usuario || ' no estaba bloqueada', p_resultado);
+      RETURN;
+    END IF;
+    -- EXPIRED & LOCKED: se desbloquea, pero la clave sigue vencida (el cambio de clave va por canal seguro)
     EXECUTE IMMEDIATE 'ALTER USER ' || DBMS_ASSERT.ENQUOTE_NAME(UPPER(p_usuario), FALSE) || ' ACCOUNT UNLOCK';
     SELECT account_status INTO p_resultado FROM dba_users WHERE username = UPPER(p_usuario);
     bitacora('DESBLOQUEAR_USUARIO', p_ejecucion, p_usuario || ' estaba ' || v_est, p_resultado);
@@ -255,16 +271,22 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
   -- -------------------------------------------------------------- espacio
   PROCEDURE AGREGAR_DATAFILE(p_tablespace IN VARCHAR2, p_diskgroup IN VARCHAR2, p_tamano_gb IN NUMBER,
                              p_maximo_gb IN NUMBER, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2) IS
-    v_n    NUMBER;
-    v_free NUMBER;
+    v_n       NUMBER;
+    v_free    NUMBER;
+    v_bigfile VARCHAR2(3);
   BEGIN
     exigir_ejecucion(p_ejecucion);
     IF p_tamano_gb NOT BETWEEN 1 AND 32 OR p_maximo_gb NOT BETWEEN p_tamano_gb AND 32 THEN
       RAISE_APPLICATION_ERROR(-20040, 'Tamaño fuera de rango (1–32 GB, máximo >= inicial)');
     END IF;
-    SELECT COUNT(*) INTO v_n FROM dba_tablespaces WHERE tablespace_name = UPPER(p_tablespace) AND contents = 'PERMANENT';
-    IF v_n = 0 THEN
+    BEGIN
+      SELECT bigfile INTO v_bigfile FROM dba_tablespaces
+       WHERE tablespace_name = UPPER(p_tablespace) AND contents = 'PERMANENT';
+    EXCEPTION WHEN NO_DATA_FOUND THEN
       RAISE_APPLICATION_ERROR(-20041, 'Tablespace inexistente o no permanente');
+    END;
+    IF v_bigfile = 'YES' THEN
+      RAISE_APPLICATION_ERROR(-20045, 'Tablespace BIGFILE: no admite más datafiles (se amplía con RESIZE, manual)');
     END IF;
     IF UPPER(p_tablespace) IN ('SYSTEM', 'SYSAUX') THEN
       RAISE_APPLICATION_ERROR(-20042, 'SYSTEM y SYSAUX se amplían manualmente');
@@ -331,6 +353,9 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
     v_nom VARCHAR2(300);
   BEGIN
     exigir_ejecucion(p_ejecucion);
+    IF p_habilitar IS NULL OR p_habilitar NOT IN ('S', 'N') THEN
+      RAISE_APPLICATION_ERROR(-20062, 'p_habilitar debe ser S o N');
+    END IF;
     validar_job(p_propietario, p_job);
     v_nom := DBMS_ASSERT.ENQUOTE_NAME(UPPER(p_propietario), FALSE) || '.' || DBMS_ASSERT.ENQUOTE_NAME(UPPER(p_job), FALSE);
     IF p_habilitar = 'S' THEN

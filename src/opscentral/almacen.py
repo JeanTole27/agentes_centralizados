@@ -52,6 +52,15 @@ intento_ingreso = Table(
     TS("bloqueado_hasta"),
 )
 
+# Personas registradas en la demo (auth.proveedor = "demo"): nombre y perfil elegido, sin contraseña.
+usuario_demo = Table(
+    "ops_usuario_demo", meta,
+    Column("login", String(60), primary_key=True),
+    Column("nombre", String(200), nullable=False),
+    Column("perfil", String(10), nullable=False),
+    TS("creado", nullable=False), TS("ultimo_ingreso", nullable=False),
+)
+
 # ----------------------------------------------------------------- ejec: ejecuciones
 ejecucion = Table(
     "ejec_ejecucion", meta,
@@ -62,7 +71,7 @@ ejecucion = Table(
     Column("destino", String(120), nullable=False, index=True),
     Column("ambiente", String(10)),
     Column("params", JSONV, nullable=False),
-    Column("cambio", String(30), index=True),
+    Column("cambio", String(40), index=True),        # referencia del caso (opcional, p. ej. clave de Jira)
     Column("motivo", Text),
     Column("solicitante", String(120), nullable=False, index=True),
     Column("estado", String(24), nullable=False, index=True),
@@ -149,7 +158,7 @@ snapshot = Table(
     "snap_snapshot", meta,
     Column("id", String(32), primary_key=True),
     Column("base", String(30), nullable=False),
-    Column("cambio", String(30), nullable=False),
+    Column("cambio", String(40), nullable=False),
     Column("momento", String(10), nullable=False),         # ANTES | DESPUES | FINAL
     TS("tomado", nullable=False),
     Column("datos", JSONV, nullable=False),

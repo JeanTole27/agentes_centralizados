@@ -32,7 +32,8 @@ class Inventario:
             self._agregar(Activo(s["id"].upper(), "servidor", s.get("ambiente", "").upper(), s))
         for d in datos.get("dominios", []):
             a = self._agregar(Activo(d["id"], "dominio", d.get("ambiente", "").upper(), d))
-            self._unir(a.clave, f"servidor:{d['servidor'].upper()}")
+            for srv in d.get("servidores") or [d["servidor"]]:   # un dominio en clúster vive en varios nodos
+                self._unir(a.clave, f"servidor:{srv.upper()}")
         for b in datos.get("bases", []):
             a = self._agregar(Activo(b["id"].upper(), "base", b.get("ambiente", "").upper(), b))
             if b.get("servidor"):
@@ -94,6 +95,10 @@ class Inventario:
 
     def bases(self, ambiente: str | None = None) -> list[Activo]:
         return [a for a in self.activos.values() if a.tipo == "base" and (not ambiente or a.ambiente == ambiente)]
+
+    def hosts_zabbix(self, tipo: str | None = None) -> dict[str, Activo]:
+        """Nombre del host en Zabbix → activo (solo los que tienen zabbix_host)."""
+        return {h: a for h, a in self._por_zbx.items() if tipo is None or a.tipo == tipo}
 
     def servidores_de_equipo(self, equipo: str) -> set[str]:
         return {a.id for a in self.activos.values() if a.tipo == "servidor" and a.datos.get("equipo") == equipo}

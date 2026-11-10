@@ -20,7 +20,10 @@ AMBIENTES_PROTEGIDOS = {"PROD", "DRP"}
 
 RE_IDENT = re.compile(r"^[A-Za-z][A-Za-z0-9_$#]{0,127}$")
 RE_SQL_ID = re.compile(r"^[0-9a-z]{13}$")
-RE_CAMBIO = re.compile(r"^(CHG|RFC|CAB|INC)[-_]?[0-9]{3,10}$", re.IGNORECASE)
+# Referencia del caso: opcional y de formato libre (clave de Jira, incidente, cambio, requerimiento,
+# tarea, despliegue...). Mismo conjunto de caracteres que acepta cmops (3 a 40).
+RE_REFERENCIA = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-/.]{2,39}$")
+RE_CAMBIO = RE_REFERENCIA          # nombre anterior, se conserva por compatibilidad
 RE_BASE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,29}$")
 TIPOS_OBJETO = {"PACKAGE", "PACKAGE BODY", "TYPE", "TYPE BODY", "PROCEDURE", "FUNCTION", "TRIGGER",
                 "VIEW", "SYNONYM", "MATERIALIZED VIEW"}
@@ -44,7 +47,6 @@ class Accion:
     plantilla: str | None = None
     procedimiento: str | None = None
     cuenta_bd: str | None = None
-    requiere_ticket: bool = False
     sistema: bool = False
     bloqueo_impl: str | None = None
     nota: str | None = None
@@ -140,7 +142,8 @@ def _validar_valor(nombre: str, esp: dict, valor: Any) -> Any:
         return s
     if tipo == "cambio":
         if not RE_CAMBIO.match(s):
-            raise ErrorValidacion(f"'{nombre}' no es un número de cambio válido (CHG/RFC/INC + número)")
+            raise ErrorValidacion(f"'{nombre}' no es una referencia válida (3 a 40 caracteres: letras, números, "
+                                  "guion, guion bajo, punto o barra)")
         return s.upper()
     if tipo == "tipo_objeto":
         s = s.upper()

@@ -23,7 +23,9 @@ from .autorizacion import PermisoDenegado, permiso_de, puede_ver
 from .catalogo import ErrorValidacion
 from .config import Config, cargar
 from .ejecuciones import Conflicto, EstadoInvalido, RequiereStepUp
-from .identidad import SinPerfil, Usuario, construir_usuario, ingreso_dev
+from .almacen import usuario_demo
+from .identidad import NOMBRES_PERFIL, PERFILES_DEMO, SinPerfil, Usuario, construir_usuario, ingreso_demo, ingreso_dev
+from .jira import ErrorJira, JiraNoConfigurado, ServicioCasos
 from .limites import pedir_refresco
 from .nucleo import Nucleo, crear
 from .sesiones import Sesiones
@@ -49,6 +51,12 @@ class IngresoDev(BaseModel):
     login: str
 
 
+class RegistroDemo(BaseModel):
+    nombre: str
+    perfil: str
+    login: str = ""
+
+
 class PedidoRefresco(BaseModel):
     objeto: str
 
@@ -63,8 +71,12 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     ses = Sesiones(n.almacen, n.auditoria, cfg)
     app = FastAPI(title="Ops Central", version=VERSION, docs_url=None if cfg.es_produccion else "/api/docs",
                   openapi_url=None if cfg.es_produccion else "/api/openapi.json")
-    app.state.n, app.state.ses = n, ses
+    casos = ServicioCasos(cfg, n.secretos, n.inventario, n.catalogo)
+    app.state.n, app.state.ses, app.state.casos = n, ses, casos
     seguro = cfg.es_produccion
+    sin_auth = cfg["auth"]["proveedor"] in ("dev", "demo") and not cfg.es_produccion
+    directa = cfg["aprobaciones"].get("ejecucion_directa", cfg["aprobaciones"].get("dba_ejecuta_directo", True))
+    ocultar = frozenset({"aprobaciones"}) if directa else frozenset()
     oidc = None
     if cfg["auth"]["proveedor"] == "oidc":
         from .oidc import ClienteOIDC
@@ -80,7 +92,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         return h
 
     for tipo, cod in ((ErrorValidacion, 422), (PermisoDenegado, 403), (SinPerfil, 403), (Conflicto, 409),
-                      (EstadoInvalido, 409), (RequiereStepUp, 428), (KeyError, 404)):
+                      (EstadoInvalido, 409), (RequiereStepUp, 428), (KeyError, 404), (JiraNoConfigurado, 503),
+                      (ErrorJira, 502)):
         app.add_exception_handler(tipo, _err(cod))
 
     # -------------------------------------------------------------- seguridad de cada pedido
@@ -117,11 +130,49 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     # ============================================================== ingreso
     @app.get("/api/salud")
     def salud_api():
-        return {"ok": True, "version": VERSION, "simulacion": cfg.simulacion, "proveedor_ingreso": cfg["auth"]["proveedor"]}
+        return {"ok": True, "version": VERSION, "proveedor_ingreso": cfg["auth"]["proveedor"],
+                "ejecucion_directa": directa, "jira": casos.habilitado}
+
+    # ---- demo: registro con nombre + perfil (no hay autenticación construida todavía)
+    @app.get("/api/auth/demo/perfiles")
+    def perfiles_demo():
+        if not sin_auth:
+            raise HTTPException(404)
+        return [{"id": p, "nombre": NOMBRES_PERFIL[p]} for p in PERFILES_DEMO]
+
+    @app.get("/api/auth/demo/usuarios")
+    def usuarios_demo():
+        if not sin_auth:
+            raise HTTPException(404)
+        with n.almacen.tx() as con:
+            filas = con.execute(select(usuario_demo).order_by(usuario_demo.c.ultimo_ingreso.desc()).limit(30)).all()
+        return [{"login": f.login, "nombre": f.nombre, "perfil": f.perfil} for f in filas]
+
+    @app.post("/api/auth/demo/registrar")
+    def registrar_demo(datos: RegistroDemo, request: Request, response: Response):
+        if not sin_auth:
+            raise HTTPException(404)
+        try:
+            u = ingreso_demo(datos.nombre, datos.perfil, datos.login,
+                             ip=request.client.host if request.client else "")
+        except ValueError as e:
+            raise ErrorValidacion(str(e)) from None
+        t = utc()
+        with n.almacen.tx() as con:
+            existe = con.execute(select(usuario_demo.c.login).where(usuario_demo.c.login == u.login)).first()
+            if existe:
+                con.execute(usuario_demo.update().where(usuario_demo.c.login == u.login)
+                            .values(nombre=u.nombre, perfil=datos.perfil, ultimo_ingreso=t))
+            else:
+                con.execute(usuario_demo.insert().values(login=u.login, nombre=u.nombre, perfil=datos.perfil,
+                                                         creado=t, ultimo_ingreso=t))
+        n.auditoria.registrar("registro_demo", u.login, nombre=u.nombre, perfil=datos.perfil, nuevo=not existe)
+        _cookie(response, ses.crear(u, "demo"))
+        return _yo(u)
 
     @app.post("/api/auth/dev/ingresar")
     def ingresar_dev(datos: IngresoDev, request: Request, response: Response):
-        if cfg["auth"]["proveedor"] != "dev" or cfg.es_produccion:
+        if not sin_auth:
             raise HTTPException(404)
         u = ingreso_dev(datos.login, cfg["auth"]["grupos"], ip=request.client.host if request.client else "")
         _cookie(response, ses.crear(u, "dev"))
@@ -129,8 +180,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
 
     @app.post("/api/auth/dev/segundo-factor")
     def mfa_dev(request: Request, u: Usuario = Depends(usuario)):
-        """Simula el segundo factor (solo desarrollo). En OIDC: GET /api/auth/oidc/ingresar?stepup=1."""
-        if cfg["auth"]["proveedor"] != "dev" or cfg.es_produccion:
+        """Simula el segundo factor (solo desarrollo/demo). En OIDC: GET /api/auth/oidc/ingresar?stepup=1."""
+        if not sin_auth:
             raise HTTPException(404)
         ses.registrar_mfa(request.cookies[COOKIE], u.login)
         return {"mfa": True, "vigencia_min": cfg["auth"]["stepup_vigencia_min"]}
@@ -172,8 +223,9 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
 
     def _yo(u: Usuario) -> dict:
         return {"login": u.login, "nombre": u.nombre, "perfiles": sorted(u.perfiles), "equipo": u.equipo,
-                "mfa_reciente": u.mfa_reciente(cfg["auth"]["stepup_vigencia_min"]), "menu": menu.menu(u.perfiles),
-                "simulacion": cfg.simulacion}
+                "mfa_reciente": u.mfa_reciente(cfg["auth"]["stepup_vigencia_min"]),
+                "nombres_perfil": [NOMBRES_PERFIL.get(p, p) for p in sorted(u.perfiles)],
+                "menu": menu.menu(u.perfiles, ocultar)}
 
     @app.get("/api/auth/yo")
     def yo(u: Usuario = Depends(usuario)):
@@ -191,13 +243,27 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                             "parametros": a.parametros, "bloqueo": a.bloqueo_impl})
         return out
 
+    # ============================================================== casos (Jira, opcionales)
+    @app.get("/api/casos")
+    def buscar_casos(q: str = "", u: Usuario = Depends(usuario)):
+        return casos.buscar(q)
+
+    @app.get("/api/casos/{clave}")
+    def caso(clave: str, accion: str | None = None, u: Usuario = Depends(usuario)):
+        try:
+            c = casos.caso(clave, accion)
+        except ValueError as e:
+            raise ErrorValidacion(str(e)) from None
+        n.auditoria.registrar("caso_consultado", u.login, caso=c["clave"], accion=accion)
+        return c
+
     @app.post("/api/acciones/{accion_id}/evaluar")
     def evaluar(accion_id: str, s: SolicitudEjecucion, u: Usuario = Depends(usuario)):
         acc, p, dest, amb, d = n.ejecuciones.evaluar(u, accion_id, s.params, s.destino)
         return {"accion": acc.id, "destino": dest, "ambiente": amb, "clase": d.clase, "permitido": d.permitido,
                 "motivo": d.motivo, "controles": d.controles, "requiere_cambio": d.requiere_cambio,
                 "requiere_aprobacion": d.requiere_aprobacion, "requiere_segundo_factor": d.requiere_stepup,
-                "parametros": p}
+                "ejecucion_directa": d.directa, "parametros": p}
 
     @app.post("/api/acciones/{accion_id}/ejecuciones", status_code=202)
     def solicitar(accion_id: str, s: SolicitudEjecucion, u: Usuario = Depends(usuario)):
@@ -365,6 +431,17 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                            evento_zbx.c.estado, evento_zbx.c.inicio).where(evento_zbx.c.episodio_id == ep["id"]))]
         return eps
 
+    @app.get("/api/zabbix/estado")
+    def zabbix_estado(u: Usuario = Depends(usuario)):
+        """Última lectura de la API de Zabbix: respaldo de problemas y trends de capacidad."""
+        _exigir_ver(u, "zbx.evento.correlacionar")
+        out = {}
+        for clave, obj in (("problemas", "zbx:problemas"), ("capacidad", "zbx:capacidad")):
+            f = estado.leer(n.almacen, obj)
+            out[clave] = None if not f else {"datos": f["datos"], "actualizado": f["actualizado"],
+                                             "antiguedad_s": f["antiguedad_s"], "error": f["error"]}
+        return out
+
     # ============================================================== prevención
     @app.get("/api/prevencion/predicciones")
     def predicciones(equipo: str | None = None, u: Usuario = Depends(usuario)):
@@ -372,10 +449,14 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         with n.almacen.tx() as con:
             filas = [dict(f._mapping) for f in con.execute(
                 select(prediccion).where(prediccion.c.vigente.is_(True)).order_by(prediccion.c.calculada.desc()))]
-        if equipo == "bd":
-            filas = [f for f in filas if f["serie"].startswith(("ts:", "asm:", "fra:"))]
-        elif equipo == "cm":
-            filas = [f for f in filas if f["serie"].startswith(("fs:", "heap:"))]
+        def equipo_de(serie: str) -> str:
+            if serie.startswith(("ts:", "asm:", "fra:")):
+                return "bd"
+            # fs:/mem:/cpu: vienen de Zabbix: son del equipo dueño del servidor en el inventario
+            s = n.inventario.servidor(serie.split(":")[1]) if serie.startswith(("fs:", "mem:", "cpu:")) else None
+            return "bd" if s and s.datos.get("equipo") == "dba" else "cm"
+        if equipo in ("bd", "cm"):
+            filas = [f for f in filas if equipo_de(f["serie"]) == equipo]
         filas.sort(key=lambda f: ((f["datos"].get("umbrales", {}).get("100") or {}).get("dias") or 1e9))
         return {"en_sombra": True, "nota": "En evaluación: aún no se publican en Zabbix", "predicciones": filas}
 
@@ -452,7 +533,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         atencion = []
         for p in n.ejecuciones.pendientes_para(u):
             atencion.append({"tipo": "aprobacion", "texto": f"Aprobar {p['accion']} en {p['destino']}",
-                             "detalle": f"pedido por {p['solicitante']} · {p['cambio'] or 'sin cambio'}",
+                             "detalle": f"pedido por {p['solicitante']} · {p['cambio'] or 'sin caso'}",
                              "nivel": "warn", "ir": "aprobaciones", "id": p["id"]})
         for r in riesgos:
             if r["dias_100"] < 7:
@@ -480,7 +561,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
 
     # ============================================================== control
     @app.get("/api/auditoria/verificar")
-    def verificar_auditoria(u: Usuario = Depends(con_perfil("lid", "adm"))):
+    def verificar_auditoria(u: Usuario = Depends(con_perfil("lid", "adm", "aut"))):
         ok, filas, msg = n.auditoria.verificar()
         return {"integra": ok, "registros": filas, "mensaje": msg}
 

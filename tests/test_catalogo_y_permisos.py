@@ -1,7 +1,7 @@
 import pytest
 
 from opscentral import aprobaciones
-from opscentral.autorizacion import decidir, puede_aprobar
+from opscentral.autorizacion import decidir, permiso_de, puede_aprobar
 from opscentral.catalogo import Catalogo, ErrorValidacion
 from opscentral.identidad import SinPerfil, construir_usuario, perfiles_desde_grupos
 from opscentral.secretos import AccesoSecretoDenegado, Secretos, SecretosArchivo
@@ -50,13 +50,19 @@ def test_matriz_de_permisos(usuarios):
     terminar = CAT["bd.ses.terminar"]
     assert not decidir(cm, terminar, "TEST").permitido            # CM no ejecuta cambios BD
     assert not decidir(con, CAT["bd.ses.bloqueos"], "TEST").permitido  # consulta solo ve
-    d = decidir(dba, terminar, "PROD")
-    assert d.permitido and d.requiere_aprobacion and d.requiere_cambio and d.requiere_stepup
+    d = decidir(dba, terminar, "PROD")          # con permiso: directo, MFA, caso opcional
+    assert d.permitido and d.directa and not d.requiere_aprobacion and not d.requiere_cambio and d.requiere_stepup
+    assert decidir(dba, terminar, "PROD", exigir_referencia_prod=True).requiere_cambio
+    d = decidir(dba, terminar, "PROD", ejecucion_directa=False)
+    assert d.requiere_aprobacion and not d.directa
+    assert decidir(lid, terminar, "PROD").directa                  # sin cola de aprobación para nadie
+    assert not decidir(lid, CAT["bd.usr.desbloquear"], "TEST").requiere_cambio   # ya no exige ticket
     d = decidir(dba, CAT["bd.inv.recompilar"], "TEST")
     assert d.permitido and d.clase == "O" and not d.requiere_aprobacion
     assert decidir(dba, CAT["bd.inv.recompilar"], "PROD").clase == "C"
     assert not decidir(dba, CAT["orq.stop"], "DESA").permitido     # DBA no baja dominios
-    assert decidir(lid, CAT["orq.stop"], "PROD").requiere_aprobacion
+    assert not decidir(lid, CAT["orq.stop"], "PROD").requiere_aprobacion       # Capa Media: directo
+    assert decidir(lid, CAT["orq.stop"], "PROD", ejecucion_directa=False).requiere_aprobacion
     assert not decidir(dba, CAT["bd.grp.crear"], "TEST").permitido   # no cabe en OPS_DBA
 
 
@@ -88,3 +94,21 @@ def test_la_api_no_puede_leer_ops_dba():
     with pytest.raises(AccesoSecretoDenegado):
         Secretos(prov, "worker-cm").leer("oracle/PROD/OPS_CONSULTA")
     assert Secretos(prov, "worker-bd").leer("oracle/PROD/OPS_DBA")["usuario"] == "OPS_DBA"
+
+
+def test_automatizador_tiene_todos_los_permisos():
+    from opscentral.identidad import ingreso_demo
+    aut = ingreso_demo("Bot Automatizador", "aut")
+    assert all(permiso_de(aut, a) == "ejecuta" for a in CAT)
+    assert decidir(aut, CAT["orq.stop"], "DESA").permitido
+    assert decidir(aut, CAT["bd.ses.terminar"], "PROD").directa
+    assert not decidir(aut, CAT["bd.grp.crear"], "TEST").permitido      # lo no implementado sigue bloqueado
+
+
+def test_referencia_libre():
+    a = CAT["bd.snap.tomar"]
+    for ref in ("OPS-123", "DESPLIEGUE-NOMINA-1110", "CHG0012345", "INC40001", "tarea/proactiva.1"):
+        assert a.validar_parametros({"base": "CORTST", "cambio": ref, "momento": "ANTES"})["cambio"] == ref.upper()
+    for mala in ("ab", "con espacio", "x" * 41, "-empieza"):
+        with pytest.raises(ErrorValidacion):
+            a.validar_parametros({"base": "CORTST", "cambio": mala, "momento": "ANTES"})

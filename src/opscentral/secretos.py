@@ -3,7 +3,7 @@
 Las credenciales de destino no viven en variables de entorno ni en el repositorio.
 Cada componente se identifica con un CONTEXTO y solo lee las rutas que le tocan:
 
-  api          firma de aprobaciones, secreto del webhook de Zabbix, cliente OIDC
+  api          firma de aprobaciones, secreto del webhook de Zabbix, cliente OIDC, Jira (solo lectura de casos)
   worker-bd    oracle/<AMB>/OPS_CONSULTA y oracle/<AMB>/OPS_DBA
   worker-ingesta / worker-ml   oracle/<AMB>/OPS_CONSULTA, zabbix/*
   worker-cm    weblogic/* y la firma de certificados SSH
@@ -21,7 +21,7 @@ from typing import Any, Protocol
 import httpx
 
 POLITICA: dict[str, list[str]] = {
-    "api": ["ops/firma_aprobaciones", "zabbix/secreto_webhook", "auth/*", "almacen/*"],
+    "api": ["ops/firma_aprobaciones", "zabbix/secreto_webhook", "auth/*", "almacen/*", "jira/*"],
     "worker-bd": ["oracle/*/OPS_CONSULTA", "oracle/*/OPS_DBA", "ops/firma_aprobaciones", "almacen/*"],
     "worker-ingesta": ["oracle/*/OPS_CONSULTA", "zabbix/*", "almacen/*"],
     "worker-ml": ["zabbix/*", "almacen/*"],

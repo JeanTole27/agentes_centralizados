@@ -2,7 +2,7 @@
 
   worker-bd       cola bd       ejecuciones bd.*, refrescos y recolección de bases
   worker-cm       cola cm       ejecuciones de Capa Media (cmops)
-  worker-ingesta  cola ingesta  Zabbix (trends, problemas) — base para E4
+  worker-ingesta  cola ingesta  Zabbix: problemas (respaldo del webhook) y trends de capacidad
   worker-ml       cola ml       scoring y entrenamiento
 
 Cada worker es un proceso con su propio contexto de secretos: la API nunca
@@ -115,6 +115,38 @@ class Worker:
     def _t_recolectar(self, p: dict) -> None:
         self.motor_bd.barrido(p.get("ambiente"), persona="sistema", ejecucion_id="recoleccion",
                               emitir=lambda _t: None)
+
+    # -------------------------------------------------------------- Zabbix (cola ingesta)
+    def _zabbix(self, fn):
+        from .zabbix import ingesta
+        cli = ingesta.crear_cliente(self.n.cfg, self.n.secretos, self.n.inventario)
+        try:
+            return fn(ingesta, cli)
+        finally:
+            cli.cerrar()
+
+    def _t_zbx_problemas(self, p: dict) -> None:
+        from . import estado
+        try:
+            r = self._zabbix(lambda ing, cli: ing.sincronizar_problemas(
+                self.n.almacen, self.n.cola, self.n.inventario, cli, self.n.cfg))
+        except Exception as e:
+            estado.marcar_error(self.n.almacen, "zbx:problemas", "zbx.problemas", str(e), origen="zabbix")
+            raise
+        if r["nuevos"] or r["recuperados"]:
+            self.n.auditoria.registrar("zabbix_sincronizacion", self.nombre, abiertos=r["abiertos"],
+                                       nuevos=r["nuevos"], recuperados=r["recuperados"])
+
+    def _t_zbx_capacidad(self, p: dict) -> None:
+        from . import estado
+        try:
+            r = self._zabbix(lambda ing, cli: ing.recolectar_capacidad(self.n.almacen, self.n.inventario, cli,
+                                                                       self.n.cfg))
+        except Exception as e:
+            estado.marcar_error(self.n.almacen, "zbx:capacidad", "zbx.capacidad", str(e), origen="zabbix")
+            raise
+        if r["puntos_nuevos"]:   # hay datos nuevos: se recalculan las predicciones
+            self.n.cola.encolar("ml", "scoring", {}, clave_unica="plan:scoring")
 
     def _t_scoring(self, p: dict) -> None:
         from .ml.servicio import scoring

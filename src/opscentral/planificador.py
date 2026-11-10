@@ -2,6 +2,7 @@
 
 - Recolección de la flota cada 15 min (protegida por los límites de 04 §3).
 - Scoring de predicciones cada hora (en sombra).
+- Zabbix: problemas abiertos cada 5 min y trends de capacidad cada hora.
 - Vence aprobaciones sin respuesta y libera trabajos de workers caídos.
 """
 from __future__ import annotations
@@ -17,6 +18,8 @@ log = logging.getLogger("opscentral.planificador")
 TAREAS = {  # nombre: (cada_s, cola, tipo)
     "recolectar": (900, "bd", "recolectar"),
     "scoring": (3600, "ml", "scoring"),
+    "zbx_problemas": (300, "ingesta", "zbx_problemas"),    # respaldo del webhook
+    "zbx_capacidad": (3600, "ingesta", "zbx_capacidad"),   # trends → series de capacidad → scoring
 }
 
 

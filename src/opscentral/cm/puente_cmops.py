@@ -8,7 +8,7 @@ no se fusionan, 01 §7).
 
 Entrada (stdin, JSON):
   {"ruta_cmops", "accion", "params", "secretos", "persona", "rol", "cambio",
-   "simulacion", "llave", "ejecucion"}
+   "llave", "ejecucion"}
 Salida (stdout, una línea JSON por evento):
   {"t": "linea", "texto": ...}   ...   {"t": "fin", "estado": ..., "trabajo": ...}
   {"t": "error", "tipo": ..., "mensaje": ...}
@@ -36,9 +36,6 @@ def main():
     from cmops.trabajos import Conflicto, GestorTrabajos, PermisoDenegado
 
     cfg = cargar()
-    # Ops Central puede FORZAR simulación, nunca quitarla: si cmops está en simulación, sigue así.
-    if req.get("simulacion"):
-        cfg["modo_simulacion"] = True
     if req.get("llave"):
         cfg.setdefault("ssh", {})
         cfg["ssh"]["llave"] = req["llave"]       # ssh usa <llave>-cert.pub automáticamente

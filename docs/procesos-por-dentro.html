@@ -1,0 +1,539 @@
+<title>Ops Central por dentro</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: manual de operación. Índice fijo a la izquierda en escritorio, cada proceso como una banda con sus 5 etapas en fila (en columna en el teléfono). */
+:root {
+  --bg: #F3F5F8; --surface: #FFFFFF; --ink: #142031; --muted: #586679; --line: #D9E0E9;
+  --accent: #1D5BCC; --accent-soft: #E5EDFB;
+  --ok: #17784A; --ok-soft: #E2F3EA; --part: #9A5B00; --part-soft: #FBEFD9; --plan: #6345C2; --plan-soft: #ECE7FA;
+  --code-bg: #EEF1F6;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E131A; --surface: #151C26; --ink: #E4E9F0; --muted: #98A4B5; --line: #283242;
+  --accent: #7FA9FF; --accent-soft: #1A2740;
+  --ok: #4FC68D; --ok-soft: #12291F; --part: #E5A54A; --part-soft: #2D2210; --plan: #AD98F5; --plan-soft: #221C38;
+  --code-bg: #1C2532; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E131A; --surface: #151C26; --ink: #E4E9F0; --muted: #98A4B5; --line: #283242;
+  --accent: #7FA9FF; --accent-soft: #1A2740;
+  --ok: #4FC68D; --ok-soft: #12291F; --part: #E5A54A; --part-soft: #2D2210; --plan: #AD98F5; --plan-soft: #221C38;
+  --code-bg: #1C2532; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--f-body); }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code, .mono { font-family: var(--f-mono); font-size: .86em; }
+code { background: var(--code-bg); padding: .08em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+
+.marco { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; max-width: 1380px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+.indice { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; display: grid; gap: 4px; }
+.indice .eti { font: 600 11px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.indice a { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 6px;
+  color: var(--ink); text-decoration: none; font-size: 14px; }
+.indice a:hover { background: var(--accent-soft); }
+.indice a .punto { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+main { min-width: 0; display: grid; gap: 56px; }
+
+.cabecera { display: grid; gap: 14px; max-width: 70ch; }
+.cabecera .sobre { font: 600 12px/1 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.cabecera h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 700; }
+.cabecera p { margin: 0; color: var(--muted); font-size: 16.5px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13.5px; color: var(--muted); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--f-body); letter-spacing: .02em;
+  padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ok { color: var(--ok); background: var(--ok-soft); }
+.part { color: var(--part); background: var(--part-soft); }
+.plan { color: var(--plan); background: var(--plan-soft); }
+.punto.ok { background: var(--ok); } .punto.part { background: var(--part); } .punto.plan { background: var(--plan); }
+
+.vista { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px; display: grid; gap: 16px; }
+.vista h2 { font-size: 24px; }
+.vista p { margin: 0; color: var(--muted); max-width: 75ch; }
+.lienzo { overflow-x: auto; }
+.lienzo svg { display: block; min-width: 900px; width: 100%; height: auto; }
+.lienzo text { font-family: var(--f-body); }
+
+.etapas-eje { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.etapas-eje div { border-top: 3px solid var(--accent); padding-top: 8px; font-size: 13.5px; color: var(--muted); }
+.etapas-eje b { display: block; color: var(--ink); font-family: var(--f-display); font-size: 16px; }
+
+.proceso { display: grid; gap: 18px; scroll-margin-top: 24px; }
+.proceso-cab { display: grid; gap: 10px; }
+.proceso-cab .fila { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.proceso-cab h2 { font-size: 28px; font-weight: 700; }
+.proceso-cab .num { font: 500 13px/1 var(--f-mono); color: var(--muted); }
+.proceso-cab p { margin: 0; max-width: 78ch; }
+.datos { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--muted); }
+.datos b { color: var(--ink); font-weight: 600; }
+
+.etapas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.etapa { padding: 16px 16px 18px; border-left: 1px solid var(--line); min-width: 0; display: grid; align-content: start; gap: 10px; }
+.etapa:first-child { border-left: 0; }
+.etapa h3 { font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; color: var(--accent); }
+.etapa h3 .n { font: 500 12px/1 var(--f-mono); color: var(--muted); }
+.etapa ul { margin: 0; padding-left: 16px; display: grid; gap: 7px; font-size: 13.8px; line-height: 1.5; }
+.etapa li::marker { color: var(--muted); }
+.etapa .falta { font-size: 13px; color: var(--plan); border-top: 1px dashed var(--line); padding-top: 8px; }
+
+.nota { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; max-width: 90ch; }
+.nota b { color: var(--ink); }
+
+.garantias { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.garantias div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 14px; }
+.garantias b { display: block; font-family: var(--f-display); font-size: 16px; margin-bottom: 4px; }
+
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 1180px) {
+  .etapas { grid-template-columns: 1fr; }
+  .etapa { border-left: 0; border-top: 1px solid var(--line); grid-template-columns: 150px minmax(0, 1fr); column-gap: 16px; }
+  .etapa:first-child { border-top: 0; }
+  .etapa h3 { flex-direction: column; gap: 4px; }
+  .etapa .falta { grid-column: 2; }
+  .etapas-eje { display: none; }
+}
+@media (max-width: 900px) {
+  .marco { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 24px 60px; }
+  .indice { position: static; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .indice .eti { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .etapa { grid-template-columns: minmax(0, 1fr); }
+  .etapa h3 { flex-direction: row; }
+  .etapa .falta { grid-column: 1; }
+  .vista { padding: 18px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="marco">
+  <nav class="indice" aria-label="Procesos">
+    <p class="eti">Procesos</p>
+    <a href="#vista">Vista general</a>
+    <a href="#inventario">Inventario <span class="punto ok"></span></a>
+    <a href="#accion">Ciclo de una acción <span class="punto ok"></span></a>
+    <a href="#bd">Motor de BD <span class="punto ok"></span></a>
+    <a href="#recoleccion">Recolección y refresco <span class="punto ok"></span></a>
+    <a href="#cm">Motor de Capa Media <span class="punto ok"></span></a>
+    <a href="#alarmas">Alarmas de Zabbix <span class="punto part"></span></a>
+    <a href="#capacidad">Capacidad desde Zabbix <span class="punto ok"></span></a>
+    <a href="#ml">Modelos de ML <span class="punto part"></span></a>
+    <a href="#rag">Asistente RAG <span class="punto plan"></span></a>
+    <a href="#garantias">Garantías comunes</a>
+  </nav>
+
+  <main>
+    <header class="cabecera">
+      <span class="sobre">Ops Central · backend</span>
+      <h1>Cómo funciona cada proceso por dentro</h1>
+      <p>Cada proceso se explica en el mismo orden: de dónde trae los datos, cómo los procesa, cómo carga la función que va a correr, cómo la ejecuta y cómo se retroalimenta. Los nombres entre <code>así</code> son archivos, tablas o acciones del catálogo, para ubicarlos en el código.</p>
+      <div class="leyenda">
+        <span><span class="pill ok">En código</span> implementado y con pruebas</span>
+        <span><span class="pill part">Parcial</span> una parte en código, otra diseñada</span>
+        <span><span class="pill plan">Diseñado</span> definido en la propuesta, sin código aún</span>
+      </div>
+      <p class="mono" style="font-size:13px">Nada de esto se ha probado todavía contra Oracle, cmops, Zabbix ni Bedrock reales.</p>
+    </header>
+
+    <section class="vista" id="vista">
+      <h2>Vista general</h2>
+      <p>La interfaz nunca consulta en vivo las bases ni los servidores: solo lee el almacén. Los workers son los únicos que tocan los sistemas, cada uno con sus credenciales, y todo pasa por una cola guardada en el mismo almacén.</p>
+      <div class="lienzo">
+        <svg viewBox="0 0 980 430" role="img" aria-labelledby="t-vista">
+          <title id="t-vista">Flujo de datos: fuentes, workers, almacén, API e interfaz</title>
+          <defs>
+            <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"></path>
+            </marker>
+          </defs>
+          <style>
+            .caja { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+            .caja-a { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+            .caja-p { fill: var(--plan-soft); stroke: var(--plan); stroke-width: 1.2; stroke-dasharray: 5 4; }
+            .t1 { fill: var(--ink); font-size: 14px; font-weight: 600; }
+            .t2 { fill: var(--muted); font-size: 12px; }
+            .col { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; }
+            .ln { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+            .ln-p { stroke: var(--plan); stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; }
+          </style>
+          <text class="col" x="20" y="22">FUENTES</text>
+          <text class="col" x="250" y="22">WORKERS Y COLA</text>
+          <text class="col" x="520" y="22">ALMACÉN</text>
+          <text class="col" x="745" y="22">API E INTERFAZ</text>
+
+          <rect class="caja" x="20" y="38" width="190" height="56" rx="8"></rect>
+          <text class="t1" x="34" y="62">Oracle · 182 bases</text><text class="t2" x="34" y="80">OPS_CONSULTA / OPS_DBA</text>
+          <rect class="caja" x="20" y="106" width="190" height="56" rx="8"></rect>
+          <text class="t1" x="34" y="130">Servidores CM</text><text class="t2" x="34" y="148">WebLogic vía cmops + SSH</text>
+          <rect class="caja" x="20" y="174" width="190" height="56" rx="8"></rect>
+          <text class="t1" x="34" y="198">Zabbix</text><text class="t2" x="34" y="216">webhook · API de lectura</text>
+          <rect class="caja" x="20" y="242" width="190" height="56" rx="8"></rect>
+          <text class="t1" x="34" y="266">Insumos de inventario</text><text class="t2" x="34" y="284">JSON, CSV y YAML reales</text>
+          <rect class="caja-p" x="20" y="310" width="190" height="56" rx="8"></rect>
+          <text class="t1" x="34" y="334">Memoria Operativa</text><text class="t2" x="34" y="352">RAG pgvector + Bedrock</text>
+
+          <rect class="caja" x="250" y="38" width="220" height="44" rx="8"></rect>
+          <text class="t1" x="264" y="65">worker-bd</text><text class="t2" x="356" y="65">lecturas y cambios</text>
+          <rect class="caja" x="250" y="92" width="220" height="44" rx="8"></rect>
+          <text class="t1" x="264" y="119">worker-cm</text><text class="t2" x="356" y="119">puente a cmops</text>
+          <rect class="caja" x="250" y="146" width="220" height="44" rx="8"></rect>
+          <text class="t1" x="264" y="173">worker-ingesta</text><text class="t2" x="380" y="173">Zabbix</text>
+          <rect class="caja" x="250" y="200" width="220" height="44" rx="8"></rect>
+          <text class="t1" x="264" y="227">worker-ml</text><text class="t2" x="356" y="227">scoring horario</text>
+          <rect class="caja-a" x="250" y="262" width="220" height="56" rx="8"></rect>
+          <text class="t1" x="264" y="286">Cola + planificador</text><text class="t2" x="264" y="304">tabla de trabajos, sin Redis</text>
+
+          <rect class="caja-a" x="520" y="38" width="180" height="328" rx="8"></rect>
+          <text class="t1" x="534" y="64">Almacén</text>
+          <text class="t2" x="534" y="92">estado_actual</text>
+          <text class="t2" x="534" y="116">serie_punto</text>
+          <text class="t2" x="534" y="140">ejecucion · linea</text>
+          <text class="t2" x="534" y="164">evento_zbx · episodio</text>
+          <text class="t2" x="534" y="188">prediccion · feedback_ml</text>
+          <text class="t2" x="534" y="212">auditoria (cadena hash)</text>
+          <text class="t2" x="534" y="236">bloqueo_destino</text>
+          <text class="t2" x="534" y="260">cola de trabajos</text>
+          <text class="t2" x="534" y="296">SQLite en desarrollo</text>
+          <text class="t2" x="534" y="314">PostgreSQL 16 en producción</text>
+
+          <rect class="caja" x="745" y="38" width="215" height="80" rx="8"></rect>
+          <text class="t1" x="759" y="62">API FastAPI</text><text class="t2" x="759" y="82">valida, decide permisos,</text><text class="t2" x="759" y="100">responde 202 y emite SSE</text>
+          <rect class="caja" x="745" y="140" width="215" height="80" rx="8"></rect>
+          <text class="t1" x="759" y="164">Interfaz React</text><text class="t2" x="759" y="184">lee solo del almacén;</text><text class="t2" x="759" y="202">formularios del catálogo</text>
+          <rect class="caja" x="745" y="242" width="215" height="56" rx="8"></rect>
+          <text class="t1" x="759" y="266">Evidencia</text><text class="t2" x="759" y="284">JSON + SHA-256 por ejecución</text>
+
+          <path class="ln" d="M210 66 H250" marker-end="url(#fl)" marker-start="url(#fl)"></path>
+          <path class="ln" d="M210 134 H230 V114 H250" marker-end="url(#fl)" marker-start="url(#fl)"></path>
+          <path class="ln" d="M210 202 H230 V168 H250" marker-end="url(#fl)"></path>
+          <path class="ln" d="M470 60 H520" marker-end="url(#fl)"></path>
+          <path class="ln" d="M470 114 H520" marker-end="url(#fl)"></path>
+          <path class="ln" d="M470 168 H520" marker-end="url(#fl)"></path>
+          <path class="ln" d="M470 222 H520" marker-end="url(#fl)"></path>
+          <path class="ln" d="M470 290 H520" marker-end="url(#fl)" marker-start="url(#fl)"></path>
+          <path class="ln" d="M700 78 H745" marker-end="url(#fl)" marker-start="url(#fl)"></path>
+          <path class="ln" d="M852 118 V140" marker-end="url(#fl)" marker-start="url(#fl)"></path>
+          <path class="ln" d="M700 270 H745" marker-end="url(#fl)"></path>
+          <path class="ln" d="M210 270 H230 V400 H610 V366" marker-end="url(#fl)"></path>
+          <text class="t2" x="250" y="394">generar-inventario → config/inventario.json (lo cargan todos)</text>
+          <path class="ln-p" d="M210 338 H232 V420 H900 V220" marker-end="url(#fl)"></path>
+          <text class="t2" x="660" y="414" style="fill:var(--plan)">proxy /api/v1/asistente (diseñado)</text>
+        </svg>
+      </div>
+      <div class="etapas-eje" aria-hidden="true">
+        <div><b>1 · Trae</b>de qué fuente y con qué credencial</div>
+        <div><b>2 · Procesa</b>validación, reglas y cálculo</div>
+        <div><b>3 · Carga</b>qué función se arma y dónde queda</div>
+        <div><b>4 · Ejecuta</b>quién la corre y con qué límites</div>
+        <div><b>5 · Retroalimenta</b>qué guarda y qué mejora</div>
+      </div>
+    </section>
+
+    <!-- ============================================================ INVENTARIO -->
+    <section class="proceso" id="inventario">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">01</span><h2>Inventario</h2><span class="pill ok">En código</span></div>
+        <p>Es la base de todo lo demás: dice en qué ambiente está cada destino, a qué activo pertenece una alerta de Zabbix y qué activos están relacionados entre sí.</p>
+        <div class="datos"><span><b>Disparo:</b> <code>python -m opscentral generar-inventario</code></span><span><b>Código:</b> <code>inventario_insumos.py</code>, <code>inventario.py</code></span><span><b>Hoy:</b> 211 servidores · 177 dominios · 182 bases</span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li><code>capa-media-ops/inventario/servidores.json</code>: servidores, IP, ambientes y dominios WebLogic.</li>
+          <li><code>databases.json</code> del kit Oracle: alias, DSN y ambiente de cada base. <code>databases.csv</code>: criticidad y equipo dueño.</li>
+          <li><code>oracle_map.yaml</code> de zabbix-capacity: qué host de BD tiene cada IP.</li>
+          <li><code>config/relaciones.json</code> (opcional): dominio → base.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Traduce ambientes: desarrollo→DESA, pruebas→TEST, stage→QA, prod→PROD, drp→DRP. Con varios, se queda con el más protegido.</li>
+          <li>Un dominio con el mismo nombre y ambiente en varios nodos es uno solo, en clúster.</li>
+          <li>Id de base: el servicio si es único; si se repite (RAC o PROD/TEST), el alias del kit.</li>
+          <li>Servidor de la base por la IP del DSN: mapa de Oracle, luego Capa Media, luego <code>BD-&lt;ip&gt;</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Escribe <code>config/inventario.json</code>, sin credenciales.</li>
+          <li>Al arrancar, cada proceso arma un grafo en memoria servidor ↔ dominio ↔ base y un índice por <code>zabbix_host</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li><code>ambiente_de()</code> decide si un destino es PROD. Con una lista de hosts, gana el más protegido.</li>
+          <li>Un destino que no está en el inventario se trata como PROD.</li>
+          <li><code>por_zabbix()</code> asocia un evento a su activo; <code>relacionados(saltos=2)</code> sirve para agrupar alertas.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>El generador imprime avisos: bases sin nombre de host, servicios repetidos, relaciones ignoradas.</li>
+          <li><code>zabbix-probar</code> y la sincronización de problemas listan los hosts de Zabbix que faltan en el inventario.</li>
+          <li>Se corrige el insumo y se regenera; el archivo no se edita a mano.</li></ul>
+          <p class="falta">Falta: las relaciones dominio → base (los insumos no las traen) y 24 servidores de BD que hoy quedan solo con su IP.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ ACCION -->
+    <section class="proceso" id="accion">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">02</span><h2>Ciclo de una acción</h2><span class="pill ok">En código</span></div>
+        <p>Es el mismo camino para las 101 acciones del catálogo, sean de BD o de Capa Media: solicitar, aprobar si hace falta, encolar, ejecutar y dejar evidencia.</p>
+        <div class="datos"><span><b>Disparo:</b> botón de la interfaz → <code>POST /api/acciones/…</code></span><span><b>Código:</b> <code>ejecuciones.py</code>, <code>autorizacion.py</code>, <code>aprobaciones.py</code>, <code>workers.py</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>El formulario se genera con los parámetros de la acción en <code>catalogo/acciones.yaml</code>.</li>
+          <li>Cada acción declara su clase de riesgo (L, O, C, X), los perfiles que la ejecutan o solo la ven, el motor y la cuenta de BD.</li>
+          <li>La persona sale de la sesión: su perfil viene de los grupos <code>GG_OPS_*</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Valida tipos, enumerados y obligatorios. Cualquier parámetro que parezca una clave se rechaza.</li>
+          <li><code>decidir()</code> calcula permiso, aprobación, segundo factor y número de cambio según clase y ambiente.</li>
+          <li>Clase C en PROD/DRP: va a aprobación de otra persona, salvo que quien pide sea DBA con permiso <code>ejecuta</code>. En ese caso se ejecuta directo.</li>
+          <li>Calcula la huella SHA-256 de acción + destino + parámetros + cambio.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Crea la fila en <code>ejecucion</code> en estado <code>pendiente_aprobacion</code> o <code>en_cola</code>.</li>
+          <li>Al aprobar, o en ejecución directa, se firma un token JWT HS256 atado al id y a la huella. En la directa el aprobador es <code>politica:dba-directo</code>.</li>
+          <li>Encola un trabajo en la cola del motor: <code>bd</code>, <code>cm</code>, <code>ingesta</code> o <code>ml</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>El worker toma el trabajo (en PostgreSQL con <code>SKIP LOCKED</code>).</li>
+          <li><code>iniciar()</code> recalcula la huella y verifica el token. Si algo no cuadra, la ejecución queda bloqueada por seguridad.</li>
+          <li>Solo un cambio (clase O o C) a la vez por destino. Si está ocupado, se reprograma a los 60 s.</li>
+          <li>Cada línea de salida se guarda en <code>linea</code> y llega en vivo a la pantalla por SSE.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li><code>finalizar()</code> guarda la evidencia en JSON con su SHA-256, sin el token, y libera el destino.</li>
+          <li>La auditoría es de solo agregar y cada fila lleva el hash de la anterior. <code>verificar-auditoria</code> revisa la cadena.</li>
+          <li>El planificador vence las aprobaciones viejas y libera trabajos huérfanos a los 90 min.</li></ul></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ BD -->
+    <section class="proceso" id="bd">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">03</span><h2>Motor de BD (Oracle)</h2><span class="pill ok">En código</span></div>
+        <p>Corre las acciones de base de datos. La cuenta la decide la acción, no la persona: las lecturas usan <code>OPS_CONSULTA</code> y los cambios usan <code>OPS_DBA</code>, que solo puede llamar al paquete <code>ADMINBD.PKG_OPS_CENTRAL</code>.</p>
+        <div class="datos"><span><b>Disparo:</b> trabajo <code>ejecutar</code> en la cola <code>bd</code></span><span><b>Código:</b> <code>bd/servicio.py</code>, <code>bd/plantillas.py</code>, <code>bd/analisis.py</code>, <code>db/oracle/01_pkg_ops_central.sql</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Pide la credencial al gestor de secretos. Solo el worker de BD puede leer <code>OPS_DBA</code>; la API no.</li>
+          <li>Conecta con <code>oracledb</code> en modo thin, con <code>call_timeout</code> de 20 s.</li>
+          <li>Marca la sesión: <code>CLIENT_IDENTIFIER</code> = persona, <code>MODULE</code> = OpsCentral y <code>ACTION</code> = id de la ejecución. El DBA de turno lo ve en <code>V$SESSION</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Solo corre las 40 plantillas fijas. Cada una pasa la política de solo lectura y declara sus binds; nunca se arma SQL con texto del usuario.</li>
+          <li><code>analisis.py</code> convierte las filas en hallazgos rojo, amarillo o info. El veredicto es el nivel más alto. Los umbrales se cambian en <code>[bd.umbrales_analisis]</code>.</li>
+          <li>Si una plantilla falla (vista sin permiso, base sin Data Guard), queda en <code>errores</code> y las demás siguen.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>El despacho elige según la acción: plantilla simple, lectura analizada (<code>POR_ACCION</code>), función especial o procedimiento del paquete.</li>
+          <li>Pide turno: 1 sesión por base y 10 bases en paralelo.</li>
+          <li>Un circuit breaker deja de intentar una base durante 600 s después de 3 fallos seguidos.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li><b>Lecturas:</b> salud, top SQL, regresión de plan (AWR), diff de esquema y deriva de parámetros entre bases, hoja de vida y análisis.</li>
+          <li><b>Cambios:</b> terminar sesión, agregar datafile, recompilar, desbloquear usuario, jobs y línea base.</li>
+          <li>El PL/SQL vuelve a validar: rechaza tablespaces BIGFILE (-20045), trata ORA-24344 como compilado con advertencias y desbloquear dos veces no falla.</li>
+          <li>Recompilar toma una foto de los inválidos antes y después.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>Devuelve <code>{veredicto, hallazgos, resumen, datos, errores}</code>.</li>
+          <li><code>bd.rep.analisis</code> arma un plan de acción: cada hallazgo propone la acción del catálogo que lo resuelve.</li>
+          <li>En la base queda la bitácora del paquete y la auditoría unificada <code>POL_OPS_DBA</code>. Un trigger rechaza conexiones que no vengan de las IPs de los workers.</li></ul></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ RECOLECCION -->
+    <section class="proceso" id="recoleccion">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">04</span><h2>Recolección y refresco</h2><span class="pill ok">En código</span></div>
+        <p>Mantiene el último valor conocido de cada base para que las pantallas respondan rápido sin cargar las bases.</p>
+        <div class="datos"><span><b>Disparo:</b> planificador cada 900 s; refresco a demanda o por una alarma</span><span><b>Código:</b> <code>planificador.py</code>, <code>MotorBD.recolectar_base</code>, <code>bd/salud.py</code>, <code>limites.py</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Por cada base, con <code>OPS_CONSULTA</code>: instancia, tablespaces, diskgroups, bloqueos, inválidos y línea base.</li>
+          <li>Si la base no tiene ASM, los diskgroups quedan vacíos y la recolección sigue.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Arma el árbol de bloqueos y cuenta las sesiones bloqueadas.</li>
+          <li>Separa los inválidos nuevos de los que ya estaban en la línea base y de los de la papelera.</li>
+          <li><code>salud.evaluar()</code> da el semáforo con sus motivos. Tablespace en amarillo al 85 % y rojo al 95 %; diskgroup al 85/92 %; sesiones al 80 % de procesos.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Guarda en <code>estado_actual</code>: <code>bd:&lt;base&gt;:salud</code> y <code>bd:&lt;base&gt;:bloqueos</code>. Es lo único que lee la pantalla.</li>
+          <li>Agrega un punto por hora a las series <code>ts:&lt;base&gt;:&lt;tablespace&gt;</code> y <code>asm:…</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>El barrido recorre las bases en paralelo, con máximo 10 a la vez.</li>
+          <li>Un refresco pedido a mano o por Zabbix se limita a 1 cada 2 min por objeto. Los pedidos simultáneos se unen en uno.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>Si una base no responde queda en <code>sin_dato</code> con el error, sin tumbar el barrido.</li>
+          <li>Las series alimentan el modelo de llenado M1 y la acción de crecimiento de tablespaces.</li>
+          <li>Los inválidos fuera de la línea base suben el semáforo hasta que alguien los revise.</li></ul></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ CM -->
+    <section class="proceso" id="cm">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">05</span><h2>Motor de Capa Media</h2><span class="pill ok">En código</span></div>
+        <p>Ops Central no reescribe <code>cmops</code>: lo invoca en un proceso aparte, con el Python de Capa Media, y lee lo que va respondiendo.</p>
+        <div class="datos"><span><b>Disparo:</b> trabajo <code>ejecutar</code> en la cola <code>cm</code></span><span><b>Código:</b> <code>cm/adaptador.py</code>, <code>cm/puente_cmops.py</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Solo las acciones que lo necesitan leen la cuenta de WebLogic del gestor de secretos.</li>
+          <li>Con Vault se emite un certificado SSH de 10 min a nombre de la persona y de la ejecución.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Arma la petición: acción, parámetros (<code>host</code> pasa a <code>hosts</code> donde cmops lo espera), rol de cmops según el ambiente, número de cambio y persona.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Lanza <code>puente_cmops.py</code> con <code>python -I</code> y le pasa la petición en JSON por la entrada estándar.</li>
+          <li>El puente es compatible con Python 3.6 y solo usa la librería estándar, igual que cmops.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>cmops corre el trabajo en los servidores por SSH, con comando forzado y sudoers acotado.</li>
+          <li>Cada evento vuelve como una línea JSON: <code>linea</code>, <code>fin</code> o <code>error</code>.</li>
+          <li>Si pasa más de una hora, se mata el proceso.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>Las líneas van a la consola en vivo; el <code>fin</code> trae el estado del trabajo de cmops.</li>
+          <li>El certificado se borra siempre, también si hubo error.</li>
+          <li>Termina con evidencia y auditoría como cualquier otra ejecución.</li></ul>
+          <p class="falta">Falta validar con cmops real en WLPC02SBCC04. <code>cm.stuck_threads</code> y <code>cm.datasources</code> necesitan soporte en cmops.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ ALARMAS -->
+    <section class="proceso" id="alarmas">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">06</span><h2>Alarmas de Zabbix</h2><span class="pill part">Parcial</span></div>
+        <p>Zabbix sigue siendo el único canal que notifica a las personas. Ops Central no vuelve a avisar: agrupa las alertas relacionadas, refresca el activo afectado y propone la acción que corresponde.</p>
+        <div class="datos"><span><b>Disparo:</b> webhook al instante; respaldo con <code>problem.get</code> cada 300 s</span><span><b>Código:</b> <code>zabbix/webhook.py</code>, <code>procesar.py</code>, <code>episodios.py</code>, <code>ingesta.py</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Webhook con un tipo de medio propio. El cuerpo viene firmado con HMAC-SHA256 y se rechaza si llega con más de 5 min de diferencia.</li>
+          <li>Respaldo: <code>problem.get</code> + <code>trigger.get</code> con severidad mínima 2, con el token de solo lectura que solo ve el worker de ingesta.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>Normaliza el evento: id, host, severidad, problema o recuperación, mantenimiento y etiquetas.</li>
+          <li>Lo asocia a un activo por <code>zabbix_host</code>.</li>
+          <li>Episodio: dos eventos van juntos si sus activos están a 2 saltos o menos en el grafo y llegan con menos de 15 min de diferencia.</li>
+          <li>Causa probable: la base antes que el servidor, y el servidor antes que el dominio.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Guarda <code>evento_zbx</code> y crea o amplía el <code>episodio</code>.</li>
+          <li>Si el mismo evento llega dos veces no se duplica; un evento en mantenimiento no abre episodio.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>Si el activo es una base y no está en mantenimiento, pide un refresco dirigido de esa base.</li>
+          <li>Propone una acción según el nombre del trigger: lock → <code>bd.ses.bloqueos</code>, tablespace → <code>bd.salud.tablespaces</code>, stuck → <code>cm.stuck_threads</code>, frmweb → <code>frm.validar</code>.</li>
+          <li>Nunca la ejecuta sola: queda como sugerencia de un clic.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>La recuperación cierra el evento. El episodio se cierra cuando no le quedan eventos abiertos, y su duración queda como dato para ML.</li>
+          <li>Si un evento sigue abierto en Ops Central pero Zabbix ya no lo tiene, se cierra como recuperado.</li>
+          <li>Los hosts que no están en el inventario quedan listados en <code>zbx:problemas</code>.</li></ul>
+          <p class="falta">Diseñado, sin código: prediagnóstico del RAG dentro del flujo, comentario en Jira y crear el mantenimiento desde el cambio.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ CAPACIDAD -->
+    <section class="proceso" id="capacidad">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">07</span><h2>Capacidad desde Zabbix</h2><span class="pill ok">En código</span></div>
+        <p>Trae de Zabbix las series de disco, memoria y CPU de los servidores. Usa los trends (agregado horario), no la historia fina, para no cargar el servidor de Zabbix.</p>
+        <div class="datos"><span><b>Disparo:</b> planificador cada 3600 s</span><span><b>Código:</b> <code>zabbix/ingesta.py</code>, <code>zabbix/metricas.py</code>, <code>zabbix/cliente.py</code></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Hace <code>host.get</code>, luego <code>item.get</code> (ítems numéricos) y luego <code>trend.get</code> de los servidores del inventario.</li>
+          <li>Es incremental: pide desde el último punto guardado. La primera vez trae 30 días.</li>
+          <li>El cliente detecta la versión (6.0 a 8.0) y envía el token como <code>Bearer</code> o en el campo <code>auth</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>El catálogo de métricas traduce cada <code>key_</code> a una serie: <code>fs:&lt;host&gt;:&lt;punto&gt;</code>, <code>mem:&lt;host&gt;</code> o <code>cpu:&lt;host&gt;</code>.</li>
+          <li>Si hay dos ítems para la misma serie gana el de mayor prioridad. Tope de 40 ítems por host.</li>
+          <li>Convierte los valores; por ejemplo, porcentaje libre a porcentaje usado.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Inserta los puntos en <code>serie_punto</code>.</li>
+          <li>Guarda el resumen en <code>zbx:capacidad</code>.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>Si llegaron puntos nuevos, encola un scoring en la cola <code>ml</code>. Una clave única evita encolarlo dos veces.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>Lista los servidores del inventario que no existen en Zabbix (<code>faltan_en_zabbix</code>).</li>
+          <li>Si Zabbix falla, el estado queda marcado con el error para que la pantalla lo muestre.</li></ul></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ ML -->
+    <section class="proceso" id="ml">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">08</span><h2>Modelos de ML</h2><span class="pill part">Parcial</span></div>
+        <p>Predice cuándo se llena cada recurso y detecta comportamientos fuera de lo normal. Durante el piloto todo corre en sombra: se calcula y se mide, pero no se publica como alerta.</p>
+        <div class="datos"><span><b>Disparo:</b> scoring cada 3600 s y después de cada ingesta de capacidad</span><span><b>Código:</b> <code>ml/servicio.py</code>, <code>ml/llenado.py</code>, <code>ml/anomalias.py</code></span></div>
+        <div class="datos"><span><span class="pill ok">M1 llenado</span></span><span><span class="pill ok">M2 heap JVM</span></span><span><span class="pill part">M3 anomalías</span> función lista, sin programar</span><span><span class="pill ok">M4 episodios</span> por reglas</span><span><span class="pill plan">M5 riesgo 24 h</span></span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Lee de <code>serie_punto</code> los últimos 30 días de cada serie <code>ts:</code>, <code>asm:</code>, <code>fs:</code>, <code>fra:</code> y <code>heap:</code>.</li>
+          <li>Las series las llenan la recolección de BD y la ingesta de Zabbix.</li>
+          <li>Pide al menos 24 puntos y usa una ventana de 14 días.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li><b>M1:</b> detecta purgas (caídas mayores que 8 veces la MAD). Con 2 o más, la serie es diente de sierra y se proyectan los picos.</li>
+          <li>Agrupa en bloques de 6 h tomando el máximo y ajusta una pendiente Theil-Sen.</li>
+          <li>Si la pendiente de los últimos 3 días difiere más de 50 %, usa la reciente.</li>
+          <li>Banda P10–P90 con el intervalo de Sen. La confianza sale del R² y de la cantidad de puntos. Se compara con <code>timeleft()</code> de Zabbix.</li>
+          <li><b>M2:</b> lo mismo sobre el mínimo diario del heap después del GC. Si el piso sube, hay fuga.</li>
+          <li><b>M3:</b> z robusto = 0,6745 · (x − mediana) / MAD, contra el mismo día y hora de semanas anteriores.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Inserta en <code>prediccion</code> con <code>vigente</code> y <code>en_sombra</code>. La predicción anterior de la serie deja de estar vigente.</li>
+          <li>Resume en <code>ml:riesgos</code> lo que llega al 100 % en menos de 30 días, ordenado por fecha.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li>El worker de ML corre el scoring de todas las series.</li>
+          <li>La pantalla Prevención muestra días hasta 85/95/100 %, la banda, la confianza y una explicación en palabras.</li>
+          <li>"Proponer acción" abre la acción del catálogo, por ejemplo <code>bd.ts.agregar_df</code>, con su clase y su aprobación.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li>Los botones "Útil" y "Falsa alarma" se guardan en <code>feedback_ml</code>.</li>
+          <li>La duración de cada episodio de Zabbix queda como etiqueta.</li>
+          <li>Metas del piloto: anticipar 70 % de los llenados con 48 h o más, 2 falsas alarmas por semana como máximo y 60 % de predicciones marcadas útiles.</li></ul>
+          <p class="falta">Diseñado, sin código: reentrenamiento nocturno con backtest, bajar la sensibilidad de series con falsas alarmas, publicar a Zabbix por trapper (E7) y el modelo M5.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ RAG -->
+    <section class="proceso" id="rag">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">09</span><h2>Asistente RAG</h2><span class="pill plan">Diseñado</span></div>
+        <p>No se construye un RAG nuevo: se usa la Memoria Operativa que ya existe (pgvector + Bedrock, 4 endpoints). Ops Central le agrega el contexto de quién pregunta y sobre qué activo. Las 6 acciones <code>ia.*</code> están en el catálogo, pero todavía no tienen código.</p>
+        <div class="datos"><span><b>Disparo:</b> pregunta del usuario, botón Prediagnóstico en alertas e incidentes</span><span><b>Endpoints:</b> <code>/api/v1/asistente/*</code> → Memoria Operativa</span></div>
+      </div>
+      <div class="etapas">
+        <div class="etapa"><h3><span class="n">1</span>Trae los datos</h3><ul>
+          <li>Recibe la pregunta y el contexto: perfil, activo, episodio o incidente abierto.</li>
+          <li>Busca en el corpus de la Memoria Operativa (runbooks, incidentes de Jira, documentación) los fragmentos más parecidos por vector.</li></ul></div>
+        <div class="etapa"><h3><span class="n">2</span>Procesa</h3><ul>
+          <li>La API de Ops Central hace de proxy con una API key propia y con alcance limitado.</li>
+          <li>Al modelo no se le envían credenciales ni datos de negocio de las tablas: solo metadatos operativos y textos de runbooks.</li>
+          <li>El LLM corre en Bedrock, dentro de la cuenta de la organización.</li></ul></div>
+        <div class="etapa"><h3><span class="n">3</span>Carga</h3><ul>
+          <li>Arma la respuesta con sus fuentes citadas.</li>
+          <li><code>ia.herramienta</code>: el modelo solo puede llamar herramientas de solo lectura que el perfil de la persona tenga permitidas.</li></ul></div>
+        <div class="etapa"><h3><span class="n">4</span>Ejecuta</h3><ul>
+          <li><code>ia.preguntar</code>: pregunta en lenguaje natural con fuentes.</li>
+          <li><code>ia.prediagnostico</code>: incidentes parecidos + runbook para una alarma o un incidente.</li>
+          <li><code>ia.resumir</code>: resume un ticket, una ejecución o una ventana de cambio.</li>
+          <li><code>ia.proponer</code> convierte una sugerencia en propuesta, que entra al ciclo normal de una acción y pasa por aprobación. El asistente nunca ejecuta.</li></ul></div>
+        <div class="etapa"><h3><span class="n">5</span>Retroalimenta</h3><ul>
+          <li><code>ia.feedback</code>: 👍/👎 con comentario por respuesta, hacia <code>/feedback</code>.</li>
+          <li>Las preguntas sin respuesta van a <code>/gaps</code> y forman el backlog de documentación.</li></ul>
+          <p class="falta">Falta todo el código en Ops Central: el proxy, las 6 acciones <code>ia.*</code> y la llamada desde el flujo de alarmas.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ GARANTIAS -->
+    <section class="proceso" id="garantias">
+      <div class="proceso-cab">
+        <div class="fila"><span class="num">10</span><h2>Garantías comunes a todos los procesos</h2></div>
+      </div>
+      <div class="garantias">
+        <div><b>Secretos por componente</b>Cada proceso lee solo lo suyo: la API puede leer la firma de aprobaciones y el secreto del webhook; la ingesta, el token de Zabbix; el worker de BD, <code>OPS_DBA</code>.</div>
+        <div><b>La interfaz no decide</b>Muestra u oculta botones por perfil, pero la API vuelve a validar cada acción contra el catálogo.</div>
+        <div><b>Huella y token</b>Lo que se aprueba es exactamente lo que corre: cambiar un parámetro después invalida el token.</div>
+        <div><b>Un cambio por destino</b>Clase O y C toman un candado sobre el destino hasta terminar.</div>
+        <div><b>Evidencia y auditoría</b>Toda ejecución deja JSON con SHA-256, y la auditoría encadena los hashes de cada registro.</div>
+        <div><b>Sin simulación</b>El producto siempre habla con los sistemas reales. Los dobles para pruebas viven solo en <code>tests/dobles/</code>.</div>
+      </div>
+      <p class="nota"><b>Pendiente de validar contra sistemas reales:</b> paquete y cuentas en una base de TEST, cmops con certificado SSH, webhook y API de Zabbix, Vault, PostgreSQL 16, SSO y Memoria Operativa.</p>
+    </section>
+
+    <footer>Basado en el código de <code>ops-central/src/opscentral</code> y en los documentos 02 a 04 de <code>propuesta-ops-central</code>. 70 pruebas en verde.</footer>
+  </main>
+</div>

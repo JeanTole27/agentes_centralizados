@@ -21,7 +21,9 @@ export function Inicio() {
     <>
       <Cabecera titulo={`Hola, ${yo.nombre.split(" ")[0]}`} sub="Lo que necesita tu atención ahora. Todo sale del almacén de Ops Central." />
       <div className="kpis">
-        <Kpi t="Por aprobar" v={k.pendientes_aprobacion} c={k.pendientes_aprobacion ? "warn" : ""} ir={() => nav("/aprobaciones")} />
+        {yo.menu.some((g) => g.pantallas.some((p) => p.id === "aprobaciones")) && (
+          <Kpi t="Por aprobar" v={k.pendientes_aprobacion} c={k.pendientes_aprobacion ? "warn" : ""} ir={() => nav("/aprobaciones")} />
+        )}
         <Kpi t="En curso" v={k.en_curso} ir={() => nav("/ejecuciones")} />
         <Kpi t="Fallidas 24 h" v={k.fallidas_24h} c={k.fallidas_24h ? "crit" : ""} ir={() => nav("/ejecuciones")} />
         <Kpi t="Exitosas 24 h" v={k.exitosas_24h} c="ok" />
@@ -104,6 +106,7 @@ export function Alertas() {
           {["abierto", "cerrado"].map((e) => <button key={e} className={estado === e ? "on" : ""} onClick={() => setEstado(e)}>{e}s</button>)}
         </div>
       </Cabecera>
+      <EstadoZabbix />
       <Cargando q={q} />
       {q.data && q.data.length === 0 && <div className="card"><Vacio>No hay episodios {estado}s.</Vacio></div>}
       {q.data?.map((ep) => (
@@ -117,6 +120,35 @@ export function Alertas() {
         </div>
       ))}
     </>
+  );
+}
+
+/** Franja con la última lectura de la API de Zabbix (respaldo del webhook y trends de capacidad). */
+function EstadoZabbix() {
+  const q = useQuery({ queryKey: ["zabbix-estado"], queryFn: () => api.get<any>("/api/zabbix/estado") });
+  if (!q.data) return null;
+  const p = q.data.problemas, c = q.data.capacidad;
+  const version = p?.datos?.version ?? c?.datos?.version;
+  const faltan: string[] = [...(p?.datos?.hosts_sin_inventario ?? [])];
+  const error = p?.error || c?.error;
+  return (
+    <div className="card" style={{ padding: "10px 14px" }}>
+      <div className="fila" style={{ flexWrap: "wrap", gap: 8, fontSize: 12.5 }}>
+        <b>Zabbix{version ? " " + version : ""}</b>
+        {p ? <>
+          <span>Problemas abiertos: <b>{p.datos.abiertos}</b></span>
+          <span className="sub">respaldo del webhook cada 5 min</span>
+          <Antiguedad s={p.antiguedad_s} origen="problem.get" />
+        </> : <span className="sub">Todavía no se leyó la API de problemas.</span>}
+        {c && <>
+          <span>· Series de capacidad: <b>{c.datos.series?.length ?? 0}</b> de {c.datos.en_zabbix}/{c.datos.servidores} servidores</span>
+          <Antiguedad s={c.antiguedad_s} origen="trend.get" />
+        </>}
+      </div>
+      {error && <div className="warnbox mt">Última lectura con error: {error}. Se muestran los últimos datos buenos.</div>}
+      {faltan.length > 0 && <div className="info mt">Hosts con problemas que no están en el inventario: {faltan.join(", ")}.</div>}
+      {c?.datos?.faltan_en_zabbix?.length > 0 && <div className="info mt">Servidores del inventario que no existen en Zabbix: {c.datos.faltan_en_zabbix.join(", ")}.</div>}
+    </div>
   );
 }
 
@@ -304,7 +336,7 @@ export function Snapshot() {
   const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
   const [base, setBase] = useState("");
   const [cambio, setCambio] = useState("");
-  const listo = base && /^(CHG|RFC|CAB|INC)[-_]?[0-9]{3,10}$/.test(cambio);
+  const listo = base && /^[A-Za-z0-9][A-Za-z0-9_\-/.]{2,39}$/.test(cambio);
   const comp = useQuery({
     queryKey: ["snapshot", base, cambio], enabled: Boolean(listo), retry: false,
     queryFn: () => api.get<EstadoObj>(`/api/estado/bd/${base}/snapshot/${cambio}`),
@@ -322,12 +354,12 @@ export function Snapshot() {
               {inv.data?.bases.map((b) => <option key={b.id} value={b.id}>{b.id} · {b.ambiente}</option>)}
             </select>
           </label>
-          <label className="lb">N.º de cambio
-            <input className="f" value={cambio} placeholder="CHG0012345" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
+          <label className="lb">Referencia (caso, despliegue, tarea…)
+            <input className="f" value={cambio} maxLength={40} placeholder="OPS-123 o DESPLIEGUE-NOMINA-1110" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
           </label>
         </div>
       </div>
-      {!listo ? <div className="card"><Vacio>Elige la base y escribe el número de cambio (CHG/RFC/CAB/INC + dígitos).</Vacio></div> : (
+      {!listo ? <div className="card"><Vacio>Elige la base y escribe una referencia que agrupe el ANTES y el DESPUÉS (clave de Jira, nombre del despliegue…).</Vacio></div> : (
         <div className="g2">
           <div className="steps">
             <Paso n={1} t="Snapshot ANTES" d="Antes de desplegar.">
@@ -609,7 +641,7 @@ export function Aprobaciones() {
           <div className="kv">
             <span>Destino</span><b>{e.destino}</b>
             <span>Pedido por</span><b>{e.solicitante} · {fecha(e.creada)}</b>
-            <span>Cambio</span><b>{e.cambio ?? "—"}</b>
+            <span>Caso</span><b>{e.cambio ?? "—"}</b>
             <span>Motivo</span><b>{e.motivo ?? "—"}</b>
             <span>Huella</span><b className="mono-sm" title="Lo que apruebas: si algo cambia, la ejecución no corre">{e.huella.slice(0, 16)}…</b>
           </div>
@@ -637,7 +669,7 @@ export function Ejecuciones() {
   const q = useQuery({ queryKey: ["ejecuciones", estado, cambio], queryFn: () => api.get<Ejecucion[]>(`/api/ejecuciones${qs ? "?" + qs : ""}`), refetchInterval: 15_000 });
   return (
     <>
-      <Cabecera titulo="Ejecuciones" sub="Historial de lo que se pidió, quién lo aprobó y qué pasó. Cada ejecución cerrada deja evidencia con su SHA-256." />
+      <Cabecera titulo="Log de ejecuciones" sub="Todo lo que se ejecutó: quién, dónde, con qué caso (si lo hubo) y qué pasó. Cada ejecución cerrada deja evidencia con su SHA-256." />
       <div className="card">
         <div className="fgrid" style={{ marginBottom: 12 }}>
           <label className="lb">Estado
@@ -645,8 +677,8 @@ export function Ejecuciones() {
               {ESTADOS.map((s) => <option key={s} value={s}>{s ? s.replace("_", " ") : "Todos"}</option>)}
             </select>
           </label>
-          <label className="lb">N.º de cambio
-            <input className="f" value={cambio} placeholder="CHG…" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
+          <label className="lb">Caso / referencia
+            <input className="f" value={cambio} placeholder="OPS-123…" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
           </label>
         </div>
         <Cargando q={q} />
@@ -654,12 +686,12 @@ export function Ejecuciones() {
         {q.data && q.data.length > 0 && (
           <div className="tbl-wrap">
             <table>
-              <thead><tr><th>Creada</th><th>Acción</th><th>Destino</th><th>Clase</th><th>Solicitante</th><th>Aprobador</th><th>Cambio</th><th>Estado</th></tr></thead>
+              <thead><tr><th>Creada</th><th>Acción</th><th>Destino</th><th>Clase</th><th>Ejecutó</th><th>Caso</th><th>Motivo</th><th>Estado</th></tr></thead>
               <tbody>
                 {q.data.map((e) => (
                   <tr key={e.id} className={"click" + (sel === e.id ? " sel" : "")} onClick={() => setSel(e.id)}>
                     <td>{fecha(e.creada)}</td><td className="mono-sm">{e.accion}</td><td>{e.destino} <span className="muted small">{e.ambiente}</span></td>
-                    <td><Clase c={e.clase} /></td><td>{e.solicitante}</td><td>{e.aprobador ?? "—"}</td><td>{e.cambio ?? "—"}</td><td><EstadoEj e={e.estado} /></td>
+                    <td><Clase c={e.clase} /></td><td>{e.solicitante}</td><td>{e.cambio ?? "—"}</td><td className="small">{(e.motivo ?? "—").slice(0, 60)}</td><td><EstadoEj e={e.estado} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -703,9 +735,9 @@ function DetalleEjecucion({ id, cerrar }: { id: string; cerrar: () => void }) {
             <span>Estado</span><b><EstadoEj e={e.estado} /></b>
             <span>Destino</span><b>{e.destino} ({e.ambiente})</b>
             <span>Clase</span><b><Clase c={e.clase} /></b>
-            <span>Solicitante</span><b>{e.solicitante} · {fecha(e.creada)}</b>
-            <span>Aprobador</span><b>{e.aprobador ?? "—"}{e.comentario ? ` · “${e.comentario}”` : ""}</b>
-            <span>Cambio / motivo</span><b>{e.cambio ?? "—"} · {e.motivo ?? "—"}</b>
+            <span>Ejecutó</span><b>{e.solicitante} · {fecha(e.creada)}</b>
+            <span>Autorización</span><b>{e.aprobador && !e.aprobador.startsWith("politica:") ? `aprobada por ${e.aprobador}` : "ejecución directa (permiso de ejecución)"}{e.comentario ? ` · “${e.comentario}”` : ""}</b>
+            <span>Caso / motivo</span><b>{e.cambio ?? "sin caso"} · {e.motivo ?? "—"}</b>
             <span>Inicio / fin</span><b>{fecha(e.iniciada)} → {fecha(e.terminada)}</b>
             <span>Origen</span><b>{e.origen}</b>
           </div>

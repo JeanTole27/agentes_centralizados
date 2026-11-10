@@ -23,14 +23,23 @@ SENTENCIA = {  # solo para vista previa (bd.inv.generar); la ejecución real la 
 }
 
 
+def _q(nombre: str) -> str:
+    """Identificador entre comillas, como lo arma DBMS_ASSERT.ENQUOTE_NAME en el paquete: respeta
+    mayúsculas/minúsculas y caracteres como $ o #. Un nombre con comillas o caracteres de control
+    no se acepta (no viene del diccionario de Oracle)."""
+    if not nombre or '"' in nombre or any(ord(c) < 32 for c in nombre) or len(nombre) > 128:
+        raise ValueError(f"nombre de objeto inválido: {nombre!r}")
+    return f'"{nombre}"'
+
+
 def plan(nuevos: list[dict]) -> list[dict]:
     validos = [o for o in nuevos if not es_papelera(o) and o["object_type"].upper() in SENTENCIA]
     validos.sort(key=lambda o: (ORDEN.index(o["object_type"].upper()), o["owner"], o["object_name"]))
     out = []
     for o in validos:
         t = o["object_type"].upper()
-        s = (f"ALTER PUBLIC SYNONYM {o['object_name']} COMPILE" if t == "SYNONYM" and o["owner"] == "PUBLIC"
-             else SENTENCIA[t].format(o=o["owner"], n=o["object_name"]))
+        s = (f"ALTER PUBLIC SYNONYM {_q(o['object_name'])} COMPILE" if t == "SYNONYM" and o["owner"] == "PUBLIC"
+             else SENTENCIA[t].format(o=_q(o["owner"]), n=_q(o["object_name"])))
         out.append({**o, "sentencia": s})
     return out
 

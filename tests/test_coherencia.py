@@ -7,7 +7,7 @@ from sqlalchemy import select
 from opscentral import estado
 from opscentral.almacen import prediccion, serie_punto, utc
 from opscentral.api import crear_app
-from opscentral.ml.llenado import serie_sintetica
+from .dobles.series import serie_sintetica
 from opscentral.ml.servicio import scoring
 from opscentral.workers import Worker
 

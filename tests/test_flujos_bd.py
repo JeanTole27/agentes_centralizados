@@ -8,6 +8,7 @@ from opscentral.ejecuciones import RequiereStepUp
 from opscentral.workers import Worker
 
 from .conftest import con_mfa
+from .dobles.oracle_falso import simular_despliegue
 
 
 def correr(worker, veces=5):
@@ -20,6 +21,8 @@ def test_f2_snapshot_comparacion_y_recompilacion(api_n, bd_n, usuarios):
     w = Worker("bd", bd_n)
     ej, dba = api_n.ejecuciones, usuarios["dba"]
     for momento in ("ANTES", "DESPUES"):
+        if momento == "DESPUES":
+            simular_despliegue("CORTST")     # el despliegue deja 3 objetos inválidos nuevos
         e = ej.solicitar(dba, "bd.snap.tomar", {"base": "CORTST", "cambio": "CHG1001", "momento": momento})
         assert e["estado"] == "en_cola"
         correr(w)
@@ -45,38 +48,72 @@ def test_f2_snapshot_comparacion_y_recompilacion(api_n, bd_n, usuarios):
         {"PKG_REPORTES_OLD", "BIN$q1w2e3==$0"}
 
 
-def test_f3_bloqueo_con_aprobacion_en_prod(api_n, bd_n, usuarios):
-    w = Worker("bd", bd_n)
-    ej = api_n.ejecuciones
-    dba, dba2 = con_mfa(usuarios["dba"]), usuarios["dba2"]
+def _arbol_corprd(ej, w, dba):
     v = ej.solicitar(dba, "bd.ses.bloqueos", {"base": "CORPRD"})
     correr(w)
     arbol = ej.obtener(v["id"])["resultado"]
     if not arbol["arboles"]:
-        pytest.skip("la simulación de esta base no generó bloqueo")
-    raiz = arbol["arboles"][0]["raiz"]
+        pytest.skip("el doble de esta base no generó bloqueo")
     assert arbol["arboles"][0]["afectadas"] == 4
+    return arbol["arboles"][0]["raiz"]
 
+
+def test_f3_dba_termina_la_sesion_en_prod_sin_cola_de_aprobacion(api_n, bd_n, usuarios):
+    w = Worker("bd", bd_n)
+    ej = api_n.ejecuciones
+    dba = con_mfa(usuarios["dba"])
+    raiz = _arbol_corprd(ej, w, dba)
     params = {"base": "CORPRD", "sid": raiz["sid"], "serial": raiz["serial"], "motivo": "Batch colgado bloquea clientes"}
-    with pytest.raises(Exception, match="cambio"):
-        ej.solicitar(dba, "bd.ses.terminar", params)                      # falta CHG en PROD
-    e = ej.solicitar(dba, "bd.ses.terminar", params, cambio="CHG2002")
+    with pytest.raises(RequiereStepUp):
+        ej.solicitar(usuarios["dba2"], "bd.ses.terminar", params)          # el MFA en PROD se mantiene
+    e = ej.solicitar(dba, "bd.ses.terminar", params)                       # el caso es opcional
+    assert e["estado"] == "en_cola" and e["aprobador"] is None           # directo: no pasa por aprobaciones
+    assert ej.pendientes_para(usuarios["lider"]) == []
+    correr(w)
+    r = ej.obtener(e["id"])
+    assert r["estado"] == "exitosa", r["error"]
+    assert r["resultado"]["bloqueo_resuelto"] is True
+    assert r["evidencia"] and api_n.evidencia.verificar(r["evidencia"], r["evidencia_sha256"])
+    # Salud no queda con el dato anterior: la ejecución repite la pasada de recolección de la base
+    from opscentral import estado
+    salud = estado.leer(api_n.almacen, "bd:CORPRD:salud")
+    assert salud["origen"] == "ejecucion" and salud["datos"]["bloqueadas"] == 0
+
+
+def test_f3_aprobacion_cuando_se_apaga_la_ejecucion_directa(api_n, bd_n, usuarios):
+    w = Worker("bd", bd_n)
+    ej = api_n.ejecuciones
+    ej.cfg = {**ej.cfg, "aprobaciones": {**ej.cfg["aprobaciones"], "ejecucion_directa": False}}
+    lider, dba2 = con_mfa(usuarios["lider"]), usuarios["dba2"]
+    raiz = _arbol_corprd(ej, w, lider)
+    params = {"base": "CORPRD", "sid": raiz["sid"], "serial": raiz["serial"], "motivo": "Batch colgado bloquea clientes"}
+    e = ej.solicitar(lider, "bd.ses.terminar", params, cambio="CHG2002")
     assert e["estado"] == "pendiente_aprobacion"
     assert not w.una_vez()                                                 # sin aprobación no hay trabajo
     with pytest.raises(PermisoDenegado):
-        ej.aprobar(dba, e["id"])                                           # autoaprobación
+        ej.aprobar(lider, e["id"])                                         # autoaprobación
     with pytest.raises(RequiereStepUp):
         ej.aprobar(dba2, e["id"])                                          # clase C pide MFA reciente
     ej.aprobar(con_mfa(dba2), e["id"], "Validado con el dueño del batch")
     correr(w)
     r = ej.obtener(e["id"])
     assert r["estado"] == "exitosa", r["error"]
-    assert r["resultado"]["bloqueo_resuelto"] is True
     assert r["aprobador"] == "dba2.demo"
-    # Salud no queda con el dato anterior: la ejecución repite la pasada de recolección de la base
-    from opscentral import estado
-    salud = estado.leer(api_n.almacen, "bd:CORPRD:salud")
-    assert salud["origen"] == "ejecucion" and salud["datos"]["bloqueadas"] == 0
+
+
+def test_token_de_ejecucion_directa_no_se_puede_falsificar(api_n, bd_n, usuarios):
+    """Sin token firmado, una clase C en PROD no corre aunque alguien la ponga en cola en el almacén."""
+    w = Worker("bd", bd_n)
+    ej = api_n.ejecuciones
+    dba = con_mfa(usuarios["dba"])
+    raiz = _arbol_corprd(ej, w, dba)
+    e = ej.solicitar(dba, "bd.ses.terminar", {"base": "CORPRD", "sid": raiz["sid"], "serial": raiz["serial"],
+                                              "motivo": "Batch colgado bloquea clientes"}, cambio="CHG2003")
+    with api_n.almacen.tx() as con:
+        con.execute(update(ejecucion).where(ejecucion.c.id == e["id"]).values(token_aprobacion="falso"))
+    correr(w)
+    r = ej.obtener(e["id"])
+    assert r["estado"] == "fallida" and "seguridad" in r["error"]
 
 
 def test_alterar_parametros_despues_de_aprobar_se_bloquea(api_n, bd_n, usuarios):
@@ -84,7 +121,7 @@ def test_alterar_parametros_despues_de_aprobar_se_bloquea(api_n, bd_n, usuarios)
     dba, dba2 = con_mfa(usuarios["dba"]), con_mfa(usuarios["dba2"])
     e = ej.solicitar(dba, "bd.usr.desbloquear", {"base": "CORTST", "usuario": "APP_BATCH"},
                      cambio="INC40001", motivo="Cuenta bloqueada por intentos fallidos")
-    ej.aprobar(dba2, e["id"])
+    assert e["estado"] == "en_cola"                 # DBA habilitado: directo
     with api_n.almacen.tx() as con:   # alguien cambia el usuario directamente en el almacén
         con.execute(update(ejecucion).where(ejecucion.c.id == e["id"]).values(
             params={"base": "CORTST", "usuario": "SYSTEM"}))

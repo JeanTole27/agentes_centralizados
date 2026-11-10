@@ -1,4 +1,4 @@
-"""Bases Oracle simuladas para desarrollo (general.simulacion = true).
+"""Doble de prueba de Oracle (solo para tests; no forma parte del producto).
 
 Tiene la misma interfaz que ConexionOracle y un estado en memoria por base, para
 que los flujos completos tengan sentido: al tomar el snapshot DESPUÉS aparecen
@@ -11,10 +11,10 @@ import random
 import threading
 from datetime import datetime, timedelta
 
-from ..credenciales import CredencialBD
-from ..inventario import Activo
-from .conexion import ErrorBD
-from .politica import validar_procedimiento
+from opscentral.bd.conexion import ErrorBD
+from opscentral.bd.politica import validar_procedimiento
+from opscentral.credenciales import CredencialBD
+from opscentral.inventario import Activo
 
 _LOCK = threading.Lock()
 _ESTADO: dict[str, dict] = {}
@@ -61,7 +61,7 @@ def simular_despliegue(base: str) -> None:
     ]
 
 
-class ConexionSimulada:
+class ConexionFalsa:
     def __init__(self, base: Activo, cred: CredencialBD, *, persona: str, ejecucion_id: str,
                  paquete: str, call_timeout_s: int):
         self.base, self.cred, self.persona, self.eid = base, cred, persona, ejecucion_id
@@ -123,6 +123,11 @@ class ConexionSimulada:
         if plantilla == "usuarios_por_expirar":
             return [{"username": "APP_BATCH", "account_status": "OPEN", "expiry_date": ahora + timedelta(days=9),
                      "profile": "PRF_APLICACION", "dias_restantes": 9.0}]
+        if plantilla in _EXTRA:
+            r = _EXTRA[plantilla](self.base.id, params or {}, ahora)
+            if isinstance(r, Exception):
+                raise r
+            return r
         raise ErrorBD(f"plantilla no simulada: {plantilla}")
 
     def llamar(self, procedimiento: str, args: dict) -> str:
@@ -165,3 +170,83 @@ class ConexionSimulada:
                                    (o["owner"], o["object_name"])]
             return args["operacion"]
         return "OK (simulado)"
+
+
+# ---------------------------------------------------------------- plantillas de diagnóstico y reportes
+def _objetos(base, p, ahora):
+    comunes = [{"object_name": "PKG_CLIENTES", "object_type": "PACKAGE BODY", "status": "VALID", "last_ddl_time": ahora},
+               {"object_name": "CLIENTES", "object_type": "TABLE", "status": "VALID", "last_ddl_time": ahora}]
+    if base == "CORPRD":
+        return comunes + [{"object_name": "VW_SALDOS", "object_type": "VIEW", "status": "INVALID", "last_ddl_time": ahora}]
+    return comunes + [{"object_name": "VW_SALDOS", "object_type": "VIEW", "status": "VALID", "last_ddl_time": ahora},
+                      {"object_name": "PKG_NUEVO", "object_type": "PACKAGE", "status": "VALID", "last_ddl_time": ahora}]
+
+
+def _parametros(base, p, ahora):
+    comun = [{"name": "processes", "value": "1500", "isdefault": "FALSE"},
+             {"name": "audit_trail", "value": "DB", "isdefault": "FALSE"},
+             {"name": "db_unique_name", "value": base.lower(), "isdefault": "FALSE"}]
+    sga = "32G" if base == "CORPRD" else "16G"
+    return comun + [{"name": "sga_target", "value": sga, "isdefault": "FALSE"}]
+
+
+_EXTRA = {
+    "idle_tx": lambda b, p, a: [
+        {"inst_id": 1, "sid": 310, "serial": 77, "username": "APP_BATCH", "machine": "AP23SBCC04",
+         "segundos_inactiva": 4000, "bloques_undo": 1200},
+        {"inst_id": 1, "sid": 311, "serial": 78, "username": "APP_WEB", "machine": "AP23SBCC09",
+         "segundos_inactiva": 700, "bloques_undo": 3}][: 2 if int(p.get("min_segundos") or 0) <= 700 else 1],
+    "sesiones_por_maquina": lambda b, p, a: [{"inst_id": 1, "username": "APP_WEB", "machine": p.get("maquina"),
+                                              "status": "ACTIVE", "sesiones": 12, "bloqueadas": 0}],
+    "fra_uso": lambda b, p, a: [{"name": "+FRA", "limite_mb": 500000, "usado_mb": 470000, "recuperable_mb": 10000,
+                                 "archivos": 900, "pct_usado": 92.0}],
+    "archivelog_hora": lambda b, p, a: [{"hora": a - timedelta(hours=h), "archivos": 4, "mb": 2000 if h == 3 else 400}
+                                        for h in range(12)],
+    "dg_rol": lambda b, p, a: [{"database_role": "PRIMARY", "protection_mode": "MAXIMUM PERFORMANCE",
+                                "force_logging": "YES"}],
+    "dg_stats": lambda b, p, a: ErrorBD("ORA-00942: table or view does not exist"),
+    "dg_gaps": lambda b, p, a: [],
+    "rman_7d": lambda b, p, a: [
+        {"input_type": "DB INCR", "status": "COMPLETED", "start_time": a - timedelta(days=2, hours=1),
+         "end_time": a - timedelta(days=2)},
+        {"input_type": "ARCHIVELOG", "status": "COMPLETED", "start_time": a - timedelta(hours=2),
+         "end_time": a - timedelta(hours=1)},
+        {"input_type": "DB INCR", "status": "FAILED", "start_time": a - timedelta(days=1), "end_time": None}],
+    "jobs_problema": lambda b, p, a: [{"owner": "APP_CORE", "job_name": "JOB_CIERRE", "enabled": "TRUE",
+                                       "state": "BROKEN", "failure_count": 16}],
+    "jobs_fallidos_24h": lambda b, p, a: [{"owner": "APP_CORE", "job_name": "JOB_CIERRE", "status": "FAILED"}] * 3,
+    "undo_24h": lambda b, p, a: [{"undoblks": 100, "maxquerylen": 5400, "ora_01555": 1, "sin_espacio": 0}],
+    "temp_sesiones": lambda b, p, a: [{"sid": 2001, "username": "APP_REP", "sql_id": "7h35uxf5uhmm1", "mb": 20480}],
+    "alertlog_24h": lambda b, p, a: [
+        {"momento": a, "mensaje": "ORA-00600: internal error code, arguments: [kcbz_check]"},
+        {"momento": a, "mensaje": "ORA-00600: internal error code, arguments: [kcbz_check]"},
+        {"momento": a, "mensaje": "ORA-01555 caused by SQL statement below"}],
+    "esperas_sistema": lambda b, p, a: [{"event": "db file sequential read", "wait_class": "User I/O"}],
+    "esperas_ahora": lambda b, p, a: [{"wait_class": "Concurrency", "event": "enq: TX - row lock contention",
+                                       "sesiones": 8}, {"wait_class": "CPU", "event": "CPU", "sesiones": 2}],
+    "parametros": _parametros,
+    "parches": lambda b, p, a: [{"patch_id": 36233263, "action": "APPLY", "status": "SUCCESS",
+                                 "description": "Database Release Update : 19.23.0.0.240416", "action_time": a}],
+    "usr_roles": lambda b, p, a: [{"grantee": p.get("usuario"), "granted_role": "CONNECT"},
+                                  {"grantee": p.get("usuario"), "granted_role": "DBA"}],
+    "usr_privs_sistema": lambda b, p, a: [{"grantee": p.get("usuario"), "privilege": "SELECT ANY TABLE",
+                                           "admin_option": "NO"}],
+    "usr_privs_objeto": lambda b, p, a: [{"owner": "APP_CORE", "objeto": "CLIENTES", "privilege": "SELECT",
+                                          "grantable": "YES"}],
+    "shrink_candidatos": lambda b, p, a: [{"segment_owner": "APP_CORE", "segment_name": "LOG_EVENTOS",
+                                           "recuperable_mb": 5120}],
+    "papelera": lambda b, p, a: [{"owner": "APP_CORE", "object_name": "BIN$q1w2e3==$0", "bloques": 1000}],
+    "objetos_esquema": _objetos,
+    "topsql_cpu": lambda b, p, a: [{"sql_id": "7h35uxf5uhmm1", "cpu_s": 900}],
+    "topsql_elapsed": lambda b, p, a: [{"sql_id": "7h35uxf5uhmm1", "elapsed_s": 1800},
+                                       {"sql_id": "0w2qpuc6u2zsp", "elapsed_s": 300}],
+    "topsql_gets": lambda b, p, a: [{"sql_id": "0w2qpuc6u2zsp", "buffer_gets": 10 ** 9}],
+    "plan_historia": lambda b, p, a: [
+        {"plan_hash_value": 111, "ejecuciones": 5000, "ms_por_ejec": 12.0, "desde": a - timedelta(days=20)},
+        {"plan_hash_value": 222, "ejecuciones": 800, "ms_por_ejec": 95.0, "desde": a - timedelta(days=1)}],
+    "plan_actual": lambda b, p, a: [{"inst_id": 1, "plan_hash_value": 222, "ms_por_ejec": 97.0}],
+    "longops": lambda b, p, a: [{"sid": 900, "opname": "RMAN: incremental datafile backup", "pct": 40.0,
+                                 "time_remaining": 1200}],
+    "stats_obsoletas": lambda b, p, a: [{"owner": "APP_CORE", "table_name": "CLIENTES", "stale_stats": "YES"},
+                                        {"owner": "APP_CORE", "table_name": "MOVIMIENTOS", "stale_stats": "YES"}],
+}

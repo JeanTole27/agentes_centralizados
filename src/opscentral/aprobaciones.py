@@ -1,7 +1,7 @@
 """Token de aprobación firmado (cierra H3).
 
 El token liga la aprobación a la huella exacta de lo que se va a ejecutar:
-acción + destino + parámetros normalizados (+ número de cambio). El worker
+acción + destino + parámetros normalizados (+ referencia del caso, si hay). El worker
 recalcula la huella justo antes de ejecutar; si alguien alteró algo, no corre.
 """
 from __future__ import annotations
@@ -15,6 +15,8 @@ import jwt
 
 ALG = "HS256"
 EMISOR = "ops-central"
+POLITICA_DIRECTA = "politica:ejecucion-directa"   # "aprobador" del token cuando se ejecuta sin cola de aprobación
+POLITICA_DBA = POLITICA_DIRECTA                     # nombre anterior
 
 
 class TokenInvalido(PermissionError):

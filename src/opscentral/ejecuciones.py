@@ -6,7 +6,9 @@
 
 Garantías:
 - La API valida contra el catálogo y decide permisos; la interfaz no decide nada.
-- La huella (acción + destino + parámetros + cambio) se calcula al solicitar.
+- La huella (acción + destino + parámetros + referencia del caso) se calcula al solicitar.
+- El caso asociado (clave de Jira u otra referencia) es opcional.
+- Sin cola de aprobación por defecto: quien tiene permiso de ejecución ejecuta, y todo queda en el log.
   El worker la recalcula y verifica el token de aprobación antes de ejecutar.
 - Un solo cambio (clase O/C) a la vez por destino.
 - Toda ejecución termina con evidencia (JSON + SHA-256) y registros de auditoría.
@@ -26,7 +28,7 @@ from . import aprobaciones
 from .almacen import Almacen, bloqueo_destino, ejecucion, linea, utc
 from .auditoria import Auditoria
 from .autorizacion import PermisoDenegado, decidir, exigir, permiso_de, puede_aprobar
-from .catalogo import RE_CAMBIO, Accion, Catalogo, ErrorValidacion
+from .catalogo import RE_REFERENCIA, Accion, Catalogo, ErrorValidacion
 from .cola import Cola
 from .evidencia import Evidencia
 from .identidad import Usuario
@@ -67,6 +69,12 @@ class ServicioEjecuciones:
                 if not self.inv.base(base):
                     raise ErrorValidacion(f"la base {base} no está en el inventario")
                 return base
+            for clave in ("dominio", "servidor"):      # cm.bd_relacionada, bd.rep.diskgroups
+                if params.get(clave):
+                    a = self.inv.buscar(params[clave])
+                    if not a:
+                        raise ErrorValidacion(f"{clave} {params[clave]} no está en el inventario")
+                    return a.id
         if accion.motor == "cm":
             d = params.get("host") or params.get("hosts") or destino
             if not d:
@@ -85,7 +93,10 @@ class ServicioEjecuciones:
         p = acc.validar_parametros(params)
         dest = self.destino_de(acc, p, destino)
         amb = self.ambiente(dest)
-        d = decidir(usuario, acc, amb, aprobacion_c_no_prod=self.cfg["aprobaciones"]["aprobacion_c_no_prod"])
+        c = self.cfg["aprobaciones"]
+        d = decidir(usuario, acc, amb, aprobacion_c_no_prod=c["aprobacion_c_no_prod"],
+                    ejecucion_directa=c.get("ejecucion_directa", c.get("dba_ejecuta_directo", True)),
+                    exigir_referencia_prod=c.get("exigir_referencia_prod", False))
         return acc, p, dest, amb, d
 
     def solicitar(self, usuario: Usuario, accion_id: str, params: dict, *, destino: str | None = None,
@@ -93,10 +104,10 @@ class ServicioEjecuciones:
         acc, p, dest, amb, d = self.evaluar(usuario, accion_id, params, destino)
         exigir(d)
         cambio = (cambio or p.get("cambio") or "").strip().upper() or None
-        if cambio and not RE_CAMBIO.match(cambio):
-            raise ErrorValidacion("número de cambio inválido")
+        if cambio and not RE_REFERENCIA.match(cambio):
+            raise ErrorValidacion("referencia del caso inválida (3 a 40 caracteres: letras, números, - _ . /)")
         if d.requiere_cambio and not cambio:
-            raise ErrorValidacion(f"{acc.id} en {amb} requiere número de cambio o ticket (CHG/RFC/INC)")
+            raise ErrorValidacion(f"{acc.id} en {amb} requiere un caso asociado (exigir_referencia_prod = true)")
         if d.requiere_stepup and not usuario.mfa_reciente(self.cfg["auth"]["stepup_vigencia_min"]):
             raise RequiereStepUp("confirma tu identidad con el segundo factor para continuar")
         if d.clase in ("O", "C") and not motivo and acc.motor in ("bd", "cm"):
@@ -109,16 +120,26 @@ class ServicioEjecuciones:
         eid = nuevo_id()
         h = aprobaciones.huella(acc.id, dest, p, cambio)
         estado = "pendiente_aprobacion" if d.requiere_aprobacion else "en_cola"
+        token = comentario = None
+        if d.directa:
+            # El worker exige un token firmado para toda clase C en PROD/DRP. Para la ejecución directa
+            # lo firma la política (no una persona): queda ligado a la misma huella y no se puede reutilizar.
+            clave = self.sec.leer(self.cfg["aprobaciones"]["clave_firma_ref"], motivo=f"ejecución directa {eid}")["clave"]
+            token = aprobaciones.emitir(clave, ejecucion_id=eid, huella_hex=h, aprobador=aprobaciones.POLITICA_DIRECTA,
+                                        solicitante=usuario.login,
+                                        vigencia_min=self.cfg["aprobaciones"]["vigencia_min"])
+            comentario = "Ejecución directa: el usuario tiene permiso de ejecución sobre la acción (sin cola de aprobación)"
         t = utc()
         with self.a.tx() as con:
             con.execute(ejecucion.insert().values(
                 id=eid, accion=acc.id, motor=acc.motor, clase=d.clase, destino=dest, ambiente=amb, params=p,
                 cambio=cambio, motivo=motivo, solicitante=usuario.login, estado=estado, huella=h,
-                creada=t, actualizada=t, origen=origen))
+                creada=t, actualizada=t, origen=origen, token_aprobacion=token, comentario=comentario))
             if estado == "en_cola":
                 self._encolar(con, eid, acc)
         self.aud.registrar("ejecucion_solicitada", usuario.login, ejecucion=eid, accion=acc.id, destino=dest,
-                           ambiente=amb, clase=d.clase, cambio=cambio, controles=d.controles, huella=h, origen=origen)
+                           ambiente=amb, clase=d.clase, cambio=cambio, controles=d.controles, huella=h, origen=origen,
+                           ejecucion_directa=d.directa)
         return self.obtener(eid)
 
     def _encolar(self, con, eid: str, acc: Accion) -> None:
@@ -182,7 +203,7 @@ class ServicioEjecuciones:
         e = self._fila(eid)
         if e["estado"] not in ("pendiente_aprobacion", "en_cola"):
             raise EstadoInvalido("solo se cancela lo que no ha empezado")
-        if usuario.login != e["solicitante"] and "lid" not in usuario.perfiles:
+        if usuario.login != e["solicitante"] and not ({"lid", "aut"} & set(usuario.perfiles)):
             raise PermisoDenegado("solo quien la pidió o el líder pueden cancelar")
         self._marcar(eid, "cancelada", actor=usuario.login)
         return self.obtener(eid)
@@ -214,7 +235,7 @@ class ServicioEjecuciones:
         return e
 
     def visible_para(self, usuario: Usuario, e: dict) -> bool:
-        if e["solicitante"] == usuario.login or e.get("aprobador") == usuario.login:
+        if usuario.total or e["solicitante"] == usuario.login or e.get("aprobador") == usuario.login:
             return True
         if e["accion"] in self.cat:
             return permiso_de(usuario, self.cat[e["accion"]]) is not None

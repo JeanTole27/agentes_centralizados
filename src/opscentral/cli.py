@@ -6,8 +6,9 @@
   ops-central worker <cola>            Worker de una cola: bd | cm | ingesta | ml
   ops-central planificador             Tareas periódicas
   ops-central dev                      API + workers + planificador en un proceso (solo desarrollo)
-  ops-central sembrar-demo             Series sintéticas para ver predicciones en simulación
   ops-central verificar-auditoria      Revisa la cadena de hash
+  ops-central generar-inventario       Arma config/inventario.json desde los insumos reales
+  ops-central zabbix-probar            Prueba la conexión con la API de Zabbix
 """
 from __future__ import annotations
 
@@ -81,7 +82,7 @@ def cmd_dev(a):
     from .planificador import Planificador
     from .workers import iniciar_hilos
     detener = threading.Event()
-    iniciar_hilos(["bd", "cm", "ml"], detener)
+    iniciar_hilos(["bd", "cm", "ingesta", "ml"], detener)
     if not a.sin_planificador:
         threading.Thread(target=Planificador().correr, args=(detener,), daemon=True).start()
     try:
@@ -90,36 +91,29 @@ def cmd_dev(a):
         detener.set()
 
 
-def cmd_sembrar(a):
-    from .almacen import Almacen, serie_punto
-    from .ml.llenado import serie_sintetica
+def cmd_zabbix_probar(a):
+    import json as _json
+    from .zabbix import ingesta
+    from .nucleo import crear
+    n = crear("worker-ingesta")
+    print(_json.dumps(ingesta.probar(n.cfg, n.secretos, n.inventario), indent=2, ensure_ascii=False))
+
+
+def cmd_generar_inventario(a):
+    import json as _json
+    from .inventario_insumos import generar
     cfg = cargar()
-    if not cfg.simulacion:
-        sys.exit("sembrar-demo solo se permite en simulación")
-    from .bd import simulador
-    alm = Almacen(cfg.url_almacen())
-    alm.crear_esquema()
-
-    def hasta_simulador(base: str, clave: str, nombre: str, pendiente: float, semilla: int):
-        # Las series ts:/asm: también las escribe la recolección con el valor del simulador.
-        # La historia sintética termina en ese mismo nivel; si no, el primer punto real parece
-        # un cambio de nivel y el modelo deja de predecir (datos_insuficientes).
-        final = simulador._estado(base)[clave][nombre]
-        return serie_sintetica(20, final - pendiente * 20, pendiente, semilla=semilla)
-
-    series = {
-        "ts:CORPRD:APP_DATA": hasta_simulador("CORPRD", "ts_pct", "APP_DATA", 3.2, 1),  # ~6 días al 100 %
-        "asm:CORPRD:DATA": hasta_simulador("CORPRD", "dg_pct", "DATA", 0.55, 2),
-        "fra:CRMPRD": serie_sintetica(20, 40, 2.5, purgas_cada_h=96, salto_purga=9, semilla=3),
-        "fs:AP23SBCC04:/oracle": serie_sintetica(20, 66, 0.9, semilla=4),
-        "heap:AP23SBCC09:Clientes1": serie_sintetica(20, 52, 1.2, ruido=3, semilla=5),
-        "ts:CORTST:USERS": hasta_simulador("CORTST", "ts_pct", "USERS", 0.05, 6),
-    }
-    with alm.tx() as con:
-        for s, pts in series.items():
-            con.execute(serie_punto.delete().where(serie_punto.c.serie == s))
-            con.execute(serie_punto.insert(), [{"serie": s, "ts": p.ts, "valor": p.valor} for p in pts])
-    print(f"{len(series)} series sintéticas cargadas ({sum(len(p) for p in series.values())} puntos)")
+    rutas = {k: (RAIZ / v).resolve() for k, v in cfg["inventario"]["insumos"].items()}
+    faltan = [str(rutas[k]) for k in ("servidores_cm", "bases") if not rutas[k].exists()]
+    if faltan:
+        sys.exit("No se encuentran los insumos obligatorios: " + ", ".join(faltan))
+    inv, avisos = generar(rutas)
+    destino = a.salida and (RAIZ / a.salida) or cfg.ruta("inventario", "archivo")
+    destino.write_text(_json.dumps(inv, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"{destino}: {len(inv['servidores'])} servidores, {len(inv['dominios'])} dominios, "
+          f"{len(inv['bases'])} bases, {len(inv['relaciones'])} relaciones")
+    for x in avisos:
+        print("  aviso:", x)
 
 
 def cmd_verificar(a):
@@ -149,8 +143,11 @@ def main(argv=None):
     x.add_argument("--puerto", type=int, default=8000)
     x.add_argument("--sin-planificador", action="store_true")
     x.set_defaults(f=cmd_dev)
-    s.add_parser("sembrar-demo").set_defaults(f=cmd_sembrar)
     s.add_parser("verificar-auditoria").set_defaults(f=cmd_verificar)
+    s.add_parser("zabbix-probar").set_defaults(f=cmd_zabbix_probar)
+    x = s.add_parser("generar-inventario")
+    x.add_argument("--salida", help="ruta de salida (por defecto [inventario].archivo)")
+    x.set_defaults(f=cmd_generar_inventario)
     a = p.parse_args(argv)
     a.f(a)
 

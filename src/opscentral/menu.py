@@ -9,7 +9,7 @@ GRUPOS = [
                     ("frmweb", "Forms · frmweb")]),
     ("BASE DE DATOS", [("snapshot", "Snapshot e inválidos"), ("bloqueos", "Sesiones bloqueantes"),
                        ("salud", "Salud de la flota"), ("tareas", "Tareas DBA"), ("reportes", "Reportes")]),
-    ("CONTROL", [("aprobaciones", "Aprobaciones"), ("ejecuciones", "Ejecuciones y evidencia"),
+    ("CONTROL", [("aprobaciones", "Aprobaciones"), ("ejecuciones", "Log de ejecuciones"),
                  ("admin", "Administración")]),
 ]
 
@@ -25,11 +25,13 @@ PERFIL = {
                     "bloqueos", "salud", "reportes", "ejecuciones"],
             "ro": ["alertas", "prevencion", "ventana", "orquestacion", "snapshot", "bloqueos", "salud", "reportes"]},
     "adm": {"nav": ["inicio", "inventario", "ejecuciones", "admin"], "ro": ["inventario", "ejecuciones"]},
+    "aut": {"nav": [p for _, ps in GRUPOS for p, _ in ps], "ro": []},     # Automatizador: todo, con edición
 }
 
 
-def menu(perfiles) -> list[dict]:
-    """Unión de pantallas; una pantalla es de solo lectura solo si lo es para TODOS los perfiles que la ven."""
+def menu(perfiles, ocultar: set[str] | frozenset[str] = frozenset()) -> list[dict]:
+    """Unión de pantallas; una pantalla es de solo lectura solo si lo es para TODOS los perfiles que la ven.
+    `ocultar`: pantallas apagadas por configuración (p. ej. Aprobaciones con ejecución directa)."""
     visibles: set[str] = set()
     editables: set[str] = set()
     for p in perfiles:
@@ -40,7 +42,8 @@ def menu(perfiles) -> list[dict]:
         editables |= set(cfg["nav"]) - set(cfg["ro"])
     out = []
     for grupo, pantallas in GRUPOS:
-        items = [{"id": i, "nombre": n, "solo_lectura": i not in editables} for i, n in pantallas if i in visibles]
+        items = [{"id": i, "nombre": n, "solo_lectura": i not in editables} for i, n in pantallas
+                 if i in visibles and i not in ocultar]
         if items:
             out.append({"grupo": grupo, "pantallas": items})
     return out

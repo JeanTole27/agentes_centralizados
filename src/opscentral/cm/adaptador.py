@@ -1,7 +1,8 @@
 """Adaptador del motor de Capa Media.
 
 Por cada ejecución:
-1. Firma un certificado SSH de corta duración (fuera de simulación): key_id = persona#ejecución.
+1. Firma un certificado SSH de corta duración (cm.certificado_ssh, con Vault): key_id = persona#ejecución.
+   Sin certificado, cmops usa la llave que tenga configurada.
 2. Lee de los secretos la cuenta WebLogic que corresponde (ops_operador u ops_admin) si la acción la necesita.
 3. Lanza el puente con el Python de cmops y pasa todo por stdin (nunca por argumentos: `ps` los muestra).
 4. Reenvía la salida línea por línea a la ejecución y borra la llave efímera al terminar.
@@ -37,6 +38,12 @@ def rol_cmops(accion: Accion, ambiente: str | None) -> str:
     return "admin" if (ambiente or "").upper() in AMBIENTES_PROTEGIDOS else "operador"
 
 
+def referencia_cmops(e: dict) -> str:
+    """cmops exige una referencia en PROD/DRP. El caso es opcional en Ops Central:
+    si no hay, se usa el id de la ejecución, que la liga al log y a la evidencia."""
+    return e.get("cambio") or f"OPS-{e['id']}"
+
+
 class MotorCM:
     def __init__(self, cfg, secretos: Secretos):
         self.cfg, self.sec = cfg, secretos
@@ -53,7 +60,7 @@ class MotorCM:
             secretos = {u: wl["usuario"], p: wl["clave"]}
         cert = None
         try:
-            if not self.cfg.simulacion:
+            if self.cfg["cm"].get("certificado_ssh", self.cfg["secretos"]["proveedor"] == "vault"):
                 cert = certificado_ssh(self.sec, usuario=e["solicitante"], ejecucion_id=e["id"],
                                        principal="svc_opscentral", ttl_min=self.cfg["cm"]["ttl_certificado_min"])
                 emitir(f"Certificado SSH emitido ({self.cfg['cm']['ttl_certificado_min']} min) para {e['solicitante']}")
@@ -61,8 +68,8 @@ class MotorCM:
             if acc.id in USAN_HOSTS and not params.get("hosts") and params.get("host"):
                 params["hosts"] = params.pop("host")
             req = {"ruta_cmops": str(self.ruta), "accion": acc.id, "params": params, "secretos": secretos,
-                   "persona": e["solicitante"], "rol": rol_cmops(acc, e["ambiente"]), "cambio": e["cambio"] or "",
-                   "simulacion": self.cfg.simulacion, "llave": str(cert.llave) if cert else "",
+                   "persona": e["solicitante"], "rol": rol_cmops(acc, e["ambiente"]), "cambio": referencia_cmops(e),
+                   "llave": str(cert.llave) if cert else "",
                    "ejecucion": e["id"]}
             return self._correr(req, emitir)
         finally:

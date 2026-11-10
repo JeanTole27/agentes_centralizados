@@ -19,7 +19,8 @@ const PANTALLAS: Record<string, () => JSX.Element> = {
   ejecuciones: P.Ejecuciones, admin: P.Admin, ventana: P.Ventana, incidentes: P.Incidentes, reportes: P.Reportes,
 };
 
-const PERFIL: Record<string, string> = { dba: "DBA", cm: "Capa Media", lid: "Líder", con: "Consulta", adm: "Administrador" };
+const PERFIL: Record<string, string> = { dba: "DBA", cm: "Capa Media", lid: "Líder", con: "Consulta", adm: "Administrador",
+  aut: "Automatizador" };
 
 export default function Shell({ yo }: { yo: Yo }) {
   const qc = useQueryClient();
@@ -80,7 +81,6 @@ export default function Shell({ yo }: { yo: Yo }) {
             <button className="menu-btn" aria-label="Menú" onClick={() => setAbierto((x) => !x)}>☰</button>
             <b>{nombreActual}</b>
             <span className="sp" />
-            {yo.simulacion && <span className="tag t-sim">SIMULACIÓN</span>}
             {yo.mfa_reciente && <span className="tag t-ok" title="Segundo factor confirmado recientemente">MFA</span>}
             <div className="user">
               <span className="av">{iniciales}</span>
@@ -89,10 +89,6 @@ export default function Shell({ yo }: { yo: Yo }) {
             <button className="btn ghost sm" onClick={salir}>Salir</button>
           </header>
           <main className="content">
-            {yo.simulacion && (
-              <div className="simbar">Modo simulación: las acciones corren contra simuladores, no contra servidores ni bases
-                reales. Los resultados y la auditoría son reales dentro de Ops Central.</div>
-            )}
             <Routes>
               <Route path="/" element={<Navigate to="/inicio" replace />} />
               {[...permitidas.keys()].map((id) => {

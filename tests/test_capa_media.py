@@ -2,7 +2,7 @@
 import pytest
 
 from opscentral import nucleo
-from opscentral.cm.adaptador import rol_cmops
+from opscentral.cm.adaptador import referencia_cmops, rol_cmops
 from opscentral.workers import Worker
 
 
@@ -29,3 +29,9 @@ def test_orq_status_por_el_puente(cfg, api_n, usuarios):
 def test_dba_no_opera_weblogic(api_n, usuarios):
     with pytest.raises(Exception, match="perfil|lectura"):
         api_n.ejecuciones.solicitar(usuarios["dba"], "orq.stop", {"host": "WLPC02SBCC04", "dominios": "simondesa"})
+
+
+def test_referencia_para_cmops_sin_caso():
+    """cmops exige referencia en PROD: sin caso se usa el id de la ejecución."""
+    assert referencia_cmops({"id": "20261110120000abcdef", "cambio": None}) == "OPS-20261110120000abcdef"
+    assert referencia_cmops({"id": "x", "cambio": "OPS-77"}) == "OPS-77"

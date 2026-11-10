@@ -1,19 +1,28 @@
 """Identidad de las personas: perfiles por grupo de AD y sesiones.
 
-- El perfil NO se elige: se calcula desde los grupos GG_OPS_* en cada ingreso.
+- Con SSO, el perfil NO se elige: se calcula desde los grupos GG_OPS_* en cada ingreso.
+- En la demo (auth.proveedor = "demo") no hay autenticación construida: la persona se registra
+  con su nombre y elige el perfil (Capa Media, DBA, Administrador o Automatizador).
 - Quien está en varios grupos recibe la unión de permisos.
 - La sesión vive en el servidor; el navegador solo lleva un identificador opaco.
 """
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-PERFILES = ("dba", "cm", "lid", "con", "adm")
-NOMBRES_PERFIL = {"dba": "DBA", "cm": "Capa Media", "lid": "Líder de turno", "con": "Consulta",
-                  "adm": "Administrador de plataforma"}
+PERFILES = ("dba", "cm", "lid", "con", "adm", "aut")
+NOMBRES_PERFIL = {"dba": "Administrador de bases de datos (DBA)", "cm": "Especialista Capa Media",
+                  "lid": "Líder de turno", "con": "Consulta", "adm": "Administrador",
+                  "aut": "Automatizador"}
+# Perfiles que se pueden elegir al registrarse en la demo
+PERFILES_DEMO = ("cm", "dba", "adm", "aut")
+# El automatizador tiene permiso de ejecución y edición sobre todo el catálogo
+PERFIL_TOTAL = "aut"
 
 
 def ahora() -> datetime:
@@ -42,6 +51,11 @@ class Usuario:
         if "cm" in self.perfiles:
             return "cm"
         return None
+
+    @property
+    def total(self) -> bool:
+        """Automatizador: ejecuta y edita todo."""
+        return PERFIL_TOTAL in self.perfiles
 
     def mfa_reciente(self, vigencia_min: int) -> bool:
         return bool(self.mfa_en) and ahora() - self.mfa_en <= timedelta(minutes=vigencia_min)
@@ -97,3 +111,27 @@ def ingreso_dev(login: str, mapa: dict[str, str], ip: str = "") -> Usuario:
         raise SinPerfil("usuario de desarrollo desconocido")
     nombre, grupos = USUARIOS_DEV[login]
     return construir_usuario(login, nombre, grupos, mapa, mfa=False, ip=ip)
+
+
+# --------------------------------------------------------------------------- registro de la demo
+RE_LOGIN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,59}$")
+
+
+def login_desde_nombre(nombre: str) -> str:
+    """'María Pérez' -> 'maria.perez' (sin tildes ni espacios)."""
+    s = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode().lower()
+    partes = ["".join(c for c in p if c.isalnum()) for p in s.split()]
+    return ".".join(p for p in partes if p)[:60]
+
+
+def ingreso_demo(nombre: str, perfil: str, login: str = "", ip: str = "") -> Usuario:
+    nombre = " ".join((nombre or "").split())
+    if len(nombre) < 3:
+        raise ValueError("escribe tu nombre (al menos 3 letras)")
+    if perfil not in PERFILES_DEMO:
+        raise ValueError(f"perfil inválido: elige uno de {', '.join(PERFILES_DEMO)}")
+    login = (login or "").strip().lower() or login_desde_nombre(nombre)
+    if not RE_LOGIN.match(login):
+        raise ValueError("usuario inválido: usa letras, números, punto, guion o guion bajo")
+    return Usuario(login=login, nombre=nombre, grupos=[f"DEMO:{perfil}"], perfiles=frozenset({perfil}),
+                   mfa_en=None, ip=ip)
