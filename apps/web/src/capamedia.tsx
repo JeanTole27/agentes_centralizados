@@ -15,7 +15,15 @@ type OpcionesCM = {
   usuarios_wl: { dominio: string; nombre: string; host: string; ambiente: string; configurado: boolean }[];
   frmweb: { host: string; ambiente: string; configurado: boolean; descripcion: string; managed_servers: string[] }[];
   fuente: string;
+  ruta_cmops?: string;
+  cmops_disponible?: boolean;
+  aviso?: string;
 };
+
+/** Si capa-media-ops no está donde lo busca la API, se dice dónde lo buscó (las opciones salen del inventario). */
+function AvisoCM({ o }: { o?: OpcionesCM }) {
+  return o?.aviso ? <div className="warnbox">{o.aviso}</div> : null;
+}
 
 function useOpcionesCM() {
   // Un servidor que no está en el inventario de Ops Central queda como "SIN AMBIENTE" (se puede filtrar igual).
@@ -70,8 +78,8 @@ function SinDetalle({ que }: { que: string }) {
 
 function SinConfiguracion({ modulo, fuente }: { modulo: string; fuente?: string }) {
   return (
-    <div className="card"><Vacio>capa-media-ops no tiene servidores configurados para {modulo}. Se configuran en{" "}
-      <span className="mono-sm">{fuente ?? "configuracion_modulos.json"}</span>.</Vacio></div>
+    <div className="card"><Vacio>No hay servidores para {modulo}: ni capa-media-ops ni el inventario de Ops Central tienen servidores de Capa
+      Media. Fuente: <span className="mono-sm">{fuente ?? "configuracion_modulos.json"}</span>.</Vacio></div>
   );
 }
 
@@ -94,6 +102,7 @@ export function Orquestacion() {
       <Cabecera titulo="Orquestación WebLogic"
         sub="Bajada y subida ordenada de dominios: Managed Servers vía Node Manager y AdminServer. Cada instalación se ejecuta con su propio usuario de SO." />
       <Cargando q={op} />
+      <AvisoCM o={op.data} />
       {op.data && hosts.length === 0 && <SinConfiguracion modulo="orquestación" fuente={op.data.fuente} />}
       {hosts.length > 0 && (
         <div className="card">
@@ -168,6 +177,7 @@ export function UsuariosWL() {
     <>
       <Cabecera titulo="Usuarios WebLogic" sub="Listar, preparar el dominio y aplicar eliminaciones, administradores y grupos en el realm." />
       <Cargando q={op} />
+      <AvisoCM o={op.data} />
       {op.data && doms.length === 0 && <SinConfiguracion modulo="usuarios WebLogic" fuente={op.data.fuente} />}
       {doms.length > 0 && (
         <div className="card">
@@ -233,6 +243,7 @@ export function Frmweb() {
     <>
       <Cabecera titulo="Procesos frmweb" sub="Detectar procesos huérfanos (sin sesión) y mitigarlos por lotes." />
       <Cargando q={op} />
+      <AvisoCM o={op.data} />
       {op.data && hosts.length === 0 && <SinConfiguracion modulo="frmweb" fuente={op.data.fuente} />}
       {hosts.length > 0 && (
         <div className="card">

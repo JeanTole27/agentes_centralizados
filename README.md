@@ -7,7 +7,8 @@ Backend e interfaz web únicos para Capa Media y Base de Datos. El diseño está
 ## Cómo correrlo (desarrollo)
 
 ```bash
-pip install -e ".[dev]"            # o: set PYTHONPATH=src
+..\instalar.bat                    # instalador único de toda la carpeta (ver ../INSTALAR.md)
+pip install -e ".[dev]"            # alternativa solo para ops-central; o: set PYTHONPATH=src
 python -m opscentral generar-inventario   # config/inventario.json desde los insumos reales
 python -m opscentral dev                  # API + workers en http://127.0.0.1:8000 (docs en /api/docs)
 python -m pytest -q                       # 92 pruebas, con los dobles de tests/dobles
@@ -72,6 +73,7 @@ npm run dev          # desarrollo con recarga en http://127.0.0.1:5173 (proxy de
 | `bd/` | 40 plantillas de solo lectura, conexión Oracle protegida, snapshot y línea base, recompilación, bloqueos, salud, recolección; `analisis.py` convierte cada lectura en hallazgos rojo/amarillo/info con umbrales configurables (`[bd.umbrales_analisis]`) |
 | `inventario.py`, `inventario_insumos.py` | Grafo servidor ↔ dominio ↔ base, y su generador desde los insumos reales |
 | `cm/` | Puente hacia `capa-media-ops/cmops` sin modificarlo (Python 3.6+, proceso aparte) |
+| `capa-media-ops/` | Copia de capa-media-ops incluida en el proyecto (cmops, módulos, `configuracion_modulos.json` y `config/app.json`). Los servidores, IPs y dominios que usa cmops salen de `config/inventario.json` (el puente se los pasa): no hay un segundo inventario. No lleva evidencias, usuarios de su interfaz ni credenciales |
 | `zabbix/` | Webhook firmado con HMAC, episodios por grafo, refresco dirigido; cliente de la API (adaptado de zabbix-capacity-mcp), ingesta de problemas y trends de capacidad, trapper |
 | `ml/` | M1 (tiempo hasta llenarse), M2 (heap JVM) y M3 (anomalías). Corren en sombra |
 | `api.py` | API FastAPI: lecturas del almacén, acciones con respuesta 202 y salida en vivo por SSE |

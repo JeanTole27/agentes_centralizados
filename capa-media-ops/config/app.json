@@ -1,0 +1,21 @@
+{
+  "nombre": "Capa Media Ops",
+  "modo_simulacion": true,
+  "escuchar": "127.0.0.1",
+  "puerto": 8080,
+  "tls": { "certificado": "", "llave": "" },
+  "ssh": {
+    "usuario": "svc_capamedia",
+    "llave": "",
+    "known_hosts": "",
+    "verificar_host": true,
+    "timeout_conexion": 10,
+    "control_master": true
+  },
+  "ruta_remota_defecto": "/tmp/cmops",
+  "sesion_minutos": 30,
+  "ambientes_productivos": ["prod", "drp"],
+  "max_trabajos_simultaneos": 4,
+  "max_hosts_paralelo": 10,
+  "timeout_paso_segundos": 3600
+}

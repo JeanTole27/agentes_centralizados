@@ -33,9 +33,11 @@ DEFECTOS: dict[str, Any] = {
     "bd": {"cuenta_consulta": "OPS_CONSULTA", "cuenta_dba": "OPS_DBA", "paquete": "ADMINBD.PKG_OPS_CENTRAL",
            "call_timeout_s": 20, "max_paralelo": 10, "sesiones_por_base": 1, "refresco_min_s": 120,
            "circuito_fallos": 3, "circuito_espera_s": 600, "ruta_kit_oracle": "../oracle-agent-kiro-master",
+           # carpeta del Oracle Instant Client (modo thick). Vacío = thin, o la variable ORACLE_CLIENT_DIR
+           "oracle_client_dir": "",
            # true solo en demo sin Oracle: los reportes bd.rep.* salen con datos de MUESTRA (prohibido en producción)
            "reportes_muestra": False},
-    "cm": {"ruta_cmops": "../capa-media-ops", "python_cmops": "python", "ttl_certificado_min": 10, "timeout_s": 3600},
+    "cm": {"ruta_cmops": "capa-media-ops", "python_cmops": "python", "ttl_certificado_min": 10, "timeout_s": 3600},
     "zabbix": {"ventana_episodio_min": 15, "secreto_webhook_ref": "zabbix/secreto_webhook",
                "token_ref": "zabbix/token_lectura", "puerto_trapper": 10051, "url": "",
                "verificar_tls": True, "timeout_s": 30, "user_agent": "OpsCentral/0.1",
@@ -48,6 +50,19 @@ DEFECTOS: dict[str, Any] = {
                                "mapa_oracle": "../zabbix-capacity-mcp-main/capacity-watchdog/config/oracle_map.yaml",
                                "relaciones": "config/relaciones.json"}},
 }
+
+
+CMOPS_INTERNO = RAIZ / "capa-media-ops"   # copia de capa-media-ops dentro del proyecto (su lógica sin cambios)
+
+
+def ruta_cmops(cfg) -> Path:
+    """Carpeta de capa-media-ops: la configurada ([cm] ruta_cmops, relativa a ops-central) y, si ahí no está
+    (p. ej. un ops-central.toml viejo con "../capa-media-ops"), la copia interna del proyecto."""
+    r = Path(cfg["cm"].get("ruta_cmops") or CMOPS_INTERNO)
+    r = r if r.is_absolute() else (RAIZ / r).resolve()
+    if not (r / "cmops" / "trabajos.py").exists() and (CMOPS_INTERNO / "cmops" / "trabajos.py").exists():
+        return CMOPS_INTERNO
+    return r
 
 
 def _fusionar(base: dict, extra: dict) -> dict:

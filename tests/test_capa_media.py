@@ -50,33 +50,41 @@ def test_clase_c_de_capa_media_sin_caso_ni_motivo(api_n, usuarios):
                                            motivo_obligatorio_c=True).controles
 
 
-def test_opciones_de_capa_media_cubren_todo_el_inventario(tmp_path):
+def test_opciones_de_capa_media_salen_del_inventario_de_ops_central(tmp_path):
     import json
-    from opscentral.cm.opciones import opciones
+    from opscentral.cm.opciones import opciones, servidores_desde_json
+    (tmp_path / "inventario.json").write_text(json.dumps({
+        "servidores": [{"id": "WL1", "ip": "10.0.0.1", "ambiente": "DESA", "equipo": "cm"},
+                       {"id": "AP07", "ip": "10.0.0.7", "ambiente": "PROD", "equipo": "cm"},
+                       {"id": "AP104", "ip": "10.0.0.4", "ambiente": "PROD", "equipo": "cm"},
+                       {"id": "BD-1", "ip": "10.0.0.9", "ambiente": "PROD", "equipo": "dba"}],
+        "dominios": [{"id": "otro", "nombre": "otro", "servidor": "WL1"},
+                     {"id": "IPM Stellent", "nombre": "IPM Stellent", "servidor": "AP07"},
+                     {"id": "CONCISO/CONCILIA", "nombre": "CONCISO/CONCILIA", "servidor": "AP07"},
+                     {"id": "ATGCPROD", "nombre": "ATGCPROD", "servidores": ["AP104"]},
+                     {"id": "tercerosprod", "nombre": "tercerosprod", "servidores": ["AP104"]}]}), encoding="utf-8")
+    srv = servidores_desde_json(tmp_path / "inventario.json")
+    assert set(srv) == {"WL1", "AP07", "AP104"} and srv["AP07"]["ip"] == "10.0.0.7"   # sin servidores de BD
     (tmp_path / "inventario").mkdir()
-    (tmp_path / "inventario" / "servidores.json").write_text(json.dumps({"servidores": {
-        "WL1": {"ambientes": ["desarrollo"], "dominios": [{"nombre": "otro"}]},
-        "AP07": {"ip": "10.0.0.7", "ambientes": ["prod"], "dominios": [{"nombre": "IPM Stellent"}, {"nombre": "CONCISO/CONCILIA"}]},
-        "AP104": {"ambientes": ["prod"], "dominios": [{"nombre": "ATGCPROD"}, {"nombre": "tercerosprod"}]}}}), encoding="utf-8")
     (tmp_path / "inventario" / "configuracion_modulos.json").write_text(json.dumps({
         "orquestacion": {"hosts": {"WL1": {"instalaciones": [
             {"id": "wl14", "usuario_so": "wlogic14c", "dominios": [{"nombre": "ARL_Web"}, {"nombre": "Externos"}]},
             {"id": "wl12", "usuario_so": "wlogic12c", "dominios": []}]}}},
         "usuarios_wl": {"dominios": {"ATGCPROD": {"host": "AP104", "admin_usuario": "no-sale"}}},
         "frmweb": {"hosts": {"AP17": {"managed_servers": ["WLS_FORMS1_1"], "descripcion": "TRON"}}}}), encoding="utf-8")
-    o = opciones(tmp_path, lambda h: {"WL1": "DESA"}.get(h, ""))
+    o = opciones(tmp_path, lambda h: {"WL1": "DESA"}.get(h, ""), srv)
     orq = {h["host"]: h for h in o["orquestacion"]}
-    assert set(orq) == {"AP07", "AP104", "WL1"}                      # todo el inventario, no solo lo configurado
+    assert set(orq) == {"AP07", "AP104", "WL1"}
     assert orq["WL1"]["configurado"] and orq["WL1"]["ambiente"] == "DESA"
     assert orq["WL1"]["instalaciones"][0]["dominios"] == [{"id": "ARL_Web", "nombre": "ARL_Web"},
                                                           {"id": "Externos", "nombre": "Externos"}]
-    assert not orq["AP07"]["configurado"] and orq["AP07"]["ambiente"] == "PROD"   # ambiente desde cmops
+    assert not orq["AP07"]["configurado"] and orq["AP07"]["ambiente"] == "PROD"
     assert orq["AP07"]["instalaciones"][0]["dominios"] == [{"id": "IPM_Stellent", "nombre": "IPM Stellent"},
                                                            {"id": "CONCISO_CONCILIA", "nombre": "CONCISO/CONCILIA"}]
     usr = {d["dominio"]: d for d in o["usuarios_wl"]}
     assert usr["ATGCPROD"]["configurado"] and not usr["tercerosprod"]["configurado"] and "IPM_Stellent" in usr
     assert {h["host"] for h in o["frmweb"]} == {"AP07", "AP104", "AP17", "WL1"}
-    assert "no-sale" not in json.dumps(o)
+    assert "no-sale" not in json.dumps(o) and "config/inventario.json" in o["fuente"]
 
 
 def test_completar_configuracion_solo_en_simulacion():
@@ -88,6 +96,8 @@ def test_completar_configuracion_solo_en_simulacion():
     assert completar_configuracion(m, srv, "orq.stop", {"host": "AP07"}, {"modo_simulacion": True}) == ""  # ya está
     completar_configuracion(m, srv, "usr.listar", {"host": "AP07", "dominio": "IPM_Stellent"}, {"modo_simulacion": True})
     assert m["usuarios_wl"]["dominios"]["IPM_Stellent"]["admin_ip"] == "10.0.0.7"
+    with pytest.raises(ValueError, match="inventario de Ops Central"):
+        completar_configuracion({}, srv, "orq.stop", {"host": "NO-EXISTE"}, {"modo_simulacion": True})
     with pytest.raises(ValueError, match="Recolectar"):
         completar_configuracion({}, srv, "frm.validar", {"host": "AP07"}, {"modo_simulacion": False})
 
@@ -127,3 +137,17 @@ def test_acciones_de_capa_media_con_las_opciones_de_cmops_sin_caso(cfg, api_n, u
         assert "configuración detallada" in texto or "configuración frmweb" in texto
     if accion == "orq.stop" and params["host"] == "AP05SBCC01":
         assert "serviciosdesa" in texto and "externosdesa" in texto
+
+
+def test_sin_carpeta_capa_media_ops_hay_opciones_y_aviso(tmp_path, cfg):
+    from opscentral.cm.opciones import opciones, servidores_desde_json
+    o = opciones(tmp_path / "no-existe", lambda h: "", servidores_desde_json(cfg.ruta("inventario", "archivo")))
+    assert o["orquestacion"] and o["frmweb"] and o["usuarios_wl"]
+    assert o["cmops_disponible"] is False and "no-existe" in o["aviso"] and "ruta_cmops" in o["aviso"]
+
+
+def test_cmops_recibe_los_servidores_del_inventario_de_ops_central():
+    """No hay un segundo inventario: la copia interna de capa-media-ops ya no trae servidores.json."""
+    from opscentral.config import CMOPS_INTERNO
+    assert not (CMOPS_INTERNO / "inventario" / "servidores.json").exists()
+    assert (CMOPS_INTERNO / "inventario" / "configuracion_modulos.json").exists()

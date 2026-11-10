@@ -1,13 +1,12 @@
-"""Opciones de las pantallas de Capa Media para TODO el inventario de capa-media-ops.
+"""Opciones de las pantallas de Capa Media y servidores que recibe cmops, desde UNA sola fuente.
 
-Fuentes (dentro de la carpeta de capa-media-ops):
-- inventario/servidores.json            → los servidores y sus dominios WebLogic (inventario general).
-- inventario/configuracion_modulos.json → los que ya tienen configuración detallada por módulo
-                                          (instalaciones, usuario de SO, rutas, credenciales).
+- Servidores, IPs, ambientes y dominios: el inventario de Ops Central (config/inventario.json). Es el mismo
+  que usan las demás vistas; cmops ya no lee su propio inventario/servidores.json (el puente le pasa este).
+- Detalle por módulo (instalaciones, usuario de SO, rutas): capa-media-ops/inventario/configuracion_modulos.json.
 
-Un servidor o dominio sin configuración detallada igual aparece: el puente le arma una configuración
-estándar en memoria al ejecutar (solo en el modo simulación de cmops; en modo real hay que generarla
-primero con "Recolectar" + `cm proponer-orquestacion`). Solo lectura: no hay usuarios ni claves en la salida.
+Un servidor o dominio sin detalle por módulo igual aparece: el puente le arma una configuración estándar en
+memoria al ejecutar (solo en el modo simulación de cmops; en modo real hay que generarla primero con
+"Recolectar" + `cm proponer-orquestacion`). Solo lectura: no hay usuarios ni claves en la salida.
 """
 import json
 import re
@@ -42,10 +41,15 @@ def dominios_de(servidor):
     return out
 
 
-def opciones(ruta_cmops, ambiente_de):
-    """ambiente_de(host) -> ambiente según el inventario de Ops Central ("" si no está)."""
+def opciones(ruta_cmops, ambiente_de, servidores):
+    """ambiente_de(host) -> ambiente según el inventario de Ops Central ("" si no está).
+    servidores: los de servidores_desde_json(config/inventario.json)."""
     ruta_cmops = Path(ruta_cmops)
-    srv = (leer(ruta_cmops / "inventario" / "servidores.json").get("servidores") or {})
+    srv = servidores or {}
+    disponible = (ruta_cmops / "cmops" / "trabajos.py").exists()
+    aviso = "" if disponible else (
+        f"No se encontró capa-media-ops en {ruta_cmops}: las ejecuciones fallarán. La carpeta viene en el "
+        "repositorio (ops-central/capa-media-ops); revisa [cm] ruta_cmops en config/ops-central.toml.")
     m = leer(ruta_cmops / "inventario" / "configuracion_modulos.json")
     orq_conf = (m.get("orquestacion") or {}).get("hosts") or {}
     usr_conf = (m.get("usuarios_wl") or {}).get("dominios") or {}
@@ -87,7 +91,26 @@ def opciones(ruta_cmops, ambiente_de):
             "managed_servers": (frm_conf.get(host) or {}).get("managed_servers") or []}
            for host in sorted(set(srv) | set(frm_conf))]
     return {"orquestacion": orq, "usuarios_wl": usr, "frmweb": frm,
-            "fuente": "capa-media-ops/inventario/servidores.json + configuracion_modulos.json"}
+            "fuente": "config/inventario.json + capa-media-ops/inventario/configuracion_modulos.json",
+            "ruta_cmops": str(ruta_cmops), "cmops_disponible": disponible, "aviso": aviso}
+
+
+def servidores_desde_json(ruta_inventario):
+    """{host: {hostname, ip, ssh_port, ambientes, dominios:[{nombre, ambiente}]}} (el formato de servidores.json de
+    cmops) desde config/inventario.json: los servidores con dominios WebLogic o del equipo de Capa Media.
+    Sin dependencias de Ops Central: lo usan la API y el puente (Python 3.6+)."""
+    d = leer(ruta_inventario)
+    srv = {}
+    for s in d.get("servidores") or []:
+        amb = s.get("ambiente") or ""
+        srv[s["id"]] = {"hostname": s["id"], "ip": s.get("ip", ""), "ssh_port": s.get("ssh_port") or 22,
+                        "ambientes": s.get("ambientes") or ([amb] if amb else []), "dominios": [],
+                        "_cm": s.get("equipo") == "cm"}
+    for dom in d.get("dominios") or []:
+        for h in dom.get("servidores") or [dom.get("servidor")]:
+            if h in srv:
+                srv[h]["dominios"].append({"nombre": dom.get("nombre") or dom["id"], "ambiente": dom.get("ambiente", "")})
+    return {h: {k: v for k, v in x.items() if k != "_cm"} for h, x in srv.items() if x["dominios"] or x["_cm"]}
 
 
 def completar_configuracion(modulos, servidores, accion, params, cfg):
@@ -100,6 +123,10 @@ def completar_configuracion(modulos, servidores, accion, params, cfg):
     base = (cfg.get("ruta_remota_defecto") or "/tmp/cmops").rstrip("/")
     usuario_so = cfg.get("usuario_so_defecto") or "oracle"
 
+    def fuera_de_inventario(h):
+        if h and h not in servidores:
+            raise ValueError(f"el servidor {h} no está en el inventario de Ops Central (config/inventario.json)")
+
     def sin_config(que):
         if not simulacion:
             raise ValueError(f"{que} no tiene configuración en capa-media-ops: recolecta la información del servidor "
@@ -108,6 +135,7 @@ def completar_configuracion(modulos, servidores, accion, params, cfg):
     if mod == "orq" and host:
         hosts = modulos.setdefault("orquestacion", {}).setdefault("hosts", {})
         if host not in hosts:
+            fuera_de_inventario(host)
             sin_config(f"el servidor {host}")
             doms = dominios_de(servidores.get(host) or {})
             hosts[host] = {"instalaciones": [{"id": "principal", "usuario_so": usuario_so, "ruta": f"{base}/wl-orquestacion",
@@ -118,6 +146,7 @@ def completar_configuracion(modulos, servidores, accion, params, cfg):
         did = str(params.get("dominio") or "").strip()
         doms = modulos.setdefault("usuarios_wl", {}).setdefault("dominios", {})
         if did and did not in doms:
+            fuera_de_inventario(host)
             sin_config(f"el dominio {did}")
             ip = (servidores.get(host) or {}).get("ip", "")
             doms[did] = {"host": host, "usuario_so": usuario_so, "ruta": f"{base}/usuarios-wl/{did}",
@@ -127,6 +156,7 @@ def completar_configuracion(modulos, servidores, accion, params, cfg):
     if mod == "frm" and host:
         hosts = modulos.setdefault("frmweb", {}).setdefault("hosts", {})
         if host not in hosts:
+            fuera_de_inventario(host)
             sin_config(f"el servidor {host}")
             hosts[host] = {"usuario_so": usuario_so, "managed_servers": []}
             return f"{host} no tiene configuración frmweb en capa-media-ops: se usa una estándar (demo en simulación)"

@@ -78,12 +78,18 @@ refresco_min_s = 120
 circuito_fallos = 3
 circuito_espera_s = 600
 ruta_kit_oracle = "../oracle-agent-kiro-master"
+# Oracle Instant Client (modo thick). Vacío = modo thin (sin cliente).
+# Hace falta si las bases usan Native Network Encryption o son versiones antiguas (errores DPY-3010 / DPY-3001).
+# Ruta absoluta o relativa a ops-central. Si se deja vacío se usa la variable ORACLE_CLIENT_DIR.
+# Ejemplo Windows (comillas simples para no escapar las barras):
+# oracle_client_dir = 'C:\oracle\instantclient_23_9'
+oracle_client_dir = ""
 # Demo sin Oracle: los reportes bd.rep.* se generan con DATOS DE MUESTRA (marcados en el HTML).
 # Con Oracle disponible ponerlo en false. Producción lo rechaza.
 reportes_muestra = true
 
 [cm]
-ruta_cmops = "../capa-media-ops"
+ruta_cmops = "capa-media-ops"   # copia incluida en el proyecto; otra ruta solo si se usa una instalación aparte
 python_cmops = "python"      # en el servidor: python3 (3.6+)
 ttl_certificado_min = 10
 timeout_s = 3600
@@ -113,7 +119,7 @@ min_puntos = 24
 archivo = "config/inventario.json"   # lo escribe: python -m opscentral generar-inventario
 
 [inventario.insumos]
-servidores_cm = "../capa-media-ops/inventario/servidores.json"
+servidores_cm = "../capa-media-ops/inventario/servidores.json"   # insumo original: solo para regenerar config/inventario.json
 bases         = "../oracle-agent-kiro-master/config/databases.json"
 bases_csv     = "../oracle-agent-kiro-master/docs/databases.csv"
 mapa_oracle   = "../zabbix-capacity-mcp-main/capacity-watchdog/config/oracle_map.yaml"

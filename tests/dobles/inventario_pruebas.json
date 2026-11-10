@@ -5,12 +5,19 @@
     {"id": "AP23SBCC04", "ip": "10.1.23.4", "ambiente": "PROD", "zabbix_host": "AP23SBCC04", "equipo": "cm"},
     {"id": "AP23SBCC09", "ip": "10.1.23.9", "ambiente": "PROD", "zabbix_host": "AP23SBCC09", "equipo": "cm"},
     {"id": "DBPRD01", "ip": "10.2.0.11", "ambiente": "PROD", "zabbix_host": "DBPRD01", "equipo": "dba"},
-    {"id": "DBTST01", "ip": "10.2.9.21", "ambiente": "TEST", "zabbix_host": "DBTST01", "equipo": "dba"}
+    {"id": "DBTST01", "ip": "10.2.9.21", "ambiente": "TEST", "zabbix_host": "DBTST01", "equipo": "dba"},
+    {"id": "AP104SBCC04", "ip": "10.1.0.104", "ambiente": "PROD", "equipo": "cm"},
+    {"id": "AP17SBCC04", "ip": "10.1.0.17", "ambiente": "PROD", "equipo": "cm"},
+    {"id": "AP05SBCC01", "ip": "10.1.0.184", "ambiente": "DESA", "equipo": "cm"}
   ],
   "dominios": [
     {"id": "simondesa", "servidor": "WLPC02SBCC04", "ambiente": "DESA"},
     {"id": "clientesprd", "servidor": "AP23SBCC04", "ambiente": "PROD"},
-    {"id": "creditoprd", "servidor": "AP23SBCC09", "ambiente": "PROD"}
+    {"id": "creditoprd", "servidor": "AP23SBCC09", "ambiente": "PROD"},
+    {"id": "ATGCPROD", "servidor": "AP104SBCC04", "ambiente": "PROD"},
+    {"id": "tercerosprod", "servidor": "AP104SBCC04", "ambiente": "PROD"},
+    {"id": "serviciosdesa", "servidor": "AP05SBCC01", "ambiente": "DESA"},
+    {"id": "externosdesa", "servidor": "AP05SBCC01", "ambiente": "DESA"}
   ],
   "bases": [
     {"id": "CORPRD", "servidor": "DBPRD01", "ambiente": "PROD", "criticidad": "alta", "dsn": "dbprd01:1521/CORPRD", "zabbix_host": "CORPRD"},

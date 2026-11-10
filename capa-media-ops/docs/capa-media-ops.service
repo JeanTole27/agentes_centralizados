@@ -1,0 +1,18 @@
+# /etc/systemd/system/capa-media-ops.service
+# systemctl daemon-reload && systemctl enable --now capa-media-ops
+[Unit]
+Description=Capa Media Ops - operacion central de middleware
+After=network-online.target
+
+[Service]
+Type=simple
+User=svc_capamedia
+WorkingDirectory=/opt/capa-media-ops
+ExecStart=/usr/bin/python3 /opt/capa-media-ops/bin/cm web
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

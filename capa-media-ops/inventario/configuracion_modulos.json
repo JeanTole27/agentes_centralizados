@@ -1,0 +1,190 @@
+{
+  "_descripcion": "Configuracion por modulo. Editable. El wl-config.sh y dominio.env de cada servidor se GENERAN desde aqui.",
+  "orquestacion": {
+    "hosts": {
+      "WLPC02SBCC04": {
+        "ssh_usuario": "",
+        "nota": "IP SSH tomada de la linea base (10.1.7.100); los Node Manager escuchan en 10.7.8.19 (NM_HOST). Confirmar cual IP usar para SSH.",
+        "instalaciones": [
+          {
+            "id": "wlogic14c",
+            "mw_home": "/oracle/app/wlogic14c/Oracle/Middleware/Oracle_Home",
+            "domains_base": "${MW_HOME}/user_projects/domains",
+            "java_home": "/opt/jdk1.8.0_391",
+            "wlst": "${MW_HOME}/oracle_common/common/bin/wlst.sh",
+            "nm_host": "10.7.8.19",
+            "trust_keystore": "/oracle/app/wlogic14c/certificados/catrust/cacerts.jks",
+            "ruta": "/oracle/app/wlogic14c/wl-orquestacion",
+            "dominios": [
+              {
+                "nombre": "externosdesa",
+                "dir": "externosdesa",
+                "domain_name": "externosdesa",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:3061",
+                "nm_port": "5566",
+                "nm_type": "plain",
+                "servers": [
+                  "Avaluos_Dev_1_1223",
+                  "Avaluos_2_Dev_1_1223",
+                  "Clientes1_Dev_1_1223",
+                  "Davivienda1_Dev_1_1223",
+                  "Grupo_Bolivar_Dev_1_1223",
+                  "Libertador1_Dev_1_1223",
+                  "ODigital_Dev_1_1223",
+                  "PureCloud_Dev_1_1223",
+                  "PureCloudAstb_Dev_1_1223"
+                ]
+              },
+              {
+                "nombre": "transversalesdesa",
+                "dir": "transversalesdesa",
+                "domain_name": "transversalesdesa",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:3041",
+                "nm_port": "5559",
+                "nm_type": "plain",
+                "servers": [
+                  "ESignature1_Dev_1_1223",
+                  "Impresion1_Dev_1_1223",
+                  "Impresion1_2_Dev_1_1223",
+                  "Transversales1_Dev_1_1223",
+                  "Transversales2_Dev_1_1223",
+                  "WSSign_Dev_1_1223"
+                ]
+              },
+              {
+                "nombre": "ARL_Web",
+                "dir": "ARL_Web",
+                "domain_name": "ARL_Web",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:8001",
+                "nm_port": "5561",
+                "nm_type": "plain",
+                "servers": [
+                  "ARLProxy1_Dev_1_1223",
+                  "ARLProxy1_2_Dev_1_1223",
+                  "ARLService1_Dev_1_1223",
+                  "ARLService1_2_Dev_1_1223"
+                ]
+              },
+              {
+                "nombre": "saluddesa",
+                "dir": "saluddesa",
+                "domain_name": "saluddesa",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:3051",
+                "nm_port": "5558",
+                "nm_type": "plain",
+                "servers": [
+                  "Salud1_Dev_1_1223",
+                  "Salud3_Dev_1_1223",
+                  "Salud3_2_Dev_1_1223"
+                ]
+              },
+              {
+                "nombre": "serviciosdesa",
+                "dir": "serviciosdesa",
+                "domain_name": "serviciosdesa",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:3031",
+                "nm_port": "5560",
+                "nm_type": "plain",
+                "servers": [
+                  "Idigital_Dev_1_1223",
+                  "Servicios3_Dev_1_1223"
+                ]
+              },
+              {
+                "nombre": "Externos14",
+                "dir": "Externos14",
+                "domain_name": "Externos14",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:14061",
+                "nm_port": "14066",
+                "nm_type": "plain",
+                "servers": [
+                  "Clientes_Dev_1_14",
+                  "Davivienda1_Dev_1_14"
+                ]
+              },
+              {
+                "nombre": "Terceros_desa",
+                "dir": "Terceros_desa",
+                "domain_name": "Terceros_desa",
+                "admin_name": "Admin_Terceros",
+                "admin_url": "t3s://${NM_HOST}:30071",
+                "nm_port": "5515",
+                "nm_type": "plain",
+                "servers": [
+                  "Libertador1_Dev_1_14",
+                  "Terceros1_Dev_1_14"
+                ]
+              },
+              {
+                "nombre": "simondesa",
+                "dir": "simondesa",
+                "domain_name": "simondesa",
+                "admin_name": "AdminServer",
+                "admin_url": "t3s://${NM_HOST}:3001",
+                "nm_port": "5557",
+                "nm_type": "plain",
+                "servers": [
+                  "Simon1_Dev_1_1223"
+                ]
+              }
+            ],
+            "usuario_so": "wlogic14c",
+            "nm_usuario": "",
+            "admin_usuario": ""
+          },
+          {
+            "id": "wlogic12c",
+            "usuario_so": "wlogic12c",
+            "ruta": "/oracle/app/wlogic12c/wl-orquestacion",
+            "mw_home": "",
+            "java_home": "",
+            "nm_host": "10.7.8.19",
+            "trust_keystore": "",
+            "nm_usuario": "",
+            "admin_usuario": "",
+            "dominios": [],
+            "nota": "Instalacion 12c (dominio acci_desa) excluida del wl-config original. Completar con Recolectar informacion + bin/cm proponer-orquestacion."
+          }
+        ]
+      }
+    }
+  },
+  "usuarios_wl": {
+    "dominios": {
+      "ATGCPROD": {
+        "host": "AP104SBCC04",
+        "usuario_so": "wlogic14c",
+        "ruta": "/Oracle/app/wlogic14c/scripts_ATGCPROD",
+        "wlst": "/Oracle/app/wlogic14c/Oracle/Middleware/Oracle_Home/oracle_common/common/bin/wlst.sh",
+        "keytool": "/opt/jdk1.8.0_391/bin/keytool",
+        "admin_ip": "10.6.4.138",
+        "admin_puerto": 6081,
+        "realm": "myrealm",
+        "tls_protocolos": "TLSv1.2,TLSv1.3",
+        "tls_minimo": "TLSv1.2",
+        "nota": "Migrado de atgc_deploy. Confirmar usuario de SO duenio del dominio.",
+        "admin_usuario": ""
+      }
+    }
+  },
+  "frmweb": {
+    "hosts": {
+      "AP17SBCC04": {
+        "usuario_so": "wlogic12c",
+        "managed_servers": [
+          "WLS_FORMS1_1",
+          "WLS_FORMS1_2",
+          "WLS_FORMS1_3"
+        ],
+        "descripcion": "TRON Forms (modulo MIG) - frmweb huerfanos en bucle"
+      }
+    }
+  },
+  "_usuarios": "No hay usuarios fijos. Por servidor: ssh_usuario (vacio = ssh.usuario de config/app.json). Por instalacion: usuario_so (duenio del MW_HOME/dominios). Por dominio (opcional): nm_usuario / admin_usuario solo para prellenar el formulario de credenciales; las claves nunca se guardan aqui."
+}

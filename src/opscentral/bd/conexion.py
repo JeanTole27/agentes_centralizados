@@ -1,7 +1,9 @@
 """Conexión a Oracle con las protecciones de 04 §3.
 
-- oracledb en modo thin (sin cliente Oracle instalado). Si las bases exigen
-  Native Network Encryption, thin no la soporta: usar listener TCPS o modo thick.
+- oracledb en modo thin (sin cliente Oracle instalado) por defecto. Si las bases exigen
+  Native Network Encryption o son versiones antiguas (DPY-3010 / DPY-3001), thin no sirve:
+  definir [bd] oracle_client_dir (o la variable ORACLE_CLIENT_DIR) con la carpeta del
+  Oracle Instant Client y se usa modo thick.
 - call_timeout por llamada (20 s por defecto).
 - Trazabilidad: CLIENT_IDENTIFIER = persona, MODULE = 'OpsCentral', ACTION = ejecución.
   Así el DBA de turno ve en V$SESSION quién está detrás de cada sesión de servicio.
@@ -9,7 +11,9 @@
 """
 from __future__ import annotations
 
+import os
 import re
+from pathlib import Path
 from typing import Any
 
 from ..credenciales import CredencialBD
@@ -22,6 +26,37 @@ class ErrorBD(RuntimeError):
     pass
 
 
+_modo_iniciado = False
+
+
+def iniciar_cliente_oracle() -> str:
+    """Activa el modo thick una sola vez, antes de la primera conexión, si hay ruta de cliente.
+
+    Orden: [bd] oracle_client_dir del TOML y, si está vacío, la variable ORACLE_CLIENT_DIR.
+    Sin ruta se queda en thin. Con ruta inválida falla con un mensaje claro (no cae a thin en
+    silencio, porque las bases que exigen thick fallarían después con un error confuso).
+    Devuelve "thick" o "thin".
+    """
+    global _modo_iniciado
+    import oracledb
+    if _modo_iniciado:
+        return "thin" if oracledb.is_thin_mode() else "thick"
+    from ..config import RAIZ, cargar
+    ruta = (str(cargar()["bd"].get("oracle_client_dir") or "").strip()
+            or os.environ.get("ORACLE_CLIENT_DIR", "").strip())
+    if ruta:
+        p = Path(ruta)
+        p = p if p.is_absolute() else (RAIZ / p).resolve()
+        if not p.is_dir():
+            raise ErrorBD(f"oracle_client_dir no existe o no es carpeta: {p}")
+        try:
+            oracledb.init_oracle_client(lib_dir=str(p))
+        except oracledb.Error as e:
+            raise ErrorBD(f"no se pudo cargar el Oracle Client desde {p}: {e}") from e
+    _modo_iniciado = True
+    return "thin" if oracledb.is_thin_mode() else "thick"
+
+
 class ConexionOracle:
     def __init__(self, base: Activo, cred: CredencialBD, *, persona: str, ejecucion_id: str,
                  paquete: str, call_timeout_s: int):
@@ -31,6 +66,7 @@ class ConexionOracle:
 
     def __enter__(self):
         import oracledb  # import diferido: la API no lo necesita
+        iniciar_cliente_oracle()
         dsn = self.base.datos.get("dsn")
         if not dsn:
             raise ErrorBD(f"la base {self.base.id} no tiene DSN en el inventario")

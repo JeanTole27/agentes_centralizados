@@ -51,6 +51,9 @@ def main():
         "opscentral_cm_opciones", os.path.join(os.path.dirname(os.path.abspath(__file__)), "opciones.py"))
     opc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(opc)
+    if req.get("inventario"):
+        # cmops usa los servidores del inventario de Ops Central (config/inventario.json), no su servidores.json.
+        inv.servidores = opc.servidores_desde_json(req["inventario"])
     try:
         aviso = opc.completar_configuracion(inv.modulos, inv.servidores, req["accion"], req.get("params") or {}, cfg)
     except ValueError as e:

@@ -331,17 +331,16 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     def cm_opciones(u: Usuario = Depends(usuario)):
         """Servidores, instalaciones y dominios que acepta capa-media-ops, por módulo."""
         from pathlib import Path as _P
-        from .cm.opciones import opciones
-        from .config import RAIZ
+        from .cm.opciones import opciones, servidores_desde_json
+        from .config import ruta_cmops
         if not any(puede_ver(u, a) for a in n.catalogo if a.motor == "cm"):
             raise HTTPException(403, "tu perfil no tiene acciones de Capa Media")
-        r = _P(n.cfg["cm"]["ruta_cmops"])
-        r = r if r.is_absolute() else (RAIZ / r).resolve()
+        r = ruta_cmops(n.cfg)
 
         def ambiente_de(host: str) -> str:
             a = n.inventario.buscar(host) if host else None
             return a.ambiente if a else ""
-        return opciones(r, ambiente_de)
+        return opciones(r, ambiente_de, servidores_desde_json(n.cfg.ruta("inventario", "archivo")))
 
     @app.get("/api/reportes/tipos")
     def reportes_tipos(u: Usuario = Depends(usuario)):

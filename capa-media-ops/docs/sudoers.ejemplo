@@ -1,0 +1,11 @@
+# /etc/sudoers.d/capa-media-ops  (validar con: visudo -cf /etc/sudoers.d/capa-media-ops)
+# Permite a la cuenta de servicio ejecutar bash como los usuarios duenios de middleware,
+# sin password y SIN acceso a root.
+#
+# Ajustar en cada servidor los usuarios que existan (wlogic12c, wlogic14c, oracle).
+Defaults:svc_capamedia !requiretty
+svc_capamedia ALL=(wlogic12c,wlogic14c,oracle) NOPASSWD: /bin/bash
+#
+# Nota: el comando remoto es siempre "sudo -n -u <usuario> -H bash -c '<script>'".
+# El script lo construye el nodo central a partir de acciones validadas; el control
+# de quien puede ejecutar que se hace en la plataforma (roles + auditoria).

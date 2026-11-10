@@ -1,0 +1,11 @@
+# Usuarios de la interfaz (hashes) y credenciales de prueba
+config/usuarios_app.json
+config/CREDENCIALES_DEMO.txt
+config/*.pem
+config/*.key
+# Evidencias y auditoria (se respaldan aparte, no van al repositorio)
+evidencias/
+# Informacion recolectada de servidores
+inventario/hechos/*.json
+__pycache__/
+*.pyc

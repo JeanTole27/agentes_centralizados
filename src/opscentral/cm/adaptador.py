@@ -47,8 +47,8 @@ def referencia_cmops(e: dict) -> str:
 class MotorCM:
     def __init__(self, cfg, secretos: Secretos):
         self.cfg, self.sec = cfg, secretos
-        r = Path(cfg["cm"]["ruta_cmops"])
-        self.ruta = r if r.is_absolute() else (RAIZ / r).resolve()
+        from ..config import ruta_cmops
+        self.ruta = ruta_cmops(cfg)
 
     def ejecutar(self, e: dict, acc: Accion, emitir: Callable[[str], None]) -> dict:
         if not (self.ruta / "cmops" / "trabajos.py").exists():
@@ -70,7 +70,9 @@ class MotorCM:
             req = {"ruta_cmops": str(self.ruta), "accion": acc.id, "params": params, "secretos": secretos,
                    "persona": e["solicitante"], "rol": rol_cmops(acc, e["ambiente"]), "cambio": referencia_cmops(e),
                    "llave": str(cert.llave) if cert else "",
-                   "ejecucion": e["id"]}
+                   "ejecucion": e["id"],
+                   # Única fuente de servidores/IPs/dominios: el inventario de Ops Central (no el de cmops).
+                   "inventario": str(self.cfg.ruta("inventario", "archivo"))}
             return self._correr(req, emitir)
         finally:
             if cert:

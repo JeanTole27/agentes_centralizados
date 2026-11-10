@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""cm - CLI de Capa Media Ops.
+
+  cm web                                   Inicia la interfaz web
+  cm acciones                              Lista las acciones disponibles
+  cm ejecutar <accion> k=v [k=v ...]       Ejecuta una accion (modo desatendido / cron)
+        ej: cm ejecutar orq.status host=WLPC02SBCC04 dominios=simondesa
+            cm ejecutar frm.validar host=AP17SBCC04
+            cm ejecutar rec.recolectar hosts=AP23SBCC04,AP23SBCC09
+  cm usuario-app crear <usuario> --rol admin|operador|consulta [--nombre "Nombre"]
+  cm usuario-app listar
+  cm usuario-app demo                      Crea usuarios de prueba (solo modo simulacion)
+  cm importar-inventario <servers_drp.json>
+  cm importar-wlconfig <wl-config.sh> --host <HOST> --usuario-so <usr> [--ssh-ip <ip>]
+"""
+import argparse
+import getpass
+import os
+import secrets
+import sys
+import threading
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)
+
+from cmops import VERSION  # noqa: E402
+from cmops.config import cargar, ruta  # noqa: E402
+
+
+def cmd_web(a):
+    from cmops.web import iniciar
+    iniciar()
+
+
+def cmd_acciones(a):
+    from cmops.modulos import ACCIONES
+    for k, v in sorted(ACCIONES.items()):
+        print("%-18s %-14s %-9s %s" % (k, v["modulo"], "lectura" if v["solo_lectura"] else "CAMBIOS", v["nombre"]))
+
+
+def cmd_ejecutar(a):
+    from cmops.inventario import Inventario
+    from cmops.seguridad import Auditoria
+    from cmops.trabajos import GestorTrabajos
+    cfg = cargar()
+    params = {}
+    for kv in a.parametros:
+        if "=" not in kv:
+            sys.exit("parametro invalido (use k=v): %s" % kv)
+        k, v = kv.split("=", 1)
+        params[k] = v
+    secretos = {}
+    if a.accion == "usr.preparar":
+        # sin usuario por defecto: cada dominio tiene el suyo
+        secretos["admin_usuario"] = input("Usuario admin de consola del dominio: ").strip()
+        secretos["admin_password"] = getpass.getpass("Password admin de consola: ")
+    if a.accion == "orq.credenciales":
+        secretos["nm_usuario"] = input("Usuario Node Manager del dominio: ").strip()
+        secretos["nm_password"] = getpass.getpass("Password Node Manager: ")
+        secretos["admin_usuario"] = input("Usuario consola (vacio = omitir): ").strip()
+        if secretos["admin_usuario"]:
+            secretos["admin_password"] = getpass.getpass("Password consola: ")
+    if a.accion == "usr.aplicar":
+        if not a.acciones:
+            sys.exit("usr.aplicar requiere --acciones <archivo ACCION|USUARIO|PASSWORD|DESCRIPCION|GRUPO>")
+        filas = []
+        with open(a.acciones, encoding="utf-8") as f:
+            for l in f:
+                l = l.strip()
+                if not l or l.startswith("#"):
+                    continue
+                c = (l.split("|") + [""] * 5)[:5]
+                filas.append(dict(zip(("accion", "usuario", "password", "descripcion", "grupo"), c)))
+        params["acciones"] = filas
+    inv = Inventario(cfg)
+    g = GestorTrabajos(cfg, inv, Auditoria())
+    sesion = {"usuario": "cli:" + getpass.getuser(), "rol": a.rol}
+    from cmops.modulos import ErrorValidacion
+    from cmops.trabajos import Conflicto, PermisoDenegado
+    try:
+        meta = g.crear(a.accion, params, secretos, sesion, a.cambio or "")
+    except (ErrorValidacion, PermisoDenegado, Conflicto) as e:
+        sys.exit("ERROR: %s" % e)
+    tid = meta["id"]
+    visto = 0
+    ev = threading.Event()
+    while True:
+        r = g.obtener(tid, visto)
+        for l in r["lineas"]:
+            print(l)
+        visto += len(r["lineas"])
+        if r["meta"]["estado"] not in ("en_cola", "ejecutando"):
+            break
+        ev.wait(0.5)
+    print("Trabajo %s -> %s  (evidencia: evidencias/trabajos/%s.log)" % (tid, r["meta"]["estado"], tid))
+    sys.exit(0 if r["meta"]["estado"] == "exitoso" else 1)
+
+
+def cmd_usuario_app(a):
+    from cmops.seguridad import Usuarios
+    u = Usuarios()
+    if a.sub == "listar":
+        for x in u.listar():
+            print("%-20s %-10s %s" % (x["usuario"], x["rol"], x["nombre"]))
+        return
+    if a.sub == "demo":
+        if not cargar().get("modo_simulacion"):
+            sys.exit("demo solo esta permitido con modo_simulacion=true")
+        lineas = ["# Usuarios de PRUEBA para modo simulacion. NO usar en produccion. Borrar este archivo."]
+        for usr, rol in (("admin", "admin"), ("operador", "operador"), ("consulta", "consulta")):
+            clave = secrets.token_urlsafe(12)
+            u.guardar(usr, clave, rol, "Usuario demo (%s)" % rol)
+            lineas.append("%s / %s  (rol %s)" % (usr, clave, rol))
+        p = ruta("config", "CREDENCIALES_DEMO.txt")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("\n".join(lineas) + "\n")
+        print("Usuarios demo creados. Credenciales en %s" % p)
+        return
+    if not a.usuario or not a.rol:
+        sys.exit("uso: cm usuario-app crear <usuario> --rol <rol>")
+    c1 = getpass.getpass("Clave para %s: " % a.usuario)
+    c2 = getpass.getpass("Repita la clave: ")
+    if c1 != c2:
+        sys.exit("las claves no coinciden")
+    u.guardar(a.usuario, c1, a.rol, a.nombre or "")
+    print("usuario %s guardado con rol %s" % (a.usuario, a.rol))
+
+
+def cmd_importar_inventario(a):
+    sys.path.insert(0, ruta("herramientas"))
+    import importar_inventario
+    importar_inventario.main(a.archivo)
+
+
+def cmd_importar_wlconfig(a):
+    sys.path.insert(0, ruta("herramientas"))
+    import importar_wlconfig
+    importar_wlconfig.main(a.archivo, a.host, a.usuario_so, a.ssh_ip, a.instalacion)
+
+
+def cmd_importar_usuarios_ssh(a):
+    sys.path.insert(0, ruta("herramientas"))
+    import importar_usuarios_ssh
+    importar_usuarios_ssh.main(a.archivo)
+
+
+def cmd_proponer_orquestacion(a):
+    sys.path.insert(0, ruta("herramientas"))
+    import proponer_orquestacion
+    proponer_orquestacion.main(a.host, a.aplicar)
+
+
+def main():
+    p = argparse.ArgumentParser(prog="cm", description="Capa Media Ops %s" % VERSION)
+    sp = p.add_subparsers(dest="cmd")
+    sp.add_parser("web").set_defaults(fn=cmd_web)
+    sp.add_parser("acciones").set_defaults(fn=cmd_acciones)
+    e = sp.add_parser("ejecutar")
+    e.add_argument("accion")
+    e.add_argument("parametros", nargs="*")
+    e.add_argument("--cambio", help="numero de cambio (obligatorio para cambios en PROD/DRP)")
+    e.add_argument("--rol", default="admin", choices=["consulta", "operador", "admin"])
+    e.add_argument("--acciones", help="archivo de acciones para usr.aplicar")
+    e.set_defaults(fn=cmd_ejecutar)
+    u = sp.add_parser("usuario-app")
+    u.add_argument("sub", choices=["crear", "listar", "demo"])
+    u.add_argument("usuario", nargs="?")
+    u.add_argument("--rol", choices=["consulta", "operador", "admin"])
+    u.add_argument("--nombre")
+    u.set_defaults(fn=cmd_usuario_app)
+    i = sp.add_parser("importar-inventario")
+    i.add_argument("archivo")
+    i.set_defaults(fn=cmd_importar_inventario)
+    w = sp.add_parser("importar-wlconfig")
+    w.add_argument("archivo")
+    w.add_argument("--host", required=True)
+    w.add_argument("--usuario-so", required=True)
+    w.add_argument("--ssh-ip")
+    w.add_argument("--instalacion", help="id de la instalacion (por defecto el usuario de SO)")
+    w.set_defaults(fn=cmd_importar_wlconfig)
+    s = sp.add_parser("importar-usuarios-ssh", help="toma SSH_USER_<HOST> de un .env (ignora las claves)")
+    s.add_argument("archivo")
+    s.set_defaults(fn=cmd_importar_usuarios_ssh)
+    o = sp.add_parser("proponer-orquestacion", help="propone instalaciones/usuarios SO desde la recoleccion")
+    o.add_argument("host")
+    o.add_argument("--aplicar", action="store_true")
+    o.set_defaults(fn=cmd_proponer_orquestacion)
+    a = p.parse_args()
+    if not getattr(a, "fn", None):
+        p.print_help()
+        sys.exit(1)
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    main()
