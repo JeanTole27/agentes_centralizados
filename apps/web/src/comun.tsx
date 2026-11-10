@@ -1,12 +1,77 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ErrorApi } from "./api";
-import type { AccionCat, Yo } from "./tipos";
+import type { AccionCat, Inventario, Yo } from "./tipos";
 
 // ---------------------------------------------------------------- contexto de sesión y avisos
 type Ctx = { yo: Yo; avisar: (t: string) => void; soloLectura: (pantalla: string) => boolean };
 export const Sesion = createContext<Ctx>(null as unknown as Ctx);
 export const useSesion = () => useContext(Sesion);
+
+// ---------------------------------------------------------------- ambiente (filtro de cada vista)
+export const ORDEN_AMBIENTES = ["PROD", "DRP", "QA", "TEST", "DESA"];
+export const ordenarAmbientes = (xs: Iterable<string>) =>
+  Array.from(new Set(xs)).sort((a, b) => (ORDEN_AMBIENTES.indexOf(a) + 1 || 99) - (ORDEN_AMBIENTES.indexOf(b) + 1 || 99) || a.localeCompare(b));
+
+export function useInventario() {
+  return useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
+}
+
+type CtxAmbiente = { ambiente: string; setAmbiente: (a: string) => void };
+const Ambiente = createContext<CtxAmbiente>({ ambiente: "", setAmbiente: () => undefined });
+
+/** Cada vista tiene su propio filtro de ambiente ("" = todos): lo comparten el campo "Ambiente" de la
+ *  vista y lo que se abre dentro de ella (formularios, modales). Al cambiar de vista empieza en "Todos". */
+export function ConAmbiente({ children }: { children: ReactNode }) {
+  const [ambiente, setAmbiente] = useState("");
+  return <Ambiente.Provider value={{ ambiente, setAmbiente }}>{children}</Ambiente.Provider>;
+}
+export const useAmbiente = () => useContext(Ambiente).ambiente;
+
+/** ¿El ambiente `a` pasa el filtro de la vista? (sin filtro, todo pasa) */
+export function useEnAmbiente() {
+  const ambiente = useAmbiente();
+  return (a?: string | null) => !ambiente || (a ?? "").toUpperCase() === ambiente;
+}
+
+/** Campo "Ambiente" de la vista. Sin `items` ofrece los ambientes del inventario completo.
+ *  `alCambiar` limpia lo que dependía del ambiente (la base o el servidor elegidos). */
+export function CampoAmbiente({ items, alCambiar, id = "f-ambiente" }: {
+  items?: { ambiente: string }[]; alCambiar?: () => void; id?: string;
+}) {
+  const { ambiente, setAmbiente } = useContext(Ambiente);
+  const inv = useInventario();
+  const fuente = items ?? [...(inv.data?.bases ?? []), ...(inv.data?.servidores ?? []), ...(inv.data?.dominios ?? [])];
+  const ambs = ordenarAmbientes(fuente.map((i) => i.ambiente));
+  return (
+    <div>
+      <label className="lb" htmlFor={id}>Ambiente</label>
+      <select id={id} className="f" value={ambiente} onChange={(e) => { setAmbiente(e.target.value); alCambiar?.(); }}>
+        <option value="">Todos</option>
+        {ambs.map((a) => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </div>
+  );
+}
+
+/** Opciones de un <select> de bases o servidores. Con filtro de ambiente: solo ese ambiente y solo el
+ *  nombre ("ABBYY"). Sin filtro: agrupadas por ambiente ("Ambiente TEST" → ABBYY), sin repetirlo en cada fila. */
+export function OpcionesActivo({ items }: { items: { id: string; ambiente: string; etiqueta?: string }[] }) {
+  const ambiente = useAmbiente();
+  const op = (i: { id: string; etiqueta?: string }) => <option key={i.id} value={i.id}>{i.etiqueta ?? i.id}</option>;
+  if (ambiente) {
+    return <>{items.filter((i) => i.ambiente === ambiente).map(op)}</>;
+  }
+  return (
+    <>
+      {ordenarAmbientes(items.map((i) => i.ambiente)).map((a) => (
+        <optgroup key={a} label={`Ambiente ${a}`}>
+          {items.filter((i) => i.ambiente === a).map(op)}
+        </optgroup>
+      ))}
+    </>
+  );
+}
 
 /** Ejecuta `fn`; si la API responde 428 pide el segundo factor y reintenta una vez.
  *  En OIDC redirige al proveedor de identidad (vuelve a Ops Central y la persona repite la acción). */

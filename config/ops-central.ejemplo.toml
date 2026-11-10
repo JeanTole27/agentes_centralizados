@@ -41,6 +41,7 @@ vigencia_min = 120
 aprobacion_c_no_prod = true  # clase C pide segunda persona también fuera de PROD
 ejecucion_directa = true     # quien tiene permiso 'ejecuta' ejecuta sin cola de aprobación (BD y Capa Media); queda en el log
 exigir_referencia_prod = false  # true: los cambios en PROD/DRP exigen un caso asociado (por defecto es opcional)
+motivo_obligatorio_c = false    # true: las acciones de clase C exigen escribir un motivo (por defecto es opcional)
 
 [jira]
 # Casos opcionales: si una ejecución se asocia a un caso, se trae de Jira para completar los datos.
@@ -62,6 +63,10 @@ vault_kv = "secret"          # montaje KV v2
 vault_ssh = "ssh-client-signer"
 vault_ssh_rol = "ops-central-cm"
 
+[reportes]
+# HTML de los reportes bd.rep.* (uno por ejecución, con su SHA-256 en el resultado)
+ruta = "datos/reportes"
+
 [bd]
 cuenta_consulta = "OPS_CONSULTA"
 cuenta_dba = "OPS_DBA"
@@ -73,6 +78,9 @@ refresco_min_s = 120
 circuito_fallos = 3
 circuito_espera_s = 600
 ruta_kit_oracle = "../oracle-agent-kiro-master"
+# Demo sin Oracle: los reportes bd.rep.* se generan con DATOS DE MUESTRA (marcados en el HTML).
+# Con Oracle disponible ponerlo en false. Producción lo rechaza.
+reportes_muestra = true
 
 [cm]
 ruta_cmops = "../capa-media-ops"

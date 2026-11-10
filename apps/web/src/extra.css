@@ -18,3 +18,13 @@
 .caso-box { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; margin-top: 10px; background: var(--acc-soft); }
 .caso-box .kv { margin-top: 6px; }
 .caso-desc { white-space: pre-wrap; max-height: 140px; overflow: auto; font-size: 12.5px; margin-top: 6px; }
+
+.top>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:600px){.top{gap:8px;padding:0 12px}}
+
+/* Avisos plegables (p. ej. hosts de Zabbix fuera del inventario) */
+details.plegable > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-weight:600;user-select:none}
+details.plegable > summary::-webkit-details-marker{display:none}
+details.plegable > summary::before{content:"▸";display:inline-block;transition:transform .15s;font-size:.9em}
+details.plegable[open] > summary::before{transform:rotate(90deg)}
+details.plegable .plegable-cuerpo{margin-top:8px;max-height:240px;overflow:auto;font-weight:400;word-break:break-word}

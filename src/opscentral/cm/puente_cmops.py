@@ -20,7 +20,8 @@ import time
 
 
 def emitir(obj):
-    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    # JSON en ASCII (escapes \u): no depende de la codificación de la consola de Windows.
+    sys.stdout.write(json.dumps(obj) + "\n")
     sys.stdout.flush()
 
 
@@ -42,7 +43,23 @@ def main():
         cfg["ssh"]["control_master"] = False     # cada ejecución con su certificado
         cfg["ssh"]["verificar_host"] = True      # StrictHostKeyChecking=yes
 
-    g = GestorTrabajos(cfg, Inventario(cfg), Auditoria())
+    inv = Inventario(cfg)
+    # Servidores/dominios del inventario sin configuración detallada por módulo: en simulación se completa
+    # en memoria (nunca se escribe en configuracion_modulos.json); en modo real se rechaza con instrucciones.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "opscentral_cm_opciones", os.path.join(os.path.dirname(os.path.abspath(__file__)), "opciones.py"))
+    opc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(opc)
+    try:
+        aviso = opc.completar_configuracion(inv.modulos, inv.servidores, req["accion"], req.get("params") or {}, cfg)
+    except ValueError as e:
+        emitir({"t": "error", "tipo": "ErrorValidacion", "mensaje": str(e)})
+        return 2
+    if aviso:
+        emitir({"t": "linea", "texto": "[ops-central] " + aviso})
+
+    g = GestorTrabajos(cfg, inv, Auditoria())
     sesion = {"usuario": "opscentral:%s#%s" % (req["persona"], req["ejecucion"]), "rol": req["rol"]}
     try:
         meta = g.crear(req["accion"], req.get("params") or {}, req.get("secretos") or {}, sesion,

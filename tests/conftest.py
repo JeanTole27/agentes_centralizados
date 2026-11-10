@@ -17,6 +17,8 @@ def cfg(tmp_path):
         "zabbix": {"url": "https://zabbix.pruebas.local"},
         "almacen": {"url": "sqlite:///" + (tmp_path / "ops.db").as_posix()},
         "evidencia": {"ruta": str(tmp_path / "evidencia")},
+        "reportes": {"ruta": str(tmp_path / "reportes")},
+        "bd": {"reportes_muestra": False},   # las pruebas usan el doble de Oracle, no datos de muestra
         "inventario": {"archivo": str(Path(__file__).parent / "dobles" / "inventario_pruebas.json")},
     })
 

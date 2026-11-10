@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { Sesion } from "./comun";
+import { ConAmbiente, Sesion } from "./comun";
 import type { Yo } from "./tipos";
 import * as P from "./pantallas";
 
@@ -93,7 +93,7 @@ export default function Shell({ yo }: { yo: Yo }) {
               <Route path="/" element={<Navigate to="/inicio" replace />} />
               {[...permitidas.keys()].map((id) => {
                 const C = PANTALLAS[id];
-                return C ? <Route key={id} path={`/${id}/*`} element={<C />} /> : null;
+                return C ? <Route key={id} path={`/${id}/*`} element={<ConAmbiente key={id}><C /></ConAmbiente>} /> : null;
               })}
               <Route path="*" element={<div className="empty">Esta pantalla no existe o tu perfil no tiene acceso.</div>} />
             </Routes>

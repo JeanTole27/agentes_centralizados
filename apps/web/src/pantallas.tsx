@@ -5,7 +5,7 @@ import { api, mensajeError } from "./api";
 import Accion from "./Accion";
 import {
   Antiguedad, Cabecera, Cargando, Clase, Consola, EstadoEj, Modal, Resultado, TablaFilas, Vacio, fecha,
-  useCatalogo, useSegundoFactor, useSesion,
+  CampoAmbiente, OpcionesActivo, useAccion, useAmbiente, useCatalogo, useEnAmbiente, useInventario, useSegundoFactor, useSesion,
 } from "./comun";
 import type { Ejecucion, EstadoObj, Inventario } from "./tipos";
 
@@ -17,6 +17,7 @@ export function Inicio() {
   if (!q.data) return <Cargando q={q} />;
   const k = q.data.kpis;
   const sem = k.bases ?? {};
+  const ultimas: Ejecucion[] = q.data.ultimas;
   return (
     <>
       <Cabecera titulo={`Hola, ${yo.nombre.split(" ")[0]}`} sub="Lo que necesita tu atención ahora. Todo sale del almacén de Ops Central." />
@@ -51,12 +52,12 @@ export function Inicio() {
         </div>
         <div className="card">
           <h3>Últimas ejecuciones</h3>
-          {q.data.ultimas.length === 0 ? <Vacio>Todavía no hay ejecuciones.</Vacio> : (
+          {ultimas.length === 0 ? <Vacio>Todavía no hay ejecuciones.</Vacio> : (
             <div className="list">
-              {q.data.ultimas.map((e: Ejecucion) => (
+              {ultimas.map((e: Ejecucion) => (
                 <div key={e.id} className="li">
                   <div className="grow"><b className="mono-sm">{e.accion}</b>
-                    <div className="muted small">{e.destino} · {e.solicitante} · {fecha(e.creada)}</div></div>
+                    <div className="muted small">{e.destino} · ambiente {e.ambiente} · {e.solicitante} · {fecha(e.creada)}</div></div>
                   <EstadoEj e={e.estado} />
                 </div>
               ))}
@@ -75,21 +76,29 @@ function Kpi({ t, v, c = "", sub, ir }: { t: string; v: number; c?: string; sub?
 
 // ======================================================================== INVENTARIO
 export function InventarioP() {
-  const q = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario") });
+  const inv = useInventario();
+  const enAmb = useEnAmbiente();
   const [tab, setTab] = useState<"servidores" | "dominios" | "bases">("servidores");
+  const datos = inv.data && {
+    servidores: inv.data.servidores.filter((x) => enAmb(x.ambiente)),
+    dominios: inv.data.dominios.filter((x) => enAmb(x.ambiente)),
+    bases: inv.data.bases.filter((x) => enAmb(x.ambiente)),
+  };
+  const q = inv;
   return (
     <>
       <Cabecera titulo="Inventario" sub="Servidores, dominios WebLogic y bases, con sus relaciones. Fuente: inventario de Ops Central." />
       <div className="card">
+        <div className="fgrid" style={{ marginBottom: 12 }}><CampoAmbiente id="inv-amb" /></div>
         <div className="tabs">
           {(["servidores", "dominios", "bases"] as const).map((t) => (
             <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-              {t[0].toUpperCase() + t.slice(1)} {q.data && <span className="muted">({q.data[t].length})</span>}
+              {t[0].toUpperCase() + t.slice(1)} {datos && <span className="muted">({datos[t].length})</span>}
             </button>
           ))}
         </div>
         <Cargando q={q} />
-        {q.data && <TablaFilas filas={q.data[tab].map((x: any) => ({ ...x, relacionados: x.relacionados.join(", ") }))} />}
+        {datos && <TablaFilas filas={datos[tab].map((x: any) => ({ ...x, relacionados: x.relacionados.join(", ") }))} />}
       </div>
     </>
   );
@@ -146,9 +155,21 @@ function EstadoZabbix() {
         </>}
       </div>
       {error && <div className="warnbox mt">Última lectura con error: {error}. Se muestran los últimos datos buenos.</div>}
-      {faltan.length > 0 && <div className="info mt">Hosts con problemas que no están en el inventario: {faltan.join(", ")}.</div>}
-      {c?.datos?.faltan_en_zabbix?.length > 0 && <div className="info mt">Servidores del inventario que no existen en Zabbix: {c.datos.faltan_en_zabbix.join(", ")}.</div>}
+      {faltan.length > 0 && <ListaPlegable titulo="Hosts con problemas que no están en el inventario" items={faltan} />}
+      {c?.datos?.faltan_en_zabbix?.length > 0 && (
+        <ListaPlegable titulo="Servidores del inventario que no existen en Zabbix" items={c.datos.faltan_en_zabbix} />
+      )}
     </div>
+  );
+}
+
+/** Aviso con una lista larga de nombres: cerrado por defecto, se abre/cierra con un clic. */
+function ListaPlegable({ titulo, items }: { titulo: string; items: string[] }) {
+  return (
+    <details className="info mt plegable">
+      <summary>{titulo} <span className="tag">{items.length}</span></summary>
+      <div className="plegable-cuerpo">{items.join(", ")}.</div>
+    </details>
   );
 }
 
@@ -267,68 +288,8 @@ function Grafico({ serie, pred }: { serie: string; pred: any }) {
   return <div ref={caja} className="chart-box" role="img" aria-label={`Uso de ${serie} y proyección`} />;
 }
 
-// ======================================================================== CAPA MEDIA
-function PantallaAcciones({ titulo, sub, acciones, conHost = true }: { titulo: string; sub: string; acciones: string[]; conHost?: boolean }) {
-  const cat = useCatalogo();
-  const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
-  const disponibles = acciones.filter((a) => cat.data?.some((c) => c.id === a));
-  const [sel, setSel] = useState<string>("");
-  const [host, setHost] = useState("");
-  const [dominios, setDominios] = useState("");
-  const actual = sel || disponibles[0];
-  const servidores = (inv.data?.servidores ?? []).filter((s) => !s.equipo || s.equipo === "cm");
-  const doms = (inv.data?.dominios ?? []).filter((d) => !host || d.servidor === host);
-  return (
-    <>
-      <Cabecera titulo={titulo} sub={sub} />
-      <Cargando q={cat} />
-      {conHost && (
-        <div className="card">
-          <div className="fgrid">
-            <label className="lb">Servidor
-              <select className="f" value={host} onChange={(e) => { setHost(e.target.value); setDominios(""); }}>
-                <option value="">— elegir —</option>
-                {servidores.map((s) => <option key={s.id} value={s.id}>{s.id} · {s.ambiente}</option>)}
-              </select>
-            </label>
-            <label className="lb">Dominios (vacío = todos)
-              <select className="f" value={dominios} onChange={(e) => setDominios(e.target.value)} disabled={!host}>
-                <option value="">Todos los del servidor</option>
-                {doms.map((d) => <option key={d.id} value={d.id}>{d.id}</option>)}
-              </select>
-            </label>
-          </div>
-        </div>
-      )}
-      <div className="card">
-        <div className="tabs">
-          {disponibles.map((a) => {
-            const c = cat.data!.find((x) => x.id === a)!;
-            return <button key={a} className={actual === a ? "on" : ""} onClick={() => setSel(a)}>{c.nombre.split("(")[0]}</button>;
-          })}
-        </div>
-        {actual && (!conHost || host) ? (
-          <Accion key={actual + host + dominios} accion={actual} compacto
-                  iniciales={conHost ? { host, ...(dominios ? { dominios } : {}) } : {}} ocultos={["hosts"]} />
-        ) : <Vacio>Elige el servidor para continuar.</Vacio>}
-        {actual && <div className="fila mt small muted"><Clase c={cat.data!.find((x) => x.id === actual)!.clase} /> <span className="mono-sm">{actual}</span></div>}
-      </div>
-    </>
-  );
-}
-
-export const Orquestacion = () => (
-  <PantallaAcciones titulo="Orquestación WebLogic" sub="Estado, bajada y subida ordenada de dominios, con snapshot previo de Managed Servers."
-    acciones={["orq.status", "orq.verificar", "orq.inventory", "orq.stop", "orq.start", "orq.credenciales", "rec.recolectar", "sys.conectividad"]} />
-);
-export const UsuariosWL = () => (
-  <PantallaAcciones titulo="Usuarios WebLogic" sub="Listar, preparar el dominio y aplicar altas, bajas y grupos en el realm."
-    acciones={["usr.listar", "usr.preparar", "usr.aplicar"]} />
-);
-export const Frmweb = () => (
-  <PantallaAcciones titulo="Procesos frmweb" sub="Detectar procesos huérfanos (sin sesión) y mitigarlos por lotes."
-    acciones={["frm.validar", "frm.mitigar"]} />
-);
+// ======================================================================== CAPA MEDIA (capamedia.tsx)
+export { Frmweb, Orquestacion, UsuariosWL } from "./capamedia";
 
 // ======================================================================== SNAPSHOT DE INVÁLIDOS
 export function Snapshot() {
@@ -336,10 +297,12 @@ export function Snapshot() {
   const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
   const [base, setBase] = useState("");
   const [cambio, setCambio] = useState("");
-  const listo = base && /^[A-Za-z0-9][A-Za-z0-9_\-/.]{2,39}$/.test(cambio);
+  // La referencia es opcional: sin ella, el ANTES abre un grupo automático y lo demás usa el último ANTES.
+  const refValida = !cambio || /^[A-Za-z0-9][A-Za-z0-9_\-/.]{2,39}$/.test(cambio);
+  const listo = Boolean(base) && refValida;
   const comp = useQuery({
-    queryKey: ["snapshot", base, cambio], enabled: Boolean(listo), retry: false,
-    queryFn: () => api.get<EstadoObj>(`/api/estado/bd/${base}/snapshot/${cambio}`),
+    queryKey: ["snapshot", base, cambio], enabled: listo, retry: false,
+    queryFn: () => api.get<EstadoObj & { grupo?: string }>(cambio ? `/api/estado/bd/${base}/snapshot/${cambio}` : `/api/estado/bd/${base}/snapshot`),
   });
   const refrescar = () => qc.invalidateQueries({ queryKey: ["snapshot", base, cambio] });
   const c = comp.data?.datos;
@@ -348,18 +311,24 @@ export function Snapshot() {
       <Cabecera titulo="Snapshot de inválidos" sub="Antes y después de un despliegue: qué objetos quedaron inválidos por el cambio, sin confundirlos con la línea base." />
       <div className="card">
         <div className="fgrid">
+          {inv.data && <CampoAmbiente id="snap-amb" items={inv.data.bases} alCambiar={() => setBase("")} />}
           <label className="lb">Base
             <select className="f" value={base} onChange={(e) => setBase(e.target.value)}>
               <option value="">— elegir —</option>
-              {inv.data?.bases.map((b) => <option key={b.id} value={b.id}>{b.id} · {b.ambiente}</option>)}
+              {inv.data && <OpcionesActivo items={inv.data.bases} />}
             </select>
           </label>
-          <label className="lb">Referencia (caso, despliegue, tarea…)
-            <input className="f" value={cambio} maxLength={40} placeholder="OPS-123 o DESPLIEGUE-NOMINA-1110" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
+          <label className="lb">Referencia (opcional: caso, despliegue, tarea…)
+            <input className="f" value={cambio} maxLength={40} placeholder="Vacío = se agrupa con el último ANTES" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
+            {!refValida && <span className="err-campo">3 a 40 caracteres: letras, números, - _ . /</span>}
           </label>
         </div>
+        {base && !cambio && (
+          <p className="muted small" style={{ marginBottom: 0 }}>Sin referencia: “Tomar ANTES” abre un grupo nuevo (SNAP-fecha-hora) y DESPUÉS, Comparar y
+            Recompilar usan el último ANTES de {base}.</p>
+        )}
       </div>
-      {!listo ? <div className="card"><Vacio>Elige la base y escribe una referencia que agrupe el ANTES y el DESPUÉS (clave de Jira, nombre del despliegue…).</Vacio></div> : (
+      {!listo ? <div className="card"><Vacio>Elige la base. La referencia es opcional.</Vacio></div> : (
         <div className="g2">
           <div className="steps">
             <Paso n={1} t="Snapshot ANTES" d="Antes de desplegar.">
@@ -376,7 +345,7 @@ export function Snapshot() {
             </Paso>
           </div>
           <div className="card">
-            <h3>Comparación {comp.data && <Antiguedad s={comp.data.antiguedad_s} />}</h3>
+            <h3>Comparación {comp.data?.grupo && <span className="tag mono">{comp.data.grupo}</span>} {comp.data && <Antiguedad s={comp.data.antiguedad_s} />}</h3>
             {comp.error ? <Vacio>{(comp.error as Error).message}</Vacio> : !c ? <Cargando q={comp} /> : (
               <>
                 <div className={c.veredicto === "sin_nuevos" ? "info" : "critbox"}>
@@ -426,9 +395,14 @@ function useRefresco() {
 }
 
 export function Bloqueos() {
-  const flota = useQuery({ queryKey: ["bd", "bloqueos"], queryFn: () => api.get<any[]>("/api/estado/bd/bloqueos"), refetchInterval: 30_000 });
+  const flotaQ = useQuery({ queryKey: ["bd", "bloqueos"], queryFn: () => api.get<any[]>("/api/estado/bd/bloqueos"), refetchInterval: 30_000 });
+  const inv = useInventario();
+  const enAmb = useEnAmbiente();
+  const ambDe = (b: string) => inv.data?.bases.find((x) => x.id === b)?.ambiente;
+  const flota = { ...flotaQ, data: flotaQ.data?.filter((b) => enAmb(ambDe(b.base))) };
   const [base, setBase] = useState("");
-  const actual = base || flota.data?.slice().sort((a, b) => b.bloqueadas - a.bloqueadas)[0]?.base || "";
+  const actual = (base && flota.data?.some((b) => b.base === base) ? base : "")
+    || flota.data?.slice().sort((a, b) => b.bloqueadas - a.bloqueadas)[0]?.base || "";
   const det = useQuery({ queryKey: ["bd", "bloqueos", actual], enabled: Boolean(actual), queryFn: () => api.get<EstadoObj>(`/api/estado/bd/${actual}/bloqueos`) });
   const refrescar = useRefresco();
   const cat = useCatalogo();
@@ -439,17 +413,18 @@ export function Bloqueos() {
       <Cabecera titulo="Bloqueos" sub="Árbol de bloqueo por base: quién bloquea a quién, desde cuándo y sobre qué objeto.">
         {actual && puedeRefrescar && <button className="btn" onClick={() => refrescar(actual)}>Refrescar {actual}</button>}
       </Cabecera>
-      <Cargando q={flota} />
+      <div className="card"><div className="fgrid"><CampoAmbiente id="blq-amb" items={inv.data?.bases ?? []} alCambiar={() => setBase("")} /></div></div>
+      <Cargando q={flotaQ} />
       <div className="dbsel">
         {flota.data?.map((b) => (
           <button key={b.base} className={"dbc" + (actual === b.base ? " on" : "")} onClick={() => setBase(b.base)}
                   aria-label={`${b.base}: ${b.bloqueadas} sesiones bloqueadas`} aria-pressed={actual === b.base}>
-            <div className="fila entre"><b>{b.base}</b>{b.bloqueadas > 0 ? <span className="tag t-crit">{b.bloqueadas} bloqueadas</span> : <span className="tag t-ok">sin bloqueos</span>}</div>
+            <div className="fila entre"><b>{b.base} <span className="muted small">{ambDe(b.base)}</span></b>{b.bloqueadas > 0 ? <span className="tag t-crit">{b.bloqueadas} bloqueadas</span> : <span className="tag t-ok">sin bloqueos</span>}</div>
             <small>{b.error ? "error: " + b.error : `${b.arboles} árboles · actualizado hace ${Math.round(b.antiguedad_s / 60)} min`}</small>
           </button>
         ))}
       </div>
-      {flota.data?.length === 0 && <div className="card"><Vacio>Sin datos de bloqueos todavía. Pide un refresco desde Salud.</Vacio></div>}
+      {flota.data?.length === 0 && <div className="card"><Vacio>Sin datos de bloqueos en este ambiente todavía. Pide un refresco desde Salud.</Vacio></div>}
       {det.data && (
         <div className="card">
           <h3>{actual} <span className="fila">{det.data.filtrado && <span className="tag t-cm">{det.data.filtrado}</span>}<Antiguedad s={det.data.antiguedad_s} origen={det.data.origen} /></span></h3>
@@ -502,7 +477,8 @@ function Nodo({ n, raiz, alTerminar }: { n: any; raiz?: boolean; alTerminar: (n:
 
 // ======================================================================== SALUD
 export function Salud() {
-  const [ambiente, setAmbiente] = useState("");
+  const ambiente = useAmbiente();
+  const inv = useInventario();
   const q = useQuery({ queryKey: ["bd", "salud", ambiente], queryFn: () => api.get<EstadoObj[]>(`/api/estado/bd/salud${ambiente ? "?ambiente=" + ambiente : ""}`), refetchInterval: 30_000 });
   const [sel, setSel] = useState<EstadoObj | null>(null);
   const refrescar = useRefresco();
@@ -512,12 +488,8 @@ export function Salud() {
   const semCls: Record<string, string> = { verde: "c-ok", amarillo: "c-warn", rojo: "c-crit", sin_dato: "c-na" };
   return (
     <>
-      <Cabecera titulo="Salud de bases" sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base.">
-        <select className="f" style={{ width: 160 }} value={ambiente} onChange={(e) => setAmbiente(e.target.value)} aria-label="Ambiente">
-          <option value="">Todos los ambientes</option>
-          {["PROD", "DRP", "QA", "TEST", "DESA"].map((a) => <option key={a}>{a}</option>)}
-        </select>
-      </Cabecera>
+      <Cabecera titulo="Salud de bases" sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base." />
+      <div className="card"><div className="fgrid"><CampoAmbiente id="salud-amb" items={inv.data?.bases ?? []} /></div></div>
       <Cargando q={q} />
       {q.data && q.data.length === 0 && <div className="card"><Vacio>Sin datos de salud todavía.</Vacio></div>}
       {q.data && q.data.length > 0 && (
@@ -563,7 +535,8 @@ export function Salud() {
 
 // ======================================================================== TAREAS DBA
 const OTRAS_PANTALLAS = new Set(["bd.snap.tomar", "bd.snap.comparar", "bd.inv.recompilar", "bd.ses.bloqueos", "bd.ses.flota",
-  "bd.ses.terminar", "bd.salud.flota"]);
+  "bd.ses.terminar", "bd.salud.flota", "bd.rep.hoja_vida", "bd.rep.analisis", "bd.rep.diskgroups", "bd.rep.sql_costosas",
+  "bd.rep.programar"]);
 const GRUPOS_BD: [string, string][] = [["bd.inv", "Inválidos"], ["bd.lb", "Línea base"], ["bd.ses", "Sesiones"], ["bd.salud", "Salud"],
   ["bd.usr", "Cuentas"], ["bd.ts", "Espacio"], ["bd.asm", "Espacio"], ["bd.stats", "Mantenimiento"], ["bd.job", "Mantenimiento"]];
 
@@ -611,7 +584,9 @@ export function Tareas() {
 export function Aprobaciones() {
   const { avisar } = useSesion();
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["pendientes"], queryFn: () => api.get<Ejecucion[]>("/api/aprobaciones/pendientes"), refetchInterval: 20_000 });
+  const pendQ = useQuery({ queryKey: ["pendientes"], queryFn: () => api.get<Ejecucion[]>("/api/aprobaciones/pendientes"), refetchInterval: 20_000 });
+  const enAmb = useEnAmbiente();
+  const q = { ...pendQ, data: pendQ.data?.filter((e) => enAmb(e.ambiente)) };
   const conSegundoFactor = useSegundoFactor();
   const [coment, setComent] = useState<Record<string, string>>({});
   const [ocupado, setOcupado] = useState("");
@@ -633,8 +608,9 @@ export function Aprobaciones() {
   return (
     <>
       <Cabecera titulo="Aprobaciones" sub="Solicitudes de otras personas que tu perfil puede aprobar. Nadie aprueba lo que pidió." />
-      <Cargando q={q} />
-      {q.data?.length === 0 && <div className="card"><Vacio>No tienes aprobaciones pendientes.</Vacio></div>}
+      <div className="card"><div className="fgrid"><CampoAmbiente id="apr-amb" /></div></div>
+      <Cargando q={pendQ} />
+      {q.data?.length === 0 && <div className="card"><Vacio>No tienes aprobaciones pendientes en este ambiente.</Vacio></div>}
       {q.data?.map((e) => (
         <div key={e.id} className="card">
           <h3><span className="mono-sm">{e.accion}</span><span className="fila"><Clase c={e.clase} /><span className="tag">{e.ambiente}</span></span></h3>
@@ -665,13 +641,15 @@ export function Ejecuciones() {
   const [estado, setEstado] = useState("");
   const [cambio, setCambio] = useState("");
   const [sel, setSel] = useState<string | null>(null);
-  const qs = new URLSearchParams({ ...(estado ? { estado } : {}), ...(cambio ? { cambio } : {}) }).toString();
-  const q = useQuery({ queryKey: ["ejecuciones", estado, cambio], queryFn: () => api.get<Ejecucion[]>(`/api/ejecuciones${qs ? "?" + qs : ""}`), refetchInterval: 15_000 });
+  const ambiente = useAmbiente();
+  const qs = new URLSearchParams({ ...(estado ? { estado } : {}), ...(cambio ? { cambio } : {}), ...(ambiente ? { ambiente } : {}) }).toString();
+  const q = useQuery({ queryKey: ["ejecuciones", estado, cambio, ambiente], queryFn: () => api.get<Ejecucion[]>(`/api/ejecuciones${qs ? "?" + qs : ""}`), refetchInterval: 15_000 });
   return (
     <>
       <Cabecera titulo="Log de ejecuciones" sub="Todo lo que se ejecutó: quién, dónde, con qué caso (si lo hubo) y qué pasó. Cada ejecución cerrada deja evidencia con su SHA-256." />
       <div className="card">
         <div className="fgrid" style={{ marginBottom: 12 }}>
+          <CampoAmbiente id="ej-amb" />
           <label className="lb">Estado
             <select className="f" value={estado} onChange={(e) => setEstado(e.target.value)}>
               {ESTADOS.map((s) => <option key={s} value={s}>{s ? s.replace("_", " ") : "Todos"}</option>)}
@@ -686,7 +664,7 @@ export function Ejecuciones() {
         {q.data && q.data.length > 0 && (
           <div className="tbl-wrap">
             <table>
-              <thead><tr><th>Creada</th><th>Acción</th><th>Destino</th><th>Clase</th><th>Ejecutó</th><th>Caso</th><th>Motivo</th><th>Estado</th></tr></thead>
+              <thead><tr><th>Creada</th><th>Acción</th><th>Destino · ambiente</th><th>Clase</th><th>Ejecutó</th><th>Caso</th><th>Motivo</th><th>Estado</th></tr></thead>
               <tbody>
                 {q.data.map((e) => (
                   <tr key={e.id} className={"click" + (sel === e.id ? " sel" : "")} onClick={() => setSel(e.id)}>
@@ -807,4 +785,226 @@ function Proxima({ titulo, etapa, texto }: { titulo: string; etapa: string; text
 }
 export const Ventana = () => <Proxima titulo="Ventana de cambios" etapa="Etapa E5" texto="Guion de la ventana con pasos de Capa Media y Base de Datos encadenados por número de cambio." />;
 export const Incidentes = () => <Proxima titulo="Incidentes" etapa="Etapa E6" texto="Vista por incidente con la línea de tiempo de eventos Zabbix, ejecuciones y evidencias." />;
-export const Reportes = () => <Proxima titulo="Reportes" etapa="Etapa E6" texto="Reportes periódicos de salud, inválidos, crecimiento y cumplimiento de controles." />;
+// ======================================================================== REPORTES (HTML generados por script)
+// Diseño: demo-ops-central.html (V.reportes / App.report). Los textos, el alcance y las etapas
+// vienen de /api/reportes/tipos; las etapas se marcan con las líneas "Etapa i/n: …" del script.
+type ReporteGen = {
+  ejecucion: string; accion: string; tipo: string; destino: string; ambiente: string; solicitante: string;
+  creada: string; nombre: string; bytes: number; sha256: string; estado?: string; muestra: boolean;
+};
+type TipoReporte = {
+  accion: string; nombre: string; skill: string; descripcion: string; alcance: "base" | "ambiente";
+  script: string; etapas: string[];
+};
+const ESTADO_CLASE: Record<string, string> = { CRITICAL: "t-crit", WARNING: "t-warn", OK: "t-ok" };
+
+export function Reportes() {
+  const cat = useCatalogo();
+  const tipos = useQuery({ queryKey: ["reportes-tipos"], queryFn: () => api.get<TipoReporte[]>("/api/reportes/tipos"), staleTime: 300_000 });
+  const ambiente = useAmbiente();
+  const inv = useInventario();
+  const q = useQuery({ queryKey: ["reportes", ambiente], queryFn: () => api.get<ReporteGen[]>(`/api/reportes${ambiente ? "?ambiente=" + ambiente : ""}`), refetchInterval: 30_000 });
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const programar = cat.data?.find((a) => a.id === "bd.rep.programar");
+  const programable = programar?.estado === "implementada" && programar.permiso === "ejecuta";
+  const lista = (tipos.data ?? []).filter((t) => cat.data?.some((a) => a.id === t.accion));
+  const sel = lista.find((t) => t.accion === abierto);
+  return (
+    <>
+      <Cabecera titulo="Reportes"
+        sub="Las skills de reportería del kit Oracle, ejecutables con un botón. Solo lectura; se construyen por etapas." />
+      <Cargando q={tipos} />
+      <div className="g2">
+        {lista.map((t) => {
+          const a = cat.data?.find((x) => x.id === t.accion);
+          const puede = a?.permiso === "ejecuta" && a.estado === "implementada";
+          return (
+            <div key={t.accion} className="card">
+              <h3>{t.nombre} <span className="tag t-bd mono">{t.skill}</span></h3>
+              <p className="muted small">{t.descripcion}</p>
+              <div className="btns mt">
+                {puede ? (
+                  <>
+                    <button className="btn pri sm" onClick={() => setAbierto(t.accion)}>Generar</button>
+                    <button className="btn sm" disabled={!programable}
+                            title={programable ? undefined : "Catalogada: la programación se implementa en una etapa posterior"}>
+                      Programar
+                    </button>
+                  </>
+                ) : <span className="muted small">Su perfil puede descargar reportes generados.</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="card mt">
+        <h3>Historial</h3>
+        <div className="fgrid" style={{ marginBottom: 12 }}><CampoAmbiente id="hist-amb" items={inv.data?.bases ?? []} /></div>
+        <Cargando q={q} />
+        {q.data && q.data.length === 0 && <Vacio>Todavía no hay reportes generados{ambiente ? ` en ${ambiente}` : ""}.</Vacio>}
+        {q.data && q.data.length > 0 && (
+          <div className="tbl-wrap">
+            <table>
+              <thead><tr><th>Reporte</th><th>Alcance</th><th>Generado por</th><th></th></tr></thead>
+              <tbody>
+                {q.data.map((r) => (
+                  <tr key={r.ejecucion}>
+                    <td>
+                      <a href={`/api/ejecuciones/${r.ejecucion}/reporte`} target="_blank" rel="noopener" title={`${r.nombre} · SHA-256 ${r.sha256}`}>
+                        {tipos.data?.find((t) => t.accion === r.accion)?.nombre ?? r.tipo}
+                      </a>
+                      {r.estado && <span className={"tag " + (ESTADO_CLASE[r.estado] ?? "")} style={{ marginLeft: 6 }}>{r.estado}</span>}
+                      {r.muestra && <span className="tag" style={{ marginLeft: 6 }}>muestra</span>}
+                    </td>
+                    <td>{r.destino.startsWith("ambiente:") ? `Ambiente ${r.ambiente}` : `${r.destino} · ambiente ${r.ambiente}`} · {fecha(r.creada)}</td>
+                    <td>{r.solicitante}</td>
+                    <td><a className="btn sm" href={`/api/ejecuciones/${r.ejecucion}/reporte?descargar=true`} download={r.nombre}>⬇ HTML</a></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {sel && <GenerarReporte t={sel} cerrar={() => setAbierto(null)} />}
+    </>
+  );
+}
+
+const RE_ETAPA = /^Etapa (\d+)\/(\d+): /;
+const NOMBRE_EXTRA: Record<string, string> = { criterio: "Criterio", umbral: "Umbral de llenado (%)" };
+
+function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
+  const acc = useAccion(t.accion);
+  const { avisar } = useSesion();
+  const qc = useQueryClient();
+  const conSegundoFactor = useSegundoFactor();
+  const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
+  const [alcance, setAlcance] = useState("");
+  const [extra, setExtra] = useState<Record<string, string>>({});
+  const [ejec, setEjec] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState(0); // última etapa anunciada por el script (1..n); 0 = ninguna
+  const [fin, setFin] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+
+  const bases = inv.data?.bases ?? [];
+  const enAmb = useEnAmbiente();
+  // Solo los ambientes con bases en el inventario (los demás fallarían al generar) y que pasan el filtro global.
+  const ambientes = (acc?.parametros.ambiente?.valores ?? []).filter((a) => bases.some((b) => b.ambiente === a) && enAmb(a));
+  // Parámetros propios del reporte además del alcance (criterio de sentencias, umbral de diskgroups).
+  const otros = Object.entries(acc?.parametros ?? {}).filter(([k]) => k !== "base" && k !== "ambiente");
+
+  useEffect(() => {
+    if (!ejec) return;
+    const es = new EventSource(`/api/ejecuciones/${ejec}/eventos`);
+    es.addEventListener("linea", (ev) => {
+      const m = RE_ETAPA.exec(JSON.parse((ev as MessageEvent).data).texto ?? "");
+      if (m) setEtapa((p) => Math.max(p, Number(m[1])));
+    });
+    es.addEventListener("fin", async (ev) => {
+      const estado = JSON.parse((ev as MessageEvent).data).estado as string;
+      es.close();
+      setFin(estado);
+      if (estado !== "exitosa") {
+        const e = await api.get<Ejecucion>(`/api/ejecuciones/${ejec}`).catch(() => null);
+        setError(e?.error || `La ejecución terminó en estado ${estado}.`);
+      } else avisar("Reporte generado: queda en el historial.");
+      qc.invalidateQueries({ queryKey: ["reportes"] });
+      qc.invalidateQueries({ queryKey: ["ejecuciones"] });
+    });
+    es.onerror = () => es.close();
+    return () => es.close();
+  }, [ejec]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function generar() {
+    setError("");
+    if (!alcance) {
+      setError(t.alcance === "ambiente" ? "Elige el ambiente." : "Elige la base.");
+      return;
+    }
+    const params: Record<string, unknown> = { [t.alcance === "ambiente" ? "ambiente" : "base"]: alcance };
+    for (const [k, esp] of otros) {
+      const x = extra[k] ?? (esp.defecto === undefined || esp.defecto === null ? "" : String(esp.defecto));
+      if (x !== "") params[k] = esp.tipo === "entero" ? Number(x) : x;
+    }
+    setOcupado(true);
+    try {
+      const r = await conSegundoFactor(() => api.post<Ejecucion>(`/api/acciones/${t.accion}/ejecuciones`, { params, cambio: null, motivo: null }));
+      if (!r) return;
+      setEtapa(0);
+      setFin(null);
+      setEjec(r.id);
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  const enCurso = !!ejec && !fin;
+  const punto = (i: number) => {
+    if (fin === "exitosa") return "d-ok";
+    if (!ejec) return "d-off";
+    if (i + 1 < etapa) return "d-ok";
+    if (i + 1 === etapa) return fin ? "d-crit" : "d-warn";
+    return "d-off";
+  };
+  return (
+    <Modal titulo={`Generar · ${t.nombre}`} cerrar={enCurso ? () => undefined : cerrar}
+      pie={<>
+        <button className="btn" onClick={cerrar} disabled={enCurso}>{fin ? "Cerrar" : "Cancelar"}</button>
+        {fin === "exitosa" && ejec ? (
+          <a className="btn pri" href={`/api/ejecuciones/${ejec}/reporte`} target="_blank" rel="noopener">Abrir reporte</a>
+        ) : (
+          <button className="btn pri" onClick={generar} disabled={ocupado || enCurso}>
+            {enCurso ? "Generando…" : fin ? "Reintentar" : "Generar"}
+          </button>
+        )}
+      </>}>
+      <p className="muted">Skill <code>{t.skill}</code> · construcción por etapas · solo lectura</p>
+      <div className="fgrid mt">
+        {t.alcance === "base" && !enCurso && <CampoAmbiente id="rep-amb" items={bases} alCambiar={() => setAlcance("")} />}
+        <label className="lb">Alcance
+          <select className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}>
+            <option value="">— elegir —</option>
+            {t.alcance === "ambiente"
+              ? ambientes.map((a) => <option key={a} value={a}>Ambiente {a} ({bases.filter((b) => b.ambiente === a).length} bases)</option>)
+              : <OpcionesActivo items={bases} />}
+          </select>
+        </label>
+        <label className="lb">Formato
+          <select className="f" disabled><option>HTML interactivo</option></select>
+        </label>
+        {otros.map(([k, esp]) => {
+          const val = extra[k] ?? (esp.defecto === undefined || esp.defecto === null ? "" : String(esp.defecto));
+          const poner = (x: string) => setExtra((p) => ({ ...p, [k]: x }));
+          return (
+            <label key={k} className="lb">{NOMBRE_EXTRA[k] ?? k}
+              {esp.tipo === "enum" ? (
+                <select className="f" disabled={enCurso} value={val} onChange={(e) => poner(e.target.value)}>
+                  {(esp.valores ?? []).map((o) => <option key={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input className="f" type={esp.tipo === "entero" ? "number" : "text"} min={esp.min} max={esp.max}
+                       disabled={enCurso} value={val} onChange={(e) => poner(e.target.value)} />
+              )}
+            </label>
+          );
+        })}
+      </div>
+      {t.alcance === "base" && (
+        <p className="muted small" style={{ marginBottom: 0 }}>Este reporte se genera por base.</p>
+      )}
+      <div className="list mt">
+        {t.etapas.map((s, i) => (
+          <div key={s} className="li"><span className={"dot " + punto(i)} /><div className="grow">{s}</div></div>
+        ))}
+      </div>
+      {enCurso && (
+        <p className="muted small">Etapa {Math.max(etapa, 1)} de {t.etapas.length} · ejecución <span className="mono-sm">{ejec}</span></p>
+      )}
+      {error && <div className="critbox mt">{error}</div>}
+    </Modal>
+  );
+}

@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..credenciales import CredencialBD
@@ -64,6 +65,27 @@ class ConexionOracle:
                 for c, v in zip(cols, r):
                     fila[c] = v.read() if hasattr(v, "read") else v
                 filas.append(fila)
+            return filas
+
+    def consultar_sql(self, sql: str, params: dict | None = None, max_filas: int = 500) -> list[dict[str, Any]]:
+        """SQL de los generadores de reportes (bd/reportes). Solo con OPS_CONSULTA, solo si es una de
+        las consultas fijas escritas en los scripts y si la política de lectura la acepta."""
+        from .reportes import es_plantilla_fija
+        if self.cred.tipo != "consulta":
+            raise ErrorBD("los reportes solo consultan con la cuenta de lectura")
+        if not es_plantilla_fija(sql):
+            raise ErrorBD("consulta de reporte rechazada: no es una de las consultas fijas de bd/reportes")
+        ok, msg = validar_lectura(sql)
+        if not ok:
+            raise ErrorBD(f"consulta de reporte rechazada por la política: {msg}")
+        nombres = set(re.findall(r"(?<!:):([a-zA-Z_]\w*)", re.sub(r"'[^']*'", "''", sql)))
+        binds = {k: v for k, v in (params or {}).items() if k in nombres}
+        with self._con.cursor() as cur:
+            cur.execute(sql, binds)
+            cols = [c[0].lower() for c in cur.description]
+            filas = []
+            for r in cur.fetchmany(max(1, min(int(max_filas), 5000))):
+                filas.append({c: (v.read() if hasattr(v, "read") else v) for c, v in zip(cols, r)})
             return filas
 
     def llamar(self, procedimiento: str, args: dict[str, Any]) -> str:

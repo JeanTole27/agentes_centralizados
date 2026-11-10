@@ -3,6 +3,7 @@ import pytest
 
 from opscentral.bd import analisis, recompilar
 from opscentral.bd.plantillas import BINDS, PLANTILLAS
+from opscentral.bd.reportes import REPORTES
 from opscentral.bd.politica import validar_lectura
 from opscentral.catalogo import Catalogo
 from opscentral.workers import Worker
@@ -40,7 +41,8 @@ def test_cada_accion_bd_implementada_tiene_logica():
     for a in CAT._acciones.values():
         if a.motor != "bd" or a.estado != "implementada":
             continue
-        assert (a.plantilla or a.procedimiento or a.id in analisis.POR_ACCION or f'"{a.id}"' in fuente), a.id
+        assert (a.plantilla or a.procedimiento or a.id in analisis.POR_ACCION or a.id in REPORTES
+                or f'"{a.id}"' in fuente), a.id
         for pl in analisis.POR_ACCION.get(a.id, ((),))[0]:
             assert pl in PLANTILLAS, (a.id, pl)
 
@@ -143,11 +145,12 @@ def test_analisis_con_plan_de_accion(api_n, bd_n, usuarios):
     assert {"bd.salud.fra", "bd.job.reintentar"} <= acciones
 
 
-def test_diskgroups_por_servidor_y_sql_costosas(api_n, bd_n, usuarios):
-    r = correr(api_n, bd_n, usuarios["dba"], "bd.rep.diskgroups", {"servidor": "DBPRD01"})
-    assert r["bases_del_servidor"] == ["CORPRD", "CRMPRD"] and r["datos"]["diskgroups"]
+def test_diskgroups_por_ambiente_y_sql_costosas(api_n, bd_n, usuarios):
+    r = correr(api_n, bd_n, usuarios["dba"], "bd.rep.diskgroups", {"ambiente": "PROD"})
+    assert r["resumen_reporte"]["servidores_consultados"] >= 1 and r["reporte"]["nombre"].startswith("reporte_diskgroups_prod_")
     r = correr(api_n, bd_n, usuarios["dba"], "bd.rep.sql_costosas", {"base": "CORTST"})
     assert r["datos"]["detalle"][0]["sql_fulltext"].startswith("UPDATE")
+    assert r["reporte"]["nombre"].startswith("reporte_sentencias_costosas_cortst_")
 
 
 def test_crecimiento_usa_las_series_del_almacen(api_n, bd_n, usuarios):

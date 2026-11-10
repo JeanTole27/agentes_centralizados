@@ -27,6 +27,7 @@ export type AccionCat = {
   permiso: "ejecuta" | "ve";
   estado: "implementada" | "catalogada";
   parametros: Record<string, EspParam>;
+  parametros_libres?: boolean;
   bloqueo: string | null;
 };
 

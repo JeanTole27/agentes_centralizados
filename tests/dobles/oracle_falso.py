@@ -12,7 +12,7 @@ import threading
 from datetime import datetime, timedelta
 
 from opscentral.bd.conexion import ErrorBD
-from opscentral.bd.politica import validar_procedimiento
+from opscentral.bd.politica import validar_lectura, validar_procedimiento
 from opscentral.credenciales import CredencialBD
 from opscentral.inventario import Activo
 
@@ -129,6 +129,20 @@ class ConexionFalsa:
                 raise r
             return r
         raise ErrorBD(f"plantilla no simulada: {plantilla}")
+
+    def consultar_sql(self, sql: str, params: dict | None = None, max_filas: int = 500) -> list[dict]:
+        """SQL de los scripts de reporte: misma validación que la conexión real; las filas
+        salen del cliente de muestra de los reportes."""
+        from opscentral.bd.reportes import es_plantilla_fija
+        if self.cred.tipo != "consulta":
+            raise ErrorBD("los reportes solo consultan con la cuenta de lectura")
+        if not es_plantilla_fija(sql):
+            raise ErrorBD("consulta de reporte rechazada: no es una de las consultas fijas de bd/reportes")
+        ok, msg = validar_lectura(sql)
+        if not ok:
+            raise ErrorBD(f"consulta de reporte rechazada por la política: {msg}")
+        from opscentral.bd.reportes.muestra import ClienteMuestra
+        return ClienteMuestra(self.base.id).query(sql, params, max_filas)
 
     def llamar(self, procedimiento: str, args: dict) -> str:
         if self.cred.tipo != "dba":

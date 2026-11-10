@@ -8,12 +8,13 @@ la salida se sigue por SSE. Errores: 401 sin sesión · 403 sin permiso ·
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import secrets
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 
@@ -23,7 +24,8 @@ from .autorizacion import PermisoDenegado, permiso_de, puede_ver
 from .catalogo import ErrorValidacion
 from .config import Config, cargar
 from .ejecuciones import Conflicto, EstadoInvalido, RequiereStepUp
-from .almacen import usuario_demo
+from .almacen import ejecucion as t_ejecucion, usuario_demo
+from .bd.reportes import REPORTES
 from .identidad import NOMBRES_PERFIL, PERFILES_DEMO, SinPerfil, Usuario, construir_usuario, ingreso_demo, ingreso_dev
 from .jira import ErrorJira, JiraNoConfigurado, ServicioCasos
 from .limites import pedir_refresco
@@ -240,7 +242,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             if p:
                 out.append({"id": a.id, "nombre": a.nombre, "motor": a.motor, "clase": a.clase,
                             "clase_prod": a.clase_prod, "permiso": p, "estado": a.estado,
-                            "parametros": a.parametros, "bloqueo": a.bloqueo_impl})
+                            "parametros": a.parametros, "parametros_libres": a.parametros_libres,
+                            "bloqueo": a.bloqueo_impl})
         return out
 
     # ============================================================== casos (Jira, opcionales)
@@ -272,8 +275,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     # ============================================================== ejecuciones
     @app.get("/api/ejecuciones")
     def ejecuciones(estado_ejec: str | None = Query(None, alias="estado"), cambio: str | None = None,
-                    limite: int = 100, u: Usuario = Depends(usuario)):
-        return n.ejecuciones.listar(u, estado=estado_ejec, cambio=cambio, limite=limite)
+                    ambiente: str | None = None, limite: int = 100, u: Usuario = Depends(usuario)):
+        return n.ejecuciones.listar(u, estado=estado_ejec, cambio=cambio, ambiente=ambiente, limite=limite)
 
     def _visible(eid: str, u: Usuario) -> dict:
         e = n.ejecuciones.obtener(eid)
@@ -322,6 +325,74 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             raise HTTPException(404, "la ejecución aún no tiene evidencia")
         integra = n.evidencia.verificar(e["evidencia"], e["evidencia_sha256"])
         return {"sha256": e["evidencia_sha256"], "integra": integra, "contenido": n.evidencia.leer(e["evidencia"])}
+
+    # ============================================================== reportes HTML (bd.rep.*)
+    @app.get("/api/cm/opciones")
+    def cm_opciones(u: Usuario = Depends(usuario)):
+        """Servidores, instalaciones y dominios que acepta capa-media-ops, por módulo."""
+        from pathlib import Path as _P
+        from .cm.opciones import opciones
+        from .config import RAIZ
+        if not any(puede_ver(u, a) for a in n.catalogo if a.motor == "cm"):
+            raise HTTPException(403, "tu perfil no tiene acciones de Capa Media")
+        r = _P(n.cfg["cm"]["ruta_cmops"])
+        r = r if r.is_absolute() else (RAIZ / r).resolve()
+
+        def ambiente_de(host: str) -> str:
+            a = n.inventario.buscar(host) if host else None
+            return a.ambiente if a else ""
+        return opciones(r, ambiente_de)
+
+    @app.get("/api/reportes/tipos")
+    def reportes_tipos(u: Usuario = Depends(usuario)):
+        """Los reportes que muestra la pantalla: nombre, skill, alcance y etapas de cada script."""
+        from .bd.reportes import tipos
+        return tipos()
+
+    @app.get("/api/reportes")
+    def reportes_generados(limite: int = 100, ambiente: str | None = None, u: Usuario = Depends(usuario)):
+        """Reportes HTML generados (ejecuciones exitosas de bd.rep.* visibles para el usuario)."""
+        filtro = [t_ejecucion.c.accion.in_(list(REPORTES)), t_ejecucion.c.estado == "exitosa"]
+        if ambiente:
+            filtro.append(t_ejecucion.c.ambiente == ambiente.upper())
+        with n.almacen.tx() as con:
+            filas = [dict(f._mapping) for f in con.execute(
+                select(t_ejecucion).where(and_(*filtro))
+                .order_by(t_ejecucion.c.creada.desc()).limit(min(max(limite, 1), 500)))]
+        out = []
+        for e in filas:
+            info = (e.get("resultado") or {}).get("reporte")
+            if not info or not n.ejecuciones.visible_para(u, e):
+                continue
+            res = (e.get("resultado") or {}).get("resumen_reporte") or {}
+            out.append({"ejecucion": e["id"], "accion": e["accion"], "tipo": REPORTES[e["accion"]][1],
+                        "destino": e["destino"], "ambiente": e["ambiente"], "solicitante": e["solicitante"],
+                        "creada": e["creada"], "nombre": info["nombre"], "bytes": info["bytes"],
+                        "sha256": info["sha256"], "estado": res.get("overall_status"),
+                        "muestra": bool((e.get("resultado") or {}).get("muestra"))})
+        return out
+
+    @app.get("/api/ejecuciones/{eid}/reporte")
+    def reporte_html(eid: str, descargar: bool = False, u: Usuario = Depends(usuario)):
+        """HTML del reporte. Se verifica la huella antes de servirlo y se entrega aislado
+        (CSP sandbox: sin acceso a la sesión ni a la API de Ops Central)."""
+        e = _visible(eid, u)
+        info = (e.get("resultado") or {}).get("reporte")
+        if not info:
+            raise HTTPException(404, "la ejecución no generó un reporte HTML")
+        raiz = n.cfg.ruta("reportes", "ruta").resolve()
+        ruta = (raiz / info["archivo"]).resolve()
+        if raiz not in ruta.parents or not ruta.is_file():
+            raise HTTPException(404, "el archivo del reporte no está disponible")
+        datos = ruta.read_bytes()
+        if hashlib.sha256(datos).hexdigest() != info["sha256"]:
+            raise HTTPException(409, "el archivo del reporte no coincide con su huella SHA-256")
+        cab = {"Content-Security-Policy": "sandbox allow-scripts; default-src 'none'; "
+                                          "style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
+               "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store", "X-Reporte-SHA256": info["sha256"]}
+        if descargar:
+            cab["Content-Disposition"] = f'attachment; filename="{info["nombre"]}"'
+        return HTMLResponse(datos.decode("utf-8"), headers=cab)
 
     # ============================================================== aprobaciones
     @app.get("/api/aprobaciones/pendientes")
@@ -378,6 +449,23 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             f["datos"] = arbol(filtrar_por_servidores(filas, n.inventario.servidores_de_equipo("cm")))
             f["filtrado"] = "solo sesiones de servidores de Capa Media"
         return f
+
+    @app.get("/api/estado/bd/{base}/snapshot")
+    def snapshot_ultimo(base: str, u: Usuario = Depends(usuario)):
+        """Sin referencia: la comparación del último snapshot ANTES de la base."""
+        _exigir_ver(u, "bd.snap.comparar")
+        from .almacen import snapshot as t_snapshot
+        with n.almacen.tx() as con:
+            fila = con.execute(select(t_snapshot.c.cambio).where(and_(
+                t_snapshot.c.base == base.upper(), t_snapshot.c.momento == "ANTES"))
+                .order_by(t_snapshot.c.tomado.desc()).limit(1)).first()
+        grupo = fila[0] if fila else None
+        if not grupo:
+            raise HTTPException(404, "todavía no hay snapshots de esta base")
+        f = estado.leer(n.almacen, f"bd:{base.upper()}:snapshot:{grupo}")
+        if not f:
+            raise HTTPException(404, f"todavía no hay comparación para {grupo}: toma el DESPUÉS y compara")
+        return {**f, "grupo": grupo}
 
     @app.get("/api/estado/bd/{base}/snapshot/{cambio}")
     def snapshot_cambio(base: str, cambio: str, u: Usuario = Depends(usuario)):

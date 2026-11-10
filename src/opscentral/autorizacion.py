@@ -9,7 +9,8 @@ Reglas (02 §1.2 y 03 RF-APR, ajustadas con el equipo):
   Con ejecucion_directa = false vuelve el esquema de cuatro ojos para clase C.
 - El caso asociado (clave de Jira, incidente, cambio...) es OPCIONAL. Solo se exige si
   aprobaciones.exigir_referencia_prod = true y la acción es O/C en PROD/DRP.
-- C exige motivo. Step-up MFA para cualquier cambio en PROD/DRP.
+- C exige motivo solo si aprobaciones.motivo_obligatorio_c = true (por defecto es opcional).
+  Step-up MFA para cualquier cambio en PROD/DRP.
 - El perfil Automatizador ('aut') tiene permiso de ejecución y edición sobre todo el catálogo.
 La decisión se toma SIEMPRE en el backend; la interfaz solo oculta botones.
 """
@@ -57,7 +58,7 @@ def puede_ver(usuario: Usuario, accion: Accion) -> bool:
 
 def decidir(usuario: Usuario, accion: Accion, ambiente: str | None, *,
             aprobacion_c_no_prod: bool = True, ejecucion_directa: bool = True,
-            exigir_referencia_prod: bool = False) -> Decision:
+            exigir_referencia_prod: bool = False, motivo_obligatorio_c: bool = False) -> Decision:
     clase = accion.clase_en(ambiente)
     protegido = (ambiente or "").upper() in AMBIENTES_PROTEGIDOS
     if clase == "X":
@@ -81,7 +82,8 @@ def decidir(usuario: Usuario, accion: Accion, ambiente: str | None, *,
         d.requiere_stepup = True
         d.controles.append("MFA reciente (cambio en PROD/DRP)")
     if clase == "C":
-        d.controles.append("motivo obligatorio")
+        if motivo_obligatorio_c:
+            d.controles.append("motivo obligatorio")
         if ejecucion_directa:
             d.directa = True
             d.controles.append("ejecución directa con permiso de ejecución (queda en el log)")

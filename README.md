@@ -10,7 +10,7 @@ Backend e interfaz web únicos para Capa Media y Base de Datos. El diseño está
 pip install -e ".[dev]"            # o: set PYTHONPATH=src
 python -m opscentral generar-inventario   # config/inventario.json desde los insumos reales
 python -m opscentral dev                  # API + workers en http://127.0.0.1:8000 (docs en /api/docs)
-python -m pytest -q                       # 82 pruebas, con los dobles de tests/dobles
+python -m pytest -q                       # 92 pruebas, con los dobles de tests/dobles
 ```
 
 ## Modo demo (sin autenticación construida)
@@ -101,7 +101,32 @@ Las 24 acciones de diagnóstico devuelven `{veredicto, hallazgos, resumen, datos
 - **Sesiones y seguridad**: transacciones inactivas abiertas, privilegios y roles poderosos.
 - **Espacio**: crecimiento con las series del almacén, candidatos a shrink y papelera.
 - **Rendimiento**: top SQL por CPU, tiempo o gets, regresión de plan (usa AWR: requiere Diagnostics Pack), operaciones largas y estadísticas obsoletas.
-- **Comparación y reportes**: diff de esquema entre bases, bases de un dominio, hoja de vida, análisis con plan de acción (cada hallazgo sugiere la acción del catálogo), diskgroups por servidor y SQL costosas.
+- **Comparación**: diff de esquema entre bases y bases de un dominio.
+
+### Reportes HTML generados por script (pantalla Reportes)
+
+Los cuatro reportes `bd.rep.*` producen un HTML autocontenido con el formato de las skills, **sin IA ni tokens**: lo arman scripts Python deterministas en `src/opscentral/bd/reportes/`.
+
+| Acción | Script | Formato (skill) | Archivo |
+|---|---|---|---|
+| `bd.rep.hoja_vida` | `hoja_vida.py` (copia de `generar_hoja_vida.py` del paquete portable) | hoja-de-vida-bd v2.0, verde | `hoja-de-vida-database-{db}-{fecha}[-env].html` |
+| `bd.rep.analisis` | `analisis.py` | reporte-analisis-bd v1.0, verde, categorías 0-9, `alert_registry` `{DOMINIO}-{NNN}` | `reporte-analisis-database-{db}-{fecha}[-env].html` |
+| `bd.rep.diskgroups` | `diskgroups.py` | reporte-diskgroups, tema oscuro, por ambiente, agrupado por servidor, RAC deduplicado, umbral 50 % | `reporte_diskgroups_{ambiente}_{fecha}.html` |
+| `bd.rep.sql_costosas` | `sentencias.py` | reporte-sentencias-costosas, panel por `sql_id` con origen, texto completo y recomendación | `reporte_sentencias_costosas_{base}_{fecha}.html` |
+
+- Solo lectura: cada SQL pasa por `ConexionOracle.consultar_sql`, que exige la cuenta `OPS_CONSULTA` y la política `validar_lectura` (un solo SELECT/WITH).
+- Una sección que falla queda `NOT_COLLECTED` con el error real; el reporte nunca aborta.
+- El HTML se guarda en `[reportes] ruta` (por defecto `datos/reportes/`), uno por ejecución. La ejecución guarda su SHA-256, y la API verifica la huella antes de servirlo.
+- API: `GET /api/reportes` lista los reportes que el usuario puede ver. `GET /api/ejecuciones/{id}/reporte` los muestra (`?descargar=true` para descargar), con CSP `sandbox`: el reporte no accede a la sesión ni a la API.
+- Hoja de vida, análisis y SQL costosas también devuelven el resultado estructurado de siempre (hallazgos y datos).
+- **Demo sin Oracle**: con `bd.reportes_muestra = true` (activo en `ops-central.ejemplo.toml`), los reportes salen con datos de muestra y un aviso visible "DATOS DE MUESTRA". Producción rechaza esta opción.
+- Cada script también corre solo, y está copiado en el paquete portable de la hoja de vida (`generar_reporte_analisis.py`, `generar_reporte_diskgroups.py`, `generar_sentencias_costosas.py`, `reportes_comun.py`, `reportes_muestra.py`):
+
+```
+python -m opscentral.bd.reportes.analisis --alias prod_core1 --muestra --output-dir salida
+python -m opscentral.bd.reportes.diskgroups --env prod --umbral 70 --muestra
+python -m opscentral.bd.reportes.sentencias --alias prod_core1 --criterio CPU --muestra
+```
 
 ## Integración con la API de Zabbix
 

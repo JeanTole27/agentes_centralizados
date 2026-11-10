@@ -18,20 +18,23 @@ DEFECTOS: dict[str, Any] = {
     "general": {"modo": "desarrollo"},
     "almacen": {"url": "sqlite:///datos/ops-central.db"},
     "evidencia": {"ruta": "datos/evidencia"},
+    "reportes": {"ruta": "datos/reportes"},
     "auth": {"proveedor": "dev", "inactividad_min": 30, "duracion_max_h": 8, "stepup_vigencia_min": 5,
              "intentos_max": 5, "bloqueo_min": 15,
              "grupos": {"GG_OPS_DBA": "dba", "GG_OPS_CM": "cm", "GG_OPS_LIDER": "lid",
                         "GG_OPS_CONSULTA": "con", "GG_OPS_ADMIN": "adm"},
              "oidc": {}},
     "aprobaciones": {"clave_firma_ref": "ops/firma_aprobaciones", "vigencia_min": 120, "aprobacion_c_no_prod": True,
-                     "ejecucion_directa": True, "exigir_referencia_prod": False},
+                     "ejecucion_directa": True, "exigir_referencia_prod": False, "motivo_obligatorio_c": False},
     "jira": {"url": "", "credencial_ref": "jira/api", "timeout_s": 20, "verificar_tls": True,
              "jql_abiertos": "statusCategory != Done ORDER BY updated DESC", "max_resultados": 25,
              "campos": {}},
     "secretos": {"proveedor": "archivo", "archivo": "config/secretos.dev.json"},
     "bd": {"cuenta_consulta": "OPS_CONSULTA", "cuenta_dba": "OPS_DBA", "paquete": "ADMINBD.PKG_OPS_CENTRAL",
            "call_timeout_s": 20, "max_paralelo": 10, "sesiones_por_base": 1, "refresco_min_s": 120,
-           "circuito_fallos": 3, "circuito_espera_s": 600, "ruta_kit_oracle": "../oracle-agent-kiro-master"},
+           "circuito_fallos": 3, "circuito_espera_s": 600, "ruta_kit_oracle": "../oracle-agent-kiro-master",
+           # true solo en demo sin Oracle: los reportes bd.rep.* salen con datos de MUESTRA (prohibido en producción)
+           "reportes_muestra": False},
     "cm": {"ruta_cmops": "../capa-media-ops", "python_cmops": "python", "ttl_certificado_min": 10, "timeout_s": 3600},
     "zabbix": {"ventana_episodio_min": 15, "secreto_webhook_ref": "zabbix/secreto_webhook",
                "token_ref": "zabbix/token_lectura", "puerto_trapper": 10051, "url": "",
@@ -106,5 +109,7 @@ def _validar(cfg: Config) -> None:
             problemas.append("secretos.proveedor = 'archivo' no se permite en producción")
         if cfg["almacen"]["url"].startswith("sqlite"):
             problemas.append("el almacén de producción es PostgreSQL")
+        if cfg["bd"].get("reportes_muestra"):
+            problemas.append("bd.reportes_muestra = true no se permite en producción")
         if problemas:
             raise ValueError("Configuración inválida para producción: " + "; ".join(problemas))

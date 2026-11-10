@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, mensajeError } from "./api";
-import { Clase, Consola, Modal, Resultado, useAccion, useSegundoFactor, useSesion } from "./comun";
+import { CampoAmbiente, Clase, Consola, Modal, OpcionesActivo, Resultado, useAccion, useSegundoFactor, useSesion } from "./comun";
 import type { Caso, EspParam, Evaluacion, Ejecucion, Inventario } from "./tipos";
 
 type Props = {
@@ -48,6 +48,7 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
   const [caso, setCaso] = useState<Caso | null>(null);
   const [errorCaso, setErrorCaso] = useState("");
   const [buscandoCaso, setBuscandoCaso] = useState(false);
+  const [abrirCaso, setAbrirCaso] = useState(false);
 
   if (!acc) return null;
   const v = { ...valores, ...iniciales }; // lo que fija la pantalla manda
@@ -95,6 +96,13 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
       const x = v[k];
       if (x === undefined || x === "") continue;
       p[k] = esp.tipo === "entero" ? Number(x) : x;
+    }
+    // Lo que fija la pantalla y no está declarado en el catálogo (acciones con parámetros libres,
+    // p. ej. instalación o dominio de Capa Media) también viaja.
+    if (acc!.parametros_libres) {
+      for (const [k, x] of Object.entries(iniciales)) {
+        if (!(k in acc!.parametros) && x !== undefined && x !== "" && !(Array.isArray(x) && x.length === 0)) p[k] = x;
+      }
     }
     return p;
   }
@@ -173,7 +181,12 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
           ))}
         </div>
       )}
-      {verCaso && (
+      {verCaso && !abrirCaso && !referencia && (
+        <div className="mt">
+          <button type="button" className="btn ghost sm" onClick={() => setAbrirCaso(true)}>+ Asociar un caso (opcional)</button>
+        </div>
+      )}
+      {verCaso && (abrirCaso || referencia) && (
         <div className="mt">
           <label className="lb" htmlFor={`caso-${accion}`}>Caso asociado (opcional: Jira, incidente, cambio, tarea…)</label>
           <div className="fila">
@@ -249,7 +262,7 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
           )}
           {!refEnParams && (
             <>
-              <label className="lb mt">Caso asociado {ev.requiere_cambio ? "(obligatorio por política)" : "(opcional)"}</label>
+              <label className="lb mt">Caso asociado {ev.requiere_cambio ? "(lo exige la configuración de este ambiente)" : "(opcional)"}</label>
               <input className="f" value={cambio} maxLength={40} placeholder="OPS-123 o cualquier referencia"
                      onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
             </>
@@ -257,7 +270,7 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
           {caso && <TarjetaCaso c={caso} />}
           {(ev.clase === "C" || ev.clase === "O") && !("motivo" in acc.parametros) && !("justificacion" in acc.parametros) && (
             <>
-              <label className="lb mt">Motivo {ev.clase === "C" && "(obligatorio)"}</label>
+              <label className="lb mt">Motivo {ev.controles.includes("motivo obligatorio") ? "(obligatorio)" : "(opcional)"}</label>
               <input className="f" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
             </>
           )}
@@ -302,7 +315,7 @@ function Campo({ nombre, esp, valor, cambiar, inv, disabled }: {
     control = (
       <select id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
         <option value="">— elegir —</option>
-        {inv.bases.map((b) => <option key={b.id} value={b.id}>{b.id} · {b.ambiente}</option>)}
+        <OpcionesActivo items={inv.bases} />
       </select>
     );
   } else if (esp.tipo === "enum" || esp.tipo === "tipo_objeto") {
@@ -319,7 +332,7 @@ function Campo({ nombre, esp, valor, cambiar, inv, disabled }: {
     control = (
       <select id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
         <option value="">— elegir —</option>
-        {inv.servidores.map((b) => <option key={b.id} value={b.id}>{b.id} · {b.ambiente}</option>)}
+        <OpcionesActivo items={inv.servidores} />
       </select>
     );
   } else {
@@ -329,10 +342,20 @@ function Campo({ nombre, esp, valor, cambiar, inv, disabled }: {
              onChange={(e) => cambiar(["cambio", "identificador", "sql_id"].includes(esp.tipo) ? e.target.value.toUpperCase() : e.target.value)} />
     );
   }
-  return (
+  const campo = (
     <div>
       <label className="lb" htmlFor={id}>{etq}</label>
       {control}
     </div>
   );
+  // Base y servidor llevan al lado el selector de ambiente (filtro global): primero el ambiente, luego el nombre.
+  if (inv && !disabled && (esp.tipo === "base" || nombre === "host")) {
+    return (
+      <>
+        <CampoAmbiente id={`${id}-amb`} items={esp.tipo === "base" ? inv.bases : inv.servidores} alCambiar={() => cambiar("")} />
+        {campo}
+      </>
+    );
+  }
+  return campo;
 }

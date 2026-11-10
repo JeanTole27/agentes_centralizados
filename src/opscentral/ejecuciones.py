@@ -69,12 +69,14 @@ class ServicioEjecuciones:
                 if not self.inv.base(base):
                     raise ErrorValidacion(f"la base {base} no está en el inventario")
                 return base
-            for clave in ("dominio", "servidor"):      # cm.bd_relacionada, bd.rep.diskgroups
+            for clave in ("dominio", "servidor"):      # cm.bd_relacionada
                 if params.get(clave):
                     a = self.inv.buscar(params[clave])
                     if not a:
                         raise ErrorValidacion(f"{clave} {params[clave]} no está en el inventario")
                     return a.id
+            if params.get("ambiente") and not destino:  # barridos por ambiente (bd.rep.diskgroups)
+                return f"ambiente:{str(params['ambiente']).upper()}"
         if accion.motor == "cm":
             d = params.get("host") or params.get("hosts") or destino
             if not d:
@@ -85,6 +87,8 @@ class ServicioEjecuciones:
         return destino
 
     def ambiente(self, destino: str) -> str:
+        if str(destino).startswith("ambiente:"):
+            return str(destino).split(":", 1)[1] or "PROD"
         return self.inv.ambiente_de(destino) or "PROD"
 
     def evaluar(self, usuario: Usuario, accion_id: str, params: dict, destino: str | None = None):
@@ -96,7 +100,8 @@ class ServicioEjecuciones:
         c = self.cfg["aprobaciones"]
         d = decidir(usuario, acc, amb, aprobacion_c_no_prod=c["aprobacion_c_no_prod"],
                     ejecucion_directa=c.get("ejecucion_directa", c.get("dba_ejecuta_directo", True)),
-                    exigir_referencia_prod=c.get("exigir_referencia_prod", False))
+                    exigir_referencia_prod=c.get("exigir_referencia_prod", False),
+                    motivo_obligatorio_c=c.get("motivo_obligatorio_c", False))
         return acc, p, dest, amb, d
 
     def solicitar(self, usuario: Usuario, accion_id: str, params: dict, *, destino: str | None = None,
@@ -112,8 +117,8 @@ class ServicioEjecuciones:
             raise RequiereStepUp("confirma tu identidad con el segundo factor para continuar")
         if d.clase in ("O", "C") and not motivo and acc.motor in ("bd", "cm"):
             motivo = p.get("motivo") or p.get("justificacion")
-        if d.clase == "C" and not motivo:
-            raise ErrorValidacion("los cambios de clase C requieren un motivo")
+        if d.clase == "C" and not motivo and self.cfg["aprobaciones"].get("motivo_obligatorio_c", False):
+            raise ErrorValidacion("los cambios de clase C requieren un motivo (aprobaciones.motivo_obligatorio_c = true)")
         if d.clase in ("O", "C"):
             self._sin_conflicto(dest)
 
@@ -242,8 +247,10 @@ class ServicioEjecuciones:
         return "lid" in usuario.perfiles
 
     def listar(self, usuario: Usuario, *, estado: str | None = None, cambio: str | None = None,
-               limite: int = 100) -> list[dict]:
+               ambiente: str | None = None, limite: int = 100) -> list[dict]:
         q = select(ejecucion).order_by(ejecucion.c.creada.desc()).limit(min(limite, 500))
+        if ambiente:
+            q = q.where(ejecucion.c.ambiente == ambiente.upper())
         if estado:
             q = q.where(ejecucion.c.estado == estado)
         if cambio:

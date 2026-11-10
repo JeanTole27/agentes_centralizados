@@ -5,6 +5,7 @@ lectura con OPS_CONSULTA y cambios con OPS_DBA, que solo llama al paquete.
 """
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +21,7 @@ from ..credenciales import credencial_bd, tipo_cuenta_bd
 from ..inventario import Activo, Inventario
 from ..limites import Limites
 from ..secretos import Secretos
-from . import analisis, bloqueos, recompilar, salud, snapshot
+from . import analisis, bloqueos, recompilar, reportes, salud, snapshot
 from .conexion import ConexionOracle, ErrorBD
 
 Emitir = Callable[[str], None]
@@ -59,17 +60,21 @@ class MotorBD:
 
         if acc.id in ("bd.salud.flota", "bd.ses.flota"):
             return self.barrido(p.get("ambiente"), persona=quien, ejecucion_id=eid, emitir=emitir)
+        if acc.id in ("bd.snap.tomar", "bd.snap.comparar", "bd.inv.generar", "bd.inv.recompilar"):
+            grupo = self.grupo_snapshot(base, p.get("cambio"), p.get("momento", ""))
+            if not p.get("cambio"):
+                emitir(f"Sin referencia: el snapshot se agrupa como {grupo}")
         if acc.id == "bd.snap.tomar":
-            return self.tomar_snapshot(base, p["cambio"], p["momento"], persona=quien, ejecucion_id=eid, emitir=emitir)
+            return self.tomar_snapshot(base, grupo, p["momento"], persona=quien, ejecucion_id=eid, emitir=emitir)
         if acc.id in ("bd.snap.comparar", "bd.inv.generar"):
-            comp = self.comparar(base, p["cambio"], persona=quien, ejecucion_id=eid)
+            comp = self.comparar(base, grupo, persona=quien, ejecucion_id=eid)
             if acc.id == "bd.inv.generar":
                 comp["plan"] = recompilar.plan(comp["nuevos"])
                 emitir(f"{len(comp['plan'])} sentencia(s) generadas (vista previa; se ejecutan por el paquete)")
             emitir(f"Veredicto: {comp['veredicto']} · {comp['resumen']}")
             return comp
         if acc.id == "bd.inv.recompilar":
-            return self.recompilar(base, p["cambio"], persona=quien, ejecucion_id=eid, emitir=emitir)
+            return self.recompilar(base, grupo, persona=quien, ejecucion_id=eid, emitir=emitir)
         if acc.id == "bd.ses.terminar":
             return self.terminar_sesion(e, emitir)
         ctx = dict(persona=quien, ejecucion_id=eid, emitir=emitir)
@@ -80,11 +85,9 @@ class MotorBD:
             "bd.ts.crecimiento": lambda: self.crecimiento(base, **ctx),
             "bd.esquema.diff": lambda: self.diff_esquema(base, p["base_destino"], p["esquema"], **ctx),
             "cm.bd_relacionada": lambda: self.bd_relacionada(p["dominio"], **ctx),
-            "bd.rep.hoja_vida": lambda: self.hoja_vida(base, **ctx),
-            "bd.rep.analisis": lambda: self.analisis_base(base, **ctx),
-            "bd.rep.diskgroups": lambda: self.diskgroups_servidor(p["servidor"], **ctx),
-            "bd.rep.sql_costosas": lambda: self.sql_costosas(base, p.get("criterio", "ELAPSED"), **ctx),
         }
+        if acc.id in reportes.REPORTES:
+            return self.reporte(acc.id, p, **ctx)
         if acc.id in especiales:
             return especiales[acc.id]()
         if acc.plantilla:
@@ -288,31 +291,6 @@ class MotorBD:
                                {"hallazgos": hallazgos, "resumen": {"semaforo_salud": sem["semaforo"],
                                                                     "hallazgos": len(top)}}, errores, emitir)
 
-    def diskgroups_servidor(self, servidor: str, *, persona: str, ejecucion_id: str, emitir: Emitir) -> dict:
-        """Diskgroups ASM de un servidor de BD: se consulta una base por servidor (el ASM es compartido)."""
-        bases = sorted(b.id for b in self.inv.bases() if (b.datos.get("servidor") or "").upper() == servidor.upper())
-        if not bases:
-            raise ErrorBD(f"el inventario no tiene bases en el servidor {servidor}")
-        ultimo_error = None
-        for b in bases:   # la primera base que responda
-            try:
-                with self.conectar(b, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="diskgroups") as c:
-                    dg = c.consultar("diskgroups")
-            except Exception as ex:  # noqa: BLE001
-                ultimo_error = ex
-                emitir(f"{b}: sin respuesta ({str(ex)[:120]}); se intenta con la siguiente base")
-                continue
-            emitir(f"Diskgroups leídos desde {b}: {len(dg)}")
-            h = []
-            for d in dg:
-                pct = float(d.get("pct_usado") or 0)
-                if pct >= salud.UMBRALES["dg_amarillo"]:
-                    h.append({"nivel": "rojo" if pct >= salud.UMBRALES["dg_rojo"] else "amarillo",
-                              "texto": f"diskgroup {d['name']} al {pct:.0f} %"})
-            return self._resultado({"diskgroups": dg}, {"hallazgos": h, "resumen": {"diskgroups": len(dg)}}, {},
-                                   emitir, servidor=servidor, base_consultada=b, bases_del_servidor=bases)
-        raise ErrorBD(f"ninguna base del servidor {servidor} respondió: {ultimo_error}")
-
     def sql_costosas(self, base: str, criterio: str, *, persona: str, ejecucion_id: str, emitir: Emitir) -> dict:
         with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="SQL costosas") as c:
             top = c.consultar(TOPSQL[criterio])
@@ -322,6 +300,96 @@ class MotorBD:
                 detalle.append({**f, "sql_fulltext": t.get("sql_fulltext")})
         emitir(f"{len(top)} SQL por {criterio}; detalle completo de las 5 primeras")
         return self._resultado({"top": top, "detalle": detalle}, None, {}, emitir, criterio=criterio)
+
+    # ------------------------------------------------------------ reportes HTML (bd/reportes, sin LLM)
+    @contextmanager
+    def _cliente_reporte(self, base: str, *, persona: str, ejecucion_id: str, motivo: str):
+        """Cliente para los scripts de reporte: la conexión OPS_CONSULTA (cada SQL pasa por la
+        política de solo lectura) o, solo en demo sin Oracle, el cliente de datos de muestra."""
+        if self.cfg["bd"].get("reportes_muestra"):
+            from .reportes.muestra import ClienteMuestra
+            yield ClienteMuestra(base)
+            return
+        with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo=motivo) as c:
+            yield reportes.ClienteOps(c)
+
+    def _entrada(self, b: Activo, modulo: str) -> dict:
+        return {"alias": b.id, "dsn": b.datos.get("dsn") or "", "environment": b.ambiente.lower(),
+                "servidor": b.datos.get("servidor"), "herramienta": f"Ops Central · bd/reportes/{modulo}.py"}
+
+    def _guardar_reporte(self, ejecucion_id: str, nombre: str, contenido: str, tipo: str) -> dict:
+        datos = contenido.encode("utf-8")
+        raiz = self.cfg.ruta("reportes", "ruta")
+        carpeta = raiz / ejecucion_id[:8]
+        carpeta.mkdir(parents=True, exist_ok=True)
+        ruta = carpeta / f"{ejecucion_id}--{nombre}"
+        if ruta.exists():
+            raise FileExistsError(f"el reporte de {ejecucion_id} ya existe y no se sobrescribe")
+        ruta.write_bytes(datos)
+        return {"archivo": ruta.relative_to(raiz).as_posix(), "nombre": nombre, "tipo": tipo,
+                "sha256": hashlib.sha256(datos).hexdigest(), "bytes": len(datos)}
+
+    def reporte(self, accion_id: str, p: dict, *, persona: str, ejecucion_id: str, emitir: Emitir) -> dict:
+        """Genera el HTML del reporte con el script correspondiente y lo guarda con su huella.
+        Con Oracle, además devuelve el resultado estructurado de siempre (hallazgos, datos)."""
+        from .reportes import analisis as r_analisis, diskgroups as r_dg, hoja_vida as r_hv, sentencias as r_sen
+        from .reportes.muestra import AVISO_HTML
+        modulo, etiqueta = reportes.REPORTES[accion_id]
+        muestra = bool(self.cfg["bd"].get("reportes_muestra"))
+        ctx = dict(persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
+        abrir = dict(persona=persona, ejecucion_id=ejecucion_id, motivo=f"reporte {etiqueta}")
+        if muestra:
+            emitir("DATOS DE MUESTRA: bd.reportes_muestra está activo; no se consulta Oracle")
+        estructurado: dict | None = None
+        etapas = {"hoja_vida": r_hv, "analisis": r_analisis, "diskgroups": r_dg, "sentencias": r_sen}[modulo].ETAPAS
+
+        def progreso(etapa: str) -> None:  # la pantalla de Reportes marca las etapas con estas líneas
+            emitir(f"Etapa {etapas.index(etapa) + 1}/{len(etapas)}: {etapa}")
+        if accion_id == "bd.rep.diskgroups":
+            amb = (p.get("ambiente") or "").upper()
+            umbral = float(p.get("umbral") or r_dg.UMBRAL_DEFECTO)
+            bases = [b for b in self.inv.bases() if b.ambiente == amb]
+            if not bases:
+                raise ErrorBD(f"el inventario no tiene bases en {amb}")
+            emitir(f"{len(bases)} base(s) en {amb}; una consulta por servidor (umbral {umbral:g} %)")
+            nombre, html_txt, res = r_dg.construir(
+                [self._entrada(b, modulo) for b in bases],
+                lambda e: self._cliente_reporte(e["alias"], **abrir), amb, umbral,
+                herramienta=f"Ops Central · bd/reportes/{modulo}.py", progreso=progreso)
+        else:
+            base = p["base"]
+            b = self._base(base)
+            if not muestra:
+                if accion_id == "bd.rep.hoja_vida":
+                    estructurado = self.hoja_vida(base, **ctx)
+                elif accion_id == "bd.rep.analisis":
+                    estructurado = self.analisis_base(base, **ctx)
+                else:
+                    estructurado = self.sql_costosas(base, p.get("criterio", "ELAPSED"), **ctx)
+            emitir(f"Generando el HTML de {etiqueta} con el script {modulo}.py")
+            with self._cliente_reporte(base, **abrir) as cl:
+                if accion_id == "bd.rep.hoja_vida":
+                    nombre, html_txt, res = r_hv.construir(cl, base, self._entrada(b, modulo), progreso=progreso)
+                elif accion_id == "bd.rep.analisis":
+                    nombre, html_txt, res = r_analisis.construir(cl, base, self._entrada(b, modulo),
+                                                                 progreso=progreso)
+                else:
+                    nombre, html_txt, res = r_sen.construir(cl, base, self._entrada(b, modulo),
+                                                            criterio=p.get("criterio", "ELAPSED"),
+                                                            perfil=self.cfg["bd"]["cuenta_consulta"],
+                                                            progreso=progreso)
+        if muestra:
+            html_txt = html_txt.replace("<body>", "<body>" + AVISO_HTML, 1)
+        info = self._guardar_reporte(ejecucion_id, nombre, html_txt, modulo)
+        emitir(f"Reporte {nombre} · {info['bytes']:,} bytes · SHA-256 {info['sha256'][:16]}… · "
+               f"estado {res.get('overall_status')}")
+        for nc in res.get("not_collected") or []:
+            emitir(f"  sección no recolectada: {nc}")
+        if estructurado is None:
+            nivel = {"CRITICAL": "rojo", "WARNING": "amarillo"}.get(res.get("overall_status"), None)
+            hallazgos = [{"nivel": nivel, "texto": f"{etiqueta}: estado {res.get('overall_status')}"}] if nivel else []
+            estructurado = self._resultado({}, {"hallazgos": hallazgos, "resumen": res}, {}, emitir)
+        return {**estructurado, "reporte": info, "resumen_reporte": res, "muestra": muestra}
 
     # ------------------------------------------------------------ snapshot y recompilación
     def tomar_snapshot(self, base: str, cambio: str, momento: str, *, persona: str, ejecucion_id: str,
@@ -337,6 +405,25 @@ class MotorBD:
                                                    ejecucion_id=ejecucion_id))
         emitir(f"Snapshot {momento}: {s['total']} objeto(s) inválido(s)")
         return {"momento": momento, "total": s["total"], "huella": s["huella"]}
+
+    def grupo_snapshot(self, base: str, cambio: str | None, momento: str = "") -> str:
+        """La referencia agrupa ANTES / DESPUÉS / FINAL. Es opcional: sin ella, un ANTES abre un
+        grupo automático (SNAP-AAAAMMDD-HHMMSS) y lo demás usa el último ANTES de esa base."""
+        if cambio:
+            return cambio.upper()
+        if momento == "ANTES":
+            return "SNAP-" + utc().strftime("%Y%m%d-%H%M%S")
+        g = self.ultimo_grupo(base)
+        if not g:
+            raise ErrorBD(f"no hay un snapshot ANTES de {base}: tómalo primero (la referencia es opcional)")
+        return g
+
+    def ultimo_grupo(self, base: str) -> str | None:
+        with self.a.tx() as con:
+            f = con.execute(select(t_snapshot.c.cambio).where(and_(
+                t_snapshot.c.base == base, t_snapshot.c.momento == "ANTES"))
+                .order_by(t_snapshot.c.tomado.desc()).limit(1)).first()
+        return f[0] if f else None
 
     def _ultimo(self, base: str, cambio: str, momentos: tuple[str, ...]) -> dict | None:
         with self.a.tx() as con:

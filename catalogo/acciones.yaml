@@ -388,7 +388,7 @@ acciones:
       requerido: true
     cambio:
       tipo: cambio
-      requerido: true
+      requerido: false
     momento:
       tipo: enum
       valores:
@@ -411,7 +411,7 @@ acciones:
     base: *id004
     cambio:
       tipo: cambio
-      requerido: true
+      requerido: false
   estado: implementada
   cuenta_bd: consulta
 - id: bd.inv.listar
@@ -439,7 +439,7 @@ acciones:
     base: *id004
     cambio:
       tipo: cambio
-      requerido: true
+      requerido: false
   estado: implementada
   cuenta_bd: consulta
 - id: bd.inv.recompilar
@@ -455,7 +455,7 @@ acciones:
     base: *id004
     cambio:
       tipo: cambio
-      requerido: true
+      requerido: false
   estado: implementada
   cuenta_bd: dba
 - id: bd.inv.utlrp
@@ -1085,7 +1085,7 @@ acciones:
   estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.diskgroups
-  nombre: Diskgroups ASM por servidor
+  nombre: Diskgroups ASM por ambiente (agrupado por servidor, RAC deduplicado)
   motor: bd
   clase: L
   perfiles:
@@ -1093,7 +1093,8 @@ acciones:
     lid: ejecuta
     con: ve
   parametros:
-    servidor: {tipo: texto, requerido: true, max_largo: 120}
+    ambiente: {tipo: enum, valores: [PROD, DRP, QA, TEST, DESA], requerido: true}
+    umbral: {tipo: entero, min: 1, max: 100, defecto: 50}
   estado: implementada
   cuenta_bd: consulta
 - id: bd.rep.sql_costosas

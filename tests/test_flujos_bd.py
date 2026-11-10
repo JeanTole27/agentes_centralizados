@@ -48,6 +48,30 @@ def test_f2_snapshot_comparacion_y_recompilacion(api_n, bd_n, usuarios):
         {"PKG_REPORTES_OLD", "BIN$q1w2e3==$0"}
 
 
+def test_snapshot_sin_referencia_agrupa_por_el_ultimo_antes(api_n, bd_n, usuarios):
+    w = Worker("bd", bd_n)
+    ej, dba = api_n.ejecuciones, usuarios["dba"]
+    # sin ANTES previo, comparar falla con un mensaje claro (no pide referencia)
+    e = ej.solicitar(dba, "bd.snap.comparar", {"base": "CORTST"})
+    correr(w)
+    assert "tómalo primero" in ej.obtener(e["id"])["error"]
+    for momento in ("ANTES", "DESPUES"):
+        if momento == "DESPUES":
+            simular_despliegue("CORTST")
+        e = ej.solicitar(dba, "bd.snap.tomar", {"base": "CORTST", "momento": momento})
+        assert e["cambio"] is None
+        correr(w)
+        r = ej.obtener(e["id"])
+        assert r["estado"] == "exitosa", r["error"]
+    e = ej.solicitar(dba, "bd.snap.comparar", {"base": "CORTST"})
+    correr(w)
+    r = ej.obtener(e["id"])
+    assert r["estado"] == "exitosa", r["error"]
+    assert r["resultado"]["resumen"]["nuevos"] == 3
+    lineas = [x["texto"] for x in ej.lineas(e["id"])]
+    assert any(t.startswith("Sin referencia: el snapshot se agrupa como SNAP-") for t in lineas)
+
+
 def _arbol_corprd(ej, w, dba):
     v = ej.solicitar(dba, "bd.ses.bloqueos", {"base": "CORPRD"})
     correr(w)
