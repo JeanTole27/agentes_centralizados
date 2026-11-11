@@ -10,7 +10,7 @@ type UsuarioDemo = { login: string; nombre: string; perfil: string };
 // nombre y elige el perfil; con ese perfil se arma el menú y se deciden los permisos en la API.
 const DESCRIPCION: Record<string, string> = {
   cm: "Orquestación WebLogic, usuarios WL y frmweb. Ejecuta las acciones de Capa Media.",
-  dba: "Snapshot e inválidos, sesiones bloqueantes, salud de la flota y tareas DBA.",
+  dba: "Snapshot e inválidos, sesiones bloqueantes, salud de bases de datos y tareas DBA.",
   adm: "Administración de la plataforma, inventario y log de ejecuciones.",
   aut: "Todos los permisos de ejecución y edición, en Capa Media y Base de Datos.",
 };

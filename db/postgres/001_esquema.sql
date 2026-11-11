@@ -51,13 +51,13 @@ CREATE TABLE ejec_ejecucion (
 	PRIMARY KEY (id)
 );
 
-CREATE INDEX ix_ejec_ejecucion_accion ON ejec_ejecucion (accion);
+CREATE INDEX ix_ejec_ejecucion_destino ON ejec_ejecucion (destino);
 
 CREATE INDEX ix_ejec_ejecucion_solicitante ON ejec_ejecucion (solicitante);
 
-CREATE INDEX ix_ejec_ejecucion_cambio ON ejec_ejecucion (cambio);
+CREATE INDEX ix_ejec_ejecucion_accion ON ejec_ejecucion (accion);
 
-CREATE INDEX ix_ejec_ejecucion_destino ON ejec_ejecucion (destino);
+CREATE INDEX ix_ejec_ejecucion_cambio ON ejec_ejecucion (cambio);
 
 CREATE INDEX ix_ejec_ejecucion_estado ON ejec_ejecucion (estado);
 
@@ -78,6 +78,7 @@ CREATE TABLE estado_actual (
 	origen VARCHAR(40) NOT NULL, 
 	actualizado TIMESTAMP WITH TIME ZONE NOT NULL, 
 	error TEXT, 
+	intentado TIMESTAMP WITH TIME ZONE, 
 	PRIMARY KEY (objeto)
 );
 

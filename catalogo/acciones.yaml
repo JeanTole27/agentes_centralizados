@@ -514,8 +514,9 @@ acciones:
       tipo: texto
       requerido: true
       min: 15
-  estado: implementada
+  estado: catalogada
   cuenta_bd: dba
+  nota: Deshabilitada. La línea base la mantiene el equipo DBA con su propia carga; Ops Central solo la consulta.
 - id: bd.ses.bloqueos
   nombre: Árbol de bloqueo de una base (raíz, bloqueados, segundos, SQL_ID, objeto, programa, módulo, máquina)
   motor: bd

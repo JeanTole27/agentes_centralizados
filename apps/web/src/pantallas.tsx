@@ -351,6 +351,7 @@ export function Snapshot() {
                 <div className={c.veredicto === "sin_nuevos" ? "info" : "critbox"}>
                   {c.veredicto === "sin_nuevos" ? "El cambio no dejó objetos inválidos nuevos." : `El cambio dejó ${c.resumen.nuevos} objetos inválidos nuevos.`}
                 </div>
+                {c.aviso_linea_base && <div className="warnbox mt small">{c.aviso_linea_base}</div>}
                 <div className="kpis mt">
                   <div className={"k " + (c.resumen.nuevos ? "crit" : "ok")}><small>Nuevos</small><b>{c.resumen.nuevos}</b></div>
                   <div className="k ok"><small>Corregidos</small><b>{c.resumen.corregidos}</b></div>
@@ -476,42 +477,120 @@ function Nodo({ n, raiz, alTerminar }: { n: any; raiz?: boolean; alTerminar: (n:
 }
 
 // ======================================================================== SALUD
+// Tipos de error de la recolección y qué hacer con cada uno (informe salud-bases-no-actualiza).
+const TIPOS_ERROR: Record<string, string> = {
+  "ORA-00942": "Falta ADMINBD.TBL_BASE_OBJETOS_INVALIDOS o el GRANT SELECT a OPS_CONSULTA: aplicar db/oracle/01 y 02 en la base (DBA).",
+  "DPY-3015": "El verificador de clave de la cuenta no es compatible con el modo thin: configurar [bd] oracle_client_dir (modo thick) y reiniciar.",
+  "DPY-6005": "No se pudo conectar (red, firewall, listener o VPN).",
+  "DPY-4024": "Una consulta superó call_timeout_s: subirlo o revisar la plantilla con el DBA.",
+  "DPY-4011": "La base o la red cerró la conexión.",
+  "ORA-01017": "Usuario o clave de OPS_CONSULTA incorrectos para esa base.",
+  "ORA-28001": "La clave de OPS_CONSULTA expiró: renovarla en la base y en el gestor de secretos.",
+  "ORA-28000": "La cuenta OPS_CONSULTA está bloqueada.",
+  "ORA-01034": "Instancia Oracle no disponible (caída o DSN erróneo).",
+  "ORA-01033": "La instancia está arrancando o deteniéndose.",
+  "ORA-12170": "Timeout de conexión TNS (red o firewall).",
+  "ORA-12514": "El listener no conoce el servicio del DSN.",
+  "ORA-20900": "El trigger TRG_OPS_CENTRAL_ORIGEN rechazó la IP del worker: agregarla a &IPS_WORKERS.",
+  "CIRCUITO": "Demasiados fallos seguidos: la base queda en pausa unos minutos antes de reintentar.",
+  "SIN DRIVER": "Este equipo no tiene instalado python-oracledb: uv sync --extra prod (o pip install -e \".[prod]\") y reiniciar opscentral dev.",
+};
+function tipoError(e?: string | null): string {
+  if (!e) return "";
+  const m = /(ORA-\d{5}|DPY-\d{4})/.exec(e);
+  if (m) return m[1];
+  if (/circuito|fallos seguidos/i.test(e)) return "CIRCUITO";
+  if (/No module named 'oracledb'/.test(e)) return "SIN DRIVER";
+  return "OTRO";
+}
+
+function Hace({ s, nunca, titulo }: { s?: number | null; nunca?: boolean; titulo?: string }) {
+  if (nunca) return <span className="tag t-crit" title={titulo}>nunca</span>;
+  return <Antiguedad s={s ?? undefined} origen={titulo} />;
+}
+
 export function Salud() {
   const ambiente = useAmbiente();
   const inv = useInventario();
   const q = useQuery({ queryKey: ["bd", "salud", ambiente], queryFn: () => api.get<EstadoObj[]>(`/api/estado/bd/salud${ambiente ? "?ambiente=" + ambiente : ""}`), refetchInterval: 30_000 });
   const [sel, setSel] = useState<EstadoObj | null>(null);
+  const [filtro, setFiltro] = useState("");
   const refrescar = useRefresco();
   const cat = useCatalogo();
   const puedeRefrescar = cat.data?.find((a) => a.id === "com.refresco")?.permiso === "ejecuta";
   const cls = (p: number | null | undefined) => p == null ? "c-na" : p >= 95 ? "c-crit" : p >= 85 ? "c-warn" : "c-ok";
   const semCls: Record<string, string> = { verde: "c-ok", amarillo: "c-warn", rojo: "c-crit", sin_dato: "c-na" };
+
+  const filas = q.data ?? [];
+  const esParcial = (f: EstadoObj) => !f.error && Object.keys(f.datos?.parciales ?? {}).length > 0;
+  const conError = filas.filter((f) => f.error);
+  const parciales = filas.filter(esParcial);
+  const ok = filas.length - conError.length - parciales.length;
+  const grupos = Object.entries(conError.reduce<Record<string, string[]>>((acc, f) => {
+    const t = tipoError(f.error);
+    (acc[t] ??= []).push(f.objeto.split(":")[1]);
+    return acc;
+  }, {})).sort((a, b) => b[1].length - a[1].length);
+  const ultimoIntento = filas.length ? Math.min(...filas.map((f) => f.intento_s ?? f.antiguedad_s)) : null;
+  const visibles = filtro === "" ? filas
+    : filtro === "PARCIAL" ? parciales
+    : filtro === "OK" ? filas.filter((f) => !f.error && !esParcial(f))
+    : conError.filter((f) => tipoError(f.error) === filtro);
+
   return (
     <>
-      <Cabecera titulo="Salud de bases" sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base." />
-      <div className="card"><div className="fgrid"><CampoAmbiente id="salud-amb" items={inv.data?.bases ?? []} /></div></div>
+      <Cabecera titulo="Salud de bases de datos"
+        sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base. Se recolecta cada 15 min." />
+      <div className="card"><div className="fgrid"><CampoAmbiente id="salud-amb" items={inv.data?.bases ?? []} alCambiar={() => setFiltro("")} /></div></div>
       <Cargando q={q} />
-      {q.data && q.data.length === 0 && <div className="card"><Vacio>Sin datos de salud todavía.</Vacio></div>}
-      {q.data && q.data.length > 0 && (
+      {q.data && q.data.length === 0 && <div className="card"><Vacio>Sin datos de salud todavía{ambiente ? ` en ${ambiente}` : ""}.</Vacio></div>}
+      {filas.length > 0 && (
+        <div className="card">
+          <div className="btns" style={{ flexWrap: "wrap", gap: 6 }}>
+            <button className={"btn sm" + (filtro === "" ? " pri" : "")} onClick={() => setFiltro("")}>Todas ({filas.length})</button>
+            <button className={"btn sm" + (filtro === "OK" ? " pri" : "")} onClick={() => setFiltro("OK")}>Con datos ({ok})</button>
+            <button className={"btn sm" + (filtro === "PARCIAL" ? " pri" : "")} onClick={() => setFiltro("PARCIAL")}>Parciales ({parciales.length})</button>
+            {grupos.map(([t, bs]) => (
+              <button key={t} className={"btn sm" + (filtro === t ? " pri" : "")} onClick={() => setFiltro(t)} title={TIPOS_ERROR[t] ?? "Ver el detalle en cada base"}>
+                {t === "CIRCUITO" ? "Circuito abierto" : t === "OTRO" ? "Otros errores" : t} ({bs.length})
+              </button>
+            ))}
+          </div>
+          <p className="muted small" style={{ marginBottom: 0 }}>
+            Último intento de recolección: {ultimoIntento == null ? "—" : <Antiguedad s={ultimoIntento} />}
+            {conError.length > 0 && <> · {conError.length} de {filas.length} bases fallan al recolectar: el problema está en la conexión o en la base, no en esta pantalla.</>}
+          </p>
+          {filtro && TIPOS_ERROR[filtro] && <div className="critbox mt small"><b>{filtro}</b>: {TIPOS_ERROR[filtro]}</div>}
+        </div>
+      )}
+      {visibles.length > 0 && (
         <div className="card tbl-wrap">
           <table className="hm">
-            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Actualizado</th>{puedeRefrescar && <th />}</tr></thead>
+            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Último dato</th><th>Último intento</th>{puedeRefrescar && <th />}</tr></thead>
             <tbody>
-              {q.data.map((f) => {
+              {visibles.map((f) => {
                 const d = f.datos ?? {};
                 const tsMax = d.tablespaces?.length ? Math.max(...d.tablespaces.map((t: any) => Number(t.pct_usado))) : null;
                 const dgMax = d.diskgroups?.length ? Math.max(...d.diskgroups.map((t: any) => Number(t.pct_usado))) : null;
                 const base = f.objeto.split(":")[1];
+                const parcial = Object.keys(d.parciales ?? {});
+                const te = tipoError(f.error);
                 return (
                   <tr key={f.objeto}>
                     <td className="nm"><b>{base}</b></td>
-                    <td className="nm">{d.ambiente ?? "—"}</td>
-                    <td className={"cell " + (f.error ? "c-na" : semCls[d.semaforo] ?? "c-na")} onClick={() => setSel(f)}>{f.error ? "error" : d.semaforo}</td>
+                    <td className="nm">{f.ambiente || d.ambiente || "—"}</td>
+                    <td className={"cell " + (f.error && !f.con_dato ? "c-na" : semCls[d.semaforo] ?? "c-na")} onClick={() => setSel(f)}
+                        title={f.error ?? (parcial.length ? `Sin: ${parcial.join(", ")}` : undefined)}>
+                      {f.error && !f.con_dato ? `error ${te === "OTRO" ? "" : te}` : d.semaforo}
+                      {f.error && f.con_dato && <span className="tag t-crit" style={{ marginLeft: 4 }}>{te}</span>}
+                      {!f.error && parcial.length > 0 && <span className="tag t-warn" style={{ marginLeft: 4 }}>parcial</span>}
+                    </td>
                     <td className={"cell " + cls(tsMax)} onClick={() => setSel(f)}>{tsMax == null ? "—" : tsMax.toFixed(0) + " %"}</td>
                     <td className={"cell " + cls(dgMax)} onClick={() => setSel(f)}>{dgMax == null ? "—" : dgMax.toFixed(0) + " %"}</td>
-                    <td className={"cell " + (d.bloqueadas > 5 ? "c-crit" : d.bloqueadas > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.bloqueadas ?? "—"}</td>
-                    <td className={"cell " + (d.invalidos_fuera_lb > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.invalidos_fuera_lb ?? "—"}</td>
-                    <td className="nm"><Antiguedad s={f.antiguedad_s} origen={f.origen} /></td>
+                    <td className={"cell " + (d.bloqueadas == null ? "c-na" : d.bloqueadas > 5 ? "c-crit" : d.bloqueadas > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.bloqueadas ?? "—"}</td>
+                    <td className={"cell " + (d.invalidos_fuera_lb == null ? "c-na" : d.invalidos_fuera_lb > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.invalidos_fuera_lb ?? "—"}</td>
+                    <td className="nm"><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
+                    <td className="nm"><Hace s={f.intento_s} titulo={f.intentado ?? f.origen} /></td>
                     {puedeRefrescar && <td className="nm"><button className="btn sm" onClick={() => refrescar(base)}>Refrescar</button></td>}
                   </tr>
                 );
@@ -522,11 +601,25 @@ export function Salud() {
       )}
       {sel && (
         <Modal titulo={`Salud de ${sel.objeto.split(":")[1]}`} cerrar={() => setSel(null)}>
-          {sel.error && <div className="critbox">{sel.error}</div>}
-          {sel.datos?.motivos?.length > 0 && <div className="list">{sel.datos.motivos.map((m: string) => <div key={m} className="li"><span className="dot d-warn" />{m}</div>)}</div>}
+          {sel.error && (
+            <div className="critbox">
+              <b>Último intento falló</b>{sel.con_dato ? " (se muestra el último dato bueno)" : " (nunca hubo un dato bueno)"}: {sel.error}
+              {TIPOS_ERROR[tipoError(sel.error)] && <div className="mt small">Qué hacer: {TIPOS_ERROR[tipoError(sel.error)]}</div>}
+            </div>
+          )}
+          {Object.keys(sel.datos?.parciales ?? {}).length > 0 && (
+            <div className="list mt">
+              {Object.entries(sel.datos.parciales as Record<string, string>).map(([k, v]) => (
+                <div key={k} className="li"><span className="dot d-warn" /><div className="grow"><b>{k}</b> no disponible: <span className="muted small">{v}</span>
+                  {TIPOS_ERROR[tipoError(v)] && <div className="muted small">{TIPOS_ERROR[tipoError(v)]}</div>}</div></div>
+              ))}
+            </div>
+          )}
+          {sel.datos?.motivos?.length > 0 && <div className="list mt">{sel.datos.motivos.map((m: string) => <div key={m} className="li"><span className="dot d-warn" />{m}</div>)}</div>}
           {sel.datos?.instancia && <><h3 className="small mt">Instancia</h3><TablaFilas filas={[sel.datos.instancia]} /></>}
           {sel.datos?.tablespaces?.length > 0 && <><h3 className="small mt">Tablespaces</h3><TablaFilas filas={sel.datos.tablespaces} /></>}
           {sel.datos?.diskgroups?.length > 0 && <><h3 className="small mt">Diskgroups</h3><TablaFilas filas={sel.datos.diskgroups} /></>}
+          <p className="muted small mt">Último dato: {sel.con_dato ? sel.actualizado : "nunca"} · último intento: {sel.intentado ?? sel.actualizado} · origen {sel.origen}</p>
         </Modal>
       )}
     </>
@@ -872,6 +965,9 @@ export function Reportes() {
 }
 
 const RE_ETAPA = /^Etapa (\d+)\/(\d+): /;
+const TODAS = "__todas__";
+type EstadoLote = { ejecucion: string; base: string; estado: string; terminal: boolean; error?: string | null; reporte: boolean };
+type FilaLote = { base: string; ejecucion: string | null; estado: string; error: string | null };
 const NOMBRE_EXTRA: Record<string, string> = { criterio: "Criterio", umbral: "Umbral de llenado (%)" };
 
 function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
@@ -887,11 +983,18 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
   const [fin, setFin] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  // Lote "todas las bases del ambiente": una ejecución por base y un ZIP al final.
+  const [lote, setLote] = useState<FilaLote[] | null>(null);
+  const [estLote, setEstLote] = useState<EstadoLote[]>([]);
+  const [zipBajado, setZipBajado] = useState(false);
 
   const bases = inv.data?.bases ?? [];
   const enAmb = useEnAmbiente();
-  // Solo los ambientes con bases en el inventario (los demás fallarían al generar) y que pasan el filtro global.
-  const ambientes = (acc?.parametros.ambiente?.valores ?? []).filter((a) => bases.some((b) => b.ambiente === a) && enAmb(a));
+  const ambienteVista = useAmbiente();
+  const basesAmb = ambienteVista ? bases.filter((b) => b.ambiente === ambienteVista) : [];
+  // Todos los ambientes del catálogo que pasan el filtro de la vista; los que no tienen bases en el
+  // inventario se muestran deshabilitados (fallarían al generar).
+  const ambientes = (acc?.parametros.ambiente?.valores ?? []).filter((a) => enAmb(a));
   // Parámetros propios del reporte además del alcance (criterio de sentencias, umbral de diskgroups).
   const otros = Object.entries(acc?.parametros ?? {}).filter(([k]) => k !== "base" && k !== "ambiente");
 
@@ -917,12 +1020,69 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
     return () => es.close();
   }, [ejec]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const idsLote = (lote ?? []).map((x) => x.ejecucion).filter((x): x is string => !!x);
+  const urlZip = `/api/reportes/zip?ids=${idsLote.join(",")}`;
+  const terminadas = estLote.filter((x) => x.terminal).length;
+  const exitosas = estLote.filter((x) => x.estado === "exitosa" && x.reporte).length;
+  const loteFin = !!lote && (idsLote.length === 0 || (estLote.length >= idsLote.length && terminadas >= idsLote.length));
+  const loteEnCurso = !!lote && !loteFin;
+
+  useEffect(() => {
+    if (!lote || !idsLote.length || loteFin) return;
+    let vivo = true;
+    const leer = async () => {
+      const r = await api.get<EstadoLote[]>(`/api/reportes/lote/estado?ids=${idsLote.join(",")}`).catch(() => null);
+      if (vivo && r) setEstLote(r);
+    };
+    leer();
+    const tm = setInterval(leer, 3000);
+    return () => { vivo = false; clearInterval(tm); };
+  }, [lote, loteFin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!loteFin || zipBajado) return;
+    setZipBajado(true);
+    qc.invalidateQueries({ queryKey: ["reportes"] });
+    qc.invalidateQueries({ queryKey: ["ejecuciones"] });
+    if (exitosas > 0) {
+      const a = document.createElement("a");
+      a.href = urlZip;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      avisar(`Lote terminado: ${exitosas} de ${(lote ?? []).length} reportes en el ZIP.`);
+    } else setError("Ninguna base generó el reporte: revisa el detalle de cada una abajo.");
+  }, [loteFin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function generarLote() {
+    const params: Record<string, unknown> = {};
+    for (const [k, esp] of otros) {
+      const x = extra[k] ?? (esp.defecto === undefined || esp.defecto === null ? "" : String(esp.defecto));
+      if (x !== "") params[k] = esp.tipo === "entero" ? Number(x) : x;
+    }
+    setOcupado(true);
+    try {
+      const r = await conSegundoFactor(() => api.post<{ ejecuciones: FilaLote[] }>("/api/reportes/lote",
+        { accion: t.accion, ambiente: ambienteVista, params }));
+      if (!r) return;
+      setEstLote([]);
+      setZipBajado(false);
+      setLote(r.ejecuciones);
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   async function generar() {
     setError("");
     if (!alcance) {
       setError(t.alcance === "ambiente" ? "Elige el ambiente." : "Elige la base.");
       return;
     }
+    if (alcance === TODAS) return generarLote();
     const params: Record<string, unknown> = { [t.alcance === "ambiente" ? "ambiente" : "base"]: alcance };
     for (const [k, esp] of otros) {
       const x = extra[k] ?? (esp.defecto === undefined || esp.defecto === null ? "" : String(esp.defecto));
@@ -942,7 +1102,7 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
     }
   }
 
-  const enCurso = !!ejec && !fin;
+  const enCurso = (!!ejec && !fin) || loteEnCurso;
   const punto = (i: number) => {
     if (fin === "exitosa") return "d-ok";
     if (!ejec) return "d-off";
@@ -954,11 +1114,17 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
     <Modal titulo={`Generar · ${t.nombre}`} cerrar={enCurso ? () => undefined : cerrar}
       pie={<>
         <button className="btn" onClick={cerrar} disabled={enCurso}>{fin ? "Cerrar" : "Cancelar"}</button>
-        {fin === "exitosa" && ejec ? (
+        {lote ? (
+          loteFin && exitosas > 0
+            ? <a className="btn pri" href={urlZip} download>⬇ Descargar ZIP ({exitosas})</a>
+            : <button className="btn pri" disabled={loteEnCurso || ocupado} onClick={() => { setLote(null); setEstLote([]); setError(""); }}>
+                {loteEnCurso ? `Generando… ${terminadas}/${idsLote.length}` : "Volver"}
+              </button>
+        ) : fin === "exitosa" && ejec ? (
           <a className="btn pri" href={`/api/ejecuciones/${ejec}/reporte`} target="_blank" rel="noopener">Abrir reporte</a>
         ) : (
           <button className="btn pri" onClick={generar} disabled={ocupado || enCurso}>
-            {enCurso ? "Generando…" : fin ? "Reintentar" : "Generar"}
+            {enCurso ? "Generando…" : fin ? "Reintentar" : alcance === TODAS ? `Generar ${basesAmb.length} reportes (ZIP)` : "Generar"}
           </button>
         )}
       </>}>
@@ -969,8 +1135,16 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
           <select className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}>
             <option value="">— elegir —</option>
             {t.alcance === "ambiente"
-              ? ambientes.map((a) => <option key={a} value={a}>Ambiente {a} ({bases.filter((b) => b.ambiente === a).length} bases)</option>)
-              : <OpcionesActivo items={bases} />}
+              ? ambientes.map((a) => {
+                  const nb = bases.filter((b) => b.ambiente === a).length;
+                  return <option key={a} value={a} disabled={!nb}>Ambiente {a} ({nb ? `${nb} bases` : "sin bases en el inventario"})</option>;
+                })
+              : <>
+                  {ambienteVista
+                    ? <option value={TODAS} disabled={!basesAmb.length}>★ Todas las bases de {ambienteVista} ({basesAmb.length}) · ZIP</option>
+                    : <option value={TODAS} disabled>★ Todas las bases (elige primero un ambiente)</option>}
+                  <OpcionesActivo items={bases} />
+                </>}
           </select>
         </label>
         <label className="lb">Formato
@@ -994,14 +1168,48 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
         })}
       </div>
       {t.alcance === "base" && (
-        <p className="muted small" style={{ marginBottom: 0 }}>Este reporte se genera por base.</p>
+        <p className="muted small" style={{ marginBottom: 0 }}>
+          Este reporte se genera por base. Con «Todas las bases» se pide uno por cada base del ambiente
+          y al terminar se descarga un ZIP con los HTML y un <code>indice.csv</code> con el resultado de cada base.
+        </p>
       )}
+      {lote ? (
+        <div className="mt">
+          <p className="small">
+            {loteFin ? "Lote terminado" : "Generando"} · {terminadas} de {idsLote.length} terminadas · {exitosas} con reporte
+            {lote.length > idsLote.length && ` · ${lote.length - idsLote.length} no se pudieron pedir`}
+          </p>
+          <div style={{ height: 6, background: "var(--line, #ddd)", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${idsLote.length ? Math.round((terminadas / idsLote.length) * 100) : 100}%`,
+                          background: "var(--acc, #2b6cb0)", transition: "width .3s" }} />
+          </div>
+          <div className="list mt" style={{ maxHeight: 220, overflow: "auto" }}>
+            {lote.map((f) => {
+              const e = estLote.find((x) => x.ejecucion === f.ejecucion);
+              const estado = e?.estado ?? f.estado;
+              const clase = estado === "exitosa" ? "d-ok" : ["fallida", "rechazada", "cancelada", "vencida"].includes(estado) ? "d-crit" : "d-warn";
+              const err = e?.error ?? f.error;
+              return (
+                <div key={f.base} className="li">
+                  <span className={"dot " + clase} />
+                  <div className="grow"><b>{f.base}</b> <span className="muted small">{estado}</span>
+                    {err && <div className="muted small" title={err}>{err.length > 140 ? err.slice(0, 140) + "…" : err}</div>}
+                  </div>
+                  {estado === "exitosa" && f.ejecucion &&
+                    <a className="btn sm" href={`/api/ejecuciones/${f.ejecucion}/reporte`} target="_blank" rel="noopener">Ver</a>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
       <div className="list mt">
         {t.etapas.map((s, i) => (
           <div key={s} className="li"><span className={"dot " + punto(i)} /><div className="grow">{s}</div></div>
         ))}
       </div>
-      {enCurso && (
+      )}
+      {enCurso && !lote && (
         <p className="muted small">Etapa {Math.max(etapa, 1)} de {t.etapas.length} · ejecución <span className="mono-sm">{ejec}</span></p>
       )}
       {error && <div className="critbox mt">{error}</div>}

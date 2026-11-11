@@ -8,7 +8,7 @@ GRUPOS = [
     ("CAPA MEDIA", [("orquestacion", "Orquestación WebLogic"), ("usuarioswl", "Usuarios WebLogic"),
                     ("frmweb", "Forms · frmweb")]),
     ("BASE DE DATOS", [("snapshot", "Snapshot e inválidos"), ("bloqueos", "Sesiones bloqueantes"),
-                       ("salud", "Salud de la flota"), ("tareas", "Tareas DBA"), ("reportes", "Reportes")]),
+                       ("salud", "Salud de bases de datos"), ("tareas", "Tareas DBA"), ("reportes", "Reportes")]),
     ("CONTROL", [("aprobaciones", "Aprobaciones"), ("ejecuciones", "Log de ejecuciones"),
                  ("admin", "Administración")]),
 ]

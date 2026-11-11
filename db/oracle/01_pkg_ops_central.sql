@@ -19,17 +19,22 @@
 -- =============================================================================
 
 -- ---------------------------------------------------------------- tablas de apoyo
-CREATE TABLE ADMINBD.TBL_BASE_OBJETOS_INVALIDOS (
-  OWNER           VARCHAR2(128) NOT NULL,
-  OBJECT_NAME     VARCHAR2(128) NOT NULL,
-  OBJECT_TYPE     VARCHAR2(30)  NOT NULL,
-  JUSTIFICACION   VARCHAR2(500) NOT NULL,
-  REGISTRADO_POR  VARCHAR2(128) NOT NULL,
-  FECHA_REGISTRO  DATE DEFAULT SYSDATE NOT NULL,
-  ACTIVO          CHAR(1) DEFAULT 'S' NOT NULL CHECK (ACTIVO IN ('S','N')),
-  CONSTRAINT PK_BASE_OBJ_INV PRIMARY KEY (OWNER, OBJECT_NAME, OBJECT_TYPE)
-);
--- Si la tabla ya existe con otra estructura, adaptar las columnas de la plantilla 'linea_base'.
+-- Línea base de inválidos: es del equipo DBA (la carga con su propio INSERT ... SELECT FROM dba_objects).
+-- Ops Central solo la LEE (OPS_CONSULTA: SELECT). Si ya existe, NO se recrea ni se toca; si no existe se
+-- crea vacía con la misma estructura, solo para que el paquete compile (RECOMPILAR_OBJETO la consulta).
+DECLARE
+  v_n NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_n FROM dba_tables WHERE owner = 'ADMINBD' AND table_name = 'TBL_BASE_OBJETOS_INVALIDOS';
+  IF v_n = 0 THEN
+    EXECUTE IMMEDIATE q'[
+      CREATE TABLE ADMINBD.TBL_BASE_OBJETOS_INVALIDOS AS
+      SELECT SYSDATE AS FECHA_REGISTRO, OWNER, OBJECT_NAME, SUBOBJECT_NAME, OBJECT_ID, DATA_OBJECT_ID,
+             OBJECT_TYPE, CREATED, LAST_DDL_TIME, TIMESTAMP, STATUS, TEMPORARY, GENERATED, SECONDARY
+        FROM dba_objects WHERE 1 = 0]';
+  END IF;
+END;
+/
 
 CREATE TABLE ADMINBD.TBL_OPS_BITACORA (
   ID              NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -48,9 +53,6 @@ CREATE OR REPLACE PACKAGE ADMINBD.PKG_OPS_CENTRAL AUTHID DEFINER AS
   PROCEDURE RECOMPILAR_OBJETO(p_propietario IN VARCHAR2, p_objeto IN VARCHAR2, p_tipo_objeto IN VARCHAR2,
                               p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2);
   PROCEDURE COMPILAR_ESQUEMA(p_esquema IN VARCHAR2, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2);
-  PROCEDURE ACTUALIZAR_LINEA_BASE(p_operacion IN VARCHAR2, p_propietario IN VARCHAR2, p_objeto IN VARCHAR2,
-                                  p_tipo_objeto IN VARCHAR2, p_justificacion IN VARCHAR2,
-                                  p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2);
   PROCEDURE DESBLOQUEAR_USUARIO(p_usuario IN VARCHAR2, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2);
   PROCEDURE AGREGAR_DATAFILE(p_tablespace IN VARCHAR2, p_diskgroup IN VARCHAR2, p_tamano_gb IN NUMBER,
                              p_maximo_gb IN NUMBER, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2);
@@ -147,7 +149,7 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
       RAISE_APPLICATION_ERROR(-20012, 'Esquema protegido: ' || v_own);
     END IF;
     SELECT COUNT(*) INTO v_lb FROM adminbd.tbl_base_objetos_invalidos
-     WHERE owner = v_own AND object_name = v_obj AND object_type = v_tipo AND activo = 'S';
+     WHERE owner = v_own AND object_name = v_obj AND object_type = v_tipo;
     IF v_lb > 0 THEN
       RAISE_APPLICATION_ERROR(-20011, 'El objeto está en la línea base de inválidos conocidos');
     END IF;
@@ -208,41 +210,7 @@ CREATE OR REPLACE PACKAGE BODY ADMINBD.PKG_OPS_CENTRAL AS
     bitacora('COMPILAR_ESQUEMA', p_ejecucion, p_esquema, p_resultado);
   END;
 
-  PROCEDURE ACTUALIZAR_LINEA_BASE(p_operacion IN VARCHAR2, p_propietario IN VARCHAR2, p_objeto IN VARCHAR2,
-                                  p_tipo_objeto IN VARCHAR2, p_justificacion IN VARCHAR2,
-                                  p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2) IS
-    v_n NUMBER;
-  BEGIN
-    exigir_ejecucion(p_ejecucion);
-    IF p_justificacion IS NULL OR LENGTH(p_justificacion) < 15 THEN
-      RAISE_APPLICATION_ERROR(-20015, 'Justificación obligatoria (mínimo 15 caracteres)');
-    END IF;
-    IF UPPER(p_operacion) = 'AGREGAR' THEN
-      SELECT COUNT(*) INTO v_n FROM dba_objects
-       WHERE owner = UPPER(p_propietario) AND object_name = p_objeto AND object_type = UPPER(p_tipo_objeto);
-      IF v_n = 0 THEN
-        RAISE_APPLICATION_ERROR(-20013, 'El objeto no existe: no se agrega a la línea base');
-      END IF;
-      MERGE INTO adminbd.tbl_base_objetos_invalidos t
-      USING (SELECT UPPER(p_propietario) o, p_objeto n, UPPER(p_tipo_objeto) ty FROM dual) s
-         ON (t.owner = s.o AND t.object_name = s.n AND t.object_type = s.ty)
-      WHEN MATCHED THEN UPDATE SET activo = 'S', justificacion = p_justificacion,
-                                   registrado_por = NVL(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER'), USER),
-                                   fecha_registro = SYSDATE
-      WHEN NOT MATCHED THEN INSERT (owner, object_name, object_type, justificacion, registrado_por)
-                            VALUES (s.o, s.n, s.ty, p_justificacion,
-                                    NVL(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER'), USER));
-    ELSIF UPPER(p_operacion) = 'RETIRAR' THEN
-      UPDATE adminbd.tbl_base_objetos_invalidos SET activo = 'N'
-       WHERE owner = UPPER(p_propietario) AND object_name = p_objeto AND object_type = UPPER(p_tipo_objeto);
-    ELSE
-      RAISE_APPLICATION_ERROR(-20016, 'Operación inválida');
-    END IF;
-    COMMIT;
-    p_resultado := UPPER(p_operacion);
-    bitacora('ACTUALIZAR_LINEA_BASE', p_ejecucion, p_operacion || ' ' || p_propietario || '.' || p_objeto ||
-             ' (' || p_justificacion || ')', p_resultado);
-  END;
+  -- (sin ACTUALIZAR_LINEA_BASE: la línea base la mantiene el equipo DBA; Ops Central solo la lee)
 
   -- -------------------------------------------------------------- cuentas
   PROCEDURE DESBLOQUEAR_USUARIO(p_usuario IN VARCHAR2, p_ejecucion IN VARCHAR2, p_resultado OUT VARCHAR2) IS

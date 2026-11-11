@@ -47,10 +47,12 @@ PLANTILLAS: dict[str, str] = {
          WHERE o.status = 'INVALID'
            AND o.owner NOT IN (SELECT u.username FROM dba_users u WHERE u.oracle_maintained = 'Y')
          ORDER BY o.owner, o.object_type, o.object_name""",
+    # Solo columnas que existen en la tabla del equipo DBA (copia de DBA_OBJECTS + FECHA_REGISTRO,
+    # cargada con INSERT ... SELECT FROM dba_objects WHERE status='INVALID'). No tiene ACTIVO ni
+    # JUSTIFICACION: estar en la tabla = estar en la línea base; retirar = borrar la fila.
     "linea_base": """
-        SELECT owner, object_name, object_type, justificacion, registrado_por, fecha_registro
-          FROM adminbd.tbl_base_objetos_invalidos
-         WHERE activo = 'S'""",
+        SELECT owner, object_name, object_type, fecha_registro
+          FROM adminbd.tbl_base_objetos_invalidos""",
     "bloqueos": """
         SELECT s.inst_id, s.sid, s.serial# AS serial, s.username, s.status, s.machine, s.program, s.module,
                s.sql_id, s.event, s.seconds_in_wait, s.last_call_et,
