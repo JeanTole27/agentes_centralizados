@@ -400,10 +400,15 @@ export function Bloqueos() {
   const inv = useInventario();
   const enAmb = useEnAmbiente();
   const ambDe = (b: string) => inv.data?.bases.find((x) => x.id === b)?.ambiente;
-  const flota = { ...flotaQ, data: flotaQ.data?.filter((b) => enAmb(ambDe(b.base))) };
+  const delAmb = flotaQ.data?.filter((b) => enAmb(ambDe(b.base)));
+  // Por defecto solo las bases con sesiones bloqueadas; las demás quedan en un resumen.
+  const [verTodas, setVerTodas] = useState(false);
+  const conBloqueo = (delAmb ?? []).filter((b) => b.bloqueadas > 0).sort((a, b) => b.bloqueadas - a.bloqueadas);
+  const sinBloqueo = (delAmb ?? []).filter((b) => !(b.bloqueadas > 0) && !b.error).length;
+  const conError = (delAmb ?? []).filter((b) => !(b.bloqueadas > 0) && b.error).length;
+  const flota = { ...flotaQ, data: delAmb && (verTodas ? delAmb : conBloqueo) };
   const [base, setBase] = useState("");
-  const actual = (base && flota.data?.some((b) => b.base === base) ? base : "")
-    || flota.data?.slice().sort((a, b) => b.bloqueadas - a.bloqueadas)[0]?.base || "";
+  const actual = (base && flota.data?.some((b) => b.base === base) ? base : "") || conBloqueo[0]?.base || "";
   const det = useQuery({ queryKey: ["bd", "bloqueos", actual], enabled: Boolean(actual), queryFn: () => api.get<EstadoObj>(`/api/estado/bd/${actual}/bloqueos`) });
   const refrescar = useRefresco();
   const cat = useCatalogo();
@@ -416,6 +421,18 @@ export function Bloqueos() {
       </Cabecera>
       <div className="card"><div className="fgrid"><CampoAmbiente id="blq-amb" items={inv.data?.bases ?? []} alCambiar={() => setBase("")} /></div></div>
       <Cargando q={flotaQ} />
+      {delAmb && delAmb.length > 0 && (
+        <div className="fila entre small muted" style={{ margin: "4px 2px 8px" }}>
+          <span>
+            {conBloqueo.length ? `${conBloqueo.length} base(s) con sesiones bloqueadas` : "Ninguna base tiene sesiones bloqueadas"}
+            {` · ${sinBloqueo} sin bloqueos`}{conError ? ` · ${conError} sin dato (error al recolectar)` : ""}
+          </span>
+          <label className="fila" style={{ gap: 6, cursor: "pointer" }}>
+            <input type="checkbox" checked={verTodas} onChange={(e) => { setVerTodas(e.target.checked); setBase(""); }} />
+            Mostrar también las bases sin bloqueos
+          </label>
+        </div>
+      )}
       <div className="dbsel">
         {flota.data?.map((b) => (
           <button key={b.base} className={"dbc" + (actual === b.base ? " on" : "")} onClick={() => setBase(b.base)}
@@ -425,7 +442,10 @@ export function Bloqueos() {
           </button>
         ))}
       </div>
-      {flota.data?.length === 0 && <div className="card"><Vacio>Sin datos de bloqueos en este ambiente todavía. Pide un refresco desde Salud.</Vacio></div>}
+      {delAmb?.length === 0 && <div className="card"><Vacio>Sin datos de bloqueos en este ambiente todavía. Pide un refresco desde Salud.</Vacio></div>}
+      {!!delAmb?.length && flota.data?.length === 0 && (
+        <div className="card"><Vacio>No hay sesiones bloqueantes en las {delAmb.length} bases revisadas.</Vacio></div>
+      )}
       {det.data && (
         <div className="card">
           <h3>{actual} <span className="fila">{det.data.filtrado && <span className="tag t-cm">{det.data.filtrado}</span>}<Antiguedad s={det.data.antiguedad_s} origen={det.data.origen} /></span></h3>
@@ -591,7 +611,7 @@ export function Salud() {
                     <td className={"cell " + (d.invalidos_fuera_lb == null ? "c-na" : d.invalidos_fuera_lb > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.invalidos_fuera_lb ?? "—"}</td>
                     <td className="nm"><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
                     <td className="nm"><Hace s={f.intento_s} titulo={f.intentado ?? f.origen} /></td>
-                    {puedeRefrescar && <td className="nm"><button className="btn sm" onClick={() => refrescar(base)}>Refrescar</button></td>}
+                    {puedeRefrescar && <td className="nm"><button className="btn sm" title={`Refrescar ${base}`} aria-label={`Refrescar ${base}`} onClick={() => refrescar(base)}>↻<span className="btn-txt"> Refrescar</span></button></td>}
                   </tr>
                 );
               })}
@@ -761,7 +781,7 @@ export function Ejecuciones() {
               <tbody>
                 {q.data.map((e) => (
                   <tr key={e.id} className={"click" + (sel === e.id ? " sel" : "")} onClick={() => setSel(e.id)}>
-                    <td>{fecha(e.creada)}</td><td className="mono-sm">{e.accion}</td><td>{e.destino} <span className="muted small">{e.ambiente}</span></td>
+                    <td>{fecha(e.creada)}</td><td className="mono-sm nw">{e.accion}</td><td>{e.destino} <span className="muted small">{e.ambiente}</span></td>
                     <td><Clase c={e.clase} /></td><td>{e.solicitante}</td><td>{e.cambio ?? "—"}</td><td className="small">{(e.motivo ?? "—").slice(0, 60)}</td><td><EstadoEj e={e.estado} /></td>
                   </tr>
                 ))}
