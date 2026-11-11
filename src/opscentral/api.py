@@ -45,6 +45,12 @@ class SolicitudEjecucion(BaseModel):
     motivo: str | None = None
 
 
+class LoteReporte(BaseModel):
+    accion: str
+    ambiente: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
 class Resolucion(BaseModel):
     comentario: str = ""
 
@@ -371,6 +377,108 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                         "muestra": bool((e.get("resultado") or {}).get("muestra"))})
         return out
 
+    # ---------------------------------------------------------- lote: todas las bases de un ambiente
+    TERMINALES = {"exitosa", "fallida", "rechazada", "cancelada", "vencida"}
+
+    @app.post("/api/reportes/lote", status_code=202)
+    def reportes_lote(s: LoteReporte, u: Usuario = Depends(usuario)):
+        """Pide un reporte por base para todas las bases del ambiente (una ejecución por base, cada
+        una con sus propios permisos, auditoría y huella). El ZIP se arma luego con /api/reportes/zip."""
+        if s.accion not in REPORTES:
+            raise ErrorValidacion(f"{s.accion} no es un reporte")
+        if "base" not in n.catalogo[s.accion].parametros:
+            raise ErrorValidacion(f"{s.accion} no se genera por base: usa el alcance por ambiente")
+        amb = (s.ambiente or "").strip().upper()
+        bases = sorted(n.inventario.bases(amb), key=lambda b: b.id) if amb else []
+        if not bases:
+            raise ErrorValidacion(f"el inventario no tiene bases en el ambiente {amb or '(vacío)'}")
+        extra = {k: v for k, v in s.params.items() if k not in ("base", "ambiente")}
+        out = []
+        for b in bases:
+            try:
+                e = n.ejecuciones.solicitar(u, s.accion, {**extra, "base": b.id})
+                out.append({"base": b.id, "ejecucion": e["id"], "estado": e["estado"], "error": None})
+            except (RequiereStepUp, PermisoDenegado):
+                if not out:
+                    raise          # el primero decide: segundo factor o sin permiso → nada se pidió
+                out.append({"base": b.id, "ejecucion": None, "estado": "rechazada", "error": "sin permiso o segundo factor vencido"})
+            except (ErrorValidacion, Conflicto, KeyError) as ex:
+                out.append({"base": b.id, "ejecucion": None, "estado": "rechazada", "error": str(ex)})
+        n.auditoria.registrar("reporte_lote_solicitado", u.login, accion=s.accion, ambiente=amb, bases=len(bases),
+                              pedidas=sum(1 for x in out if x["ejecucion"]))
+        return {"accion": s.accion, "ambiente": amb, "ejecuciones": out}
+
+    def _ids(ids: str) -> list[str]:
+        lista = list(dict.fromkeys(x.strip() for x in ids.split(",") if x.strip()))
+        if not lista or len(lista) > 500:
+            raise ErrorValidacion("indica entre 1 y 500 ejecuciones")
+        return lista
+
+    @app.get("/api/reportes/lote/estado")
+    def reportes_lote_estado(ids: str, u: Usuario = Depends(usuario)):
+        """Estado de las ejecuciones de un lote (lo consulta la pantalla mientras se generan)."""
+        out = []
+        for eid in _ids(ids):
+            try:
+                e = _visible(eid, u)
+            except (HTTPException, KeyError):
+                continue
+            out.append({"ejecucion": eid, "base": e["destino"], "estado": e["estado"],
+                        "terminal": e["estado"] in TERMINALES, "error": e.get("error"),
+                        "reporte": bool((e.get("resultado") or {}).get("reporte"))})
+        return out
+
+    @app.get("/api/reportes/zip")
+    def reportes_zip(ids: str, u: Usuario = Depends(usuario)):
+        """ZIP con los HTML de las ejecuciones indicadas (huella verificada) y un indice.csv con el
+        resultado de cada base, incluidas las que fallaron o no generaron reporte."""
+        import csv
+        import io
+        import zipfile
+        buf, indice = io.BytesIO(), io.StringIO()
+        w = csv.writer(indice)
+        w.writerow(["base", "ambiente", "reporte", "estado", "archivo", "sha256", "detalle"])
+        raiz = n.cfg.ruta("reportes", "ruta").resolve()
+        incluidos, accion, ambs = 0, None, set()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for eid in _ids(ids):
+                try:
+                    e = _visible(eid, u)
+                except (HTTPException, KeyError):
+                    w.writerow(["", "", "", "no visible", "", "", eid])
+                    continue
+                if e["accion"] not in REPORTES:
+                    continue
+                accion = accion or e["accion"]
+                ambs.add(e["ambiente"])
+                tipo = REPORTES[e["accion"]][1]
+                info = (e.get("resultado") or {}).get("reporte")
+                if e["estado"] != "exitosa" or not info:
+                    w.writerow([e["destino"], e["ambiente"], tipo, e["estado"], "", "", (e.get("error") or "")[:300]])
+                    continue
+                ruta = (raiz / info["archivo"]).resolve()
+                if raiz not in ruta.parents or not ruta.is_file():
+                    w.writerow([e["destino"], e["ambiente"], tipo, "sin archivo", "", "", ""])
+                    continue
+                datos = ruta.read_bytes()
+                if hashlib.sha256(datos).hexdigest() != info["sha256"]:
+                    w.writerow([e["destino"], e["ambiente"], tipo, "huella inválida", "", info["sha256"], ""])
+                    continue
+                nombre = f"{e['destino']}__{info['nombre']}"
+                z.writestr(nombre, datos)
+                incluidos += 1
+                w.writerow([e["destino"], e["ambiente"], tipo, "exitosa", nombre, info["sha256"], ""])
+            z.writestr("indice.csv", "﻿" + indice.getvalue())
+        if not incluidos:
+            raise HTTPException(404, "ninguna de las ejecuciones tiene un reporte disponible todavía")
+        clave = REPORTES[accion][0] if accion else "reportes"
+        amb = "-".join(sorted(ambs)).lower() or "varios"
+        nombre_zip = f"reportes_{clave}_{amb}_{utc().strftime('%Y%m%d-%H%M')}.zip"
+        n.auditoria.registrar("reporte_lote_descargado", u.login, accion=accion, ambiente=amb, reportes=incluidos)
+        return Response(buf.getvalue(), media_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{nombre_zip}"',
+                                 "Cache-Control": "no-store", "X-Reportes-Incluidos": str(incluidos)})
+
     @app.get("/api/ejecuciones/{eid}/reporte")
     def reporte_html(eid: str, descargar: bool = False, u: Usuario = Depends(usuario)):
         """HTML del reporte. Se verifica la huella antes de servirlo y se entrega aislado
@@ -415,8 +523,12 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     def salud_flota(ambiente: str | None = None, u: Usuario = Depends(usuario)):
         _exigir_ver(u, "bd.salud.flota")
         filas = estado.leer_tipo(n.almacen, "bd.salud")
+        # El ambiente sale del inventario: las filas que solo registraron errores tienen datos = {}
+        # y con el filtro por datos.ambiente desaparecían de la vista.
+        for f in filas:
+            f["ambiente"] = (f["datos"] or {}).get("ambiente") or n.inventario.ambiente_de(f["objeto"].split(":")[1]) or ""
         if ambiente:
-            filas = [f for f in filas if (f["datos"] or {}).get("ambiente") == ambiente.upper()]
+            filas = [f for f in filas if f["ambiente"] == ambiente.upper()]
         suyas = _bases_visibles(u)
         if suyas is not None:
             filas = [f for f in filas if f["objeto"].split(":")[1] in suyas]

@@ -216,3 +216,43 @@ def test_modo_muestra_marca_el_reporte_y_no_se_permite_en_produccion(api_n, bd_n
         config.cargar(extra={"general": {"modo": "produccion"}, "auth": {"proveedor": "oidc"},
                              "secretos": {"proveedor": "vault"}, "almacen": {"url": "postgresql://x/y"},
                              "bd": {"reportes_muestra": True}})
+
+
+def test_lote_por_ambiente_y_descarga_zip(api_n, bd_n, usuarios, cfg):
+    import csv
+    import io
+    import zipfile
+    c = TestClient(api_mod.crear_app(cfg, api_n))
+    assert c.post("/api/auth/dev/ingresar", json={"login": "dba.demo"}, headers=H).status_code == 200
+    # alcance por ambiente o ambiente sin bases → 422
+    assert c.post("/api/reportes/lote", json={"accion": "bd.rep.diskgroups", "ambiente": "PROD"}, headers=H).status_code == 422
+    assert c.post("/api/reportes/lote", json={"accion": "bd.rep.hoja_vida", "ambiente": "QA"}, headers=H).status_code == 422
+    r = c.post("/api/reportes/lote", json={"accion": "bd.rep.sql_costosas", "ambiente": "prod",
+                                           "params": {"criterio": "CPU", "base": "CORTST"}}, headers=H)
+    assert r.status_code == 202, r.text
+    lote = r.json()
+    assert lote["ambiente"] == "PROD" and [x["base"] for x in lote["ejecuciones"]] == ["CORPRD", "CRMPRD"]
+    ids = [x["ejecucion"] for x in lote["ejecuciones"]]
+    assert all(ids)
+    # antes de correr el worker no hay nada que empaquetar
+    assert c.get("/api/reportes/zip", params={"ids": ",".join(ids)}).status_code == 404
+    w = Worker("bd", bd_n)
+    for _ in range(6):
+        if not w.una_vez():
+            break
+    est = c.get("/api/reportes/lote/estado", params={"ids": ",".join(ids)}).json()
+    assert len(est) == 2 and all(x["terminal"] and x["estado"] == "exitosa" for x in est)
+    z = c.get("/api/reportes/zip", params={"ids": ",".join(ids)})
+    assert z.status_code == 200 and z.headers["content-type"] == "application/zip"
+    assert z.headers["content-disposition"].startswith('attachment; filename="reportes_sentencias_prod_')
+    arch = zipfile.ZipFile(io.BytesIO(z.content))
+    nombres = arch.namelist()
+    assert "indice.csv" in nombres and sum(x.startswith("CORPRD__") for x in nombres) == 1
+    filas = list(csv.DictReader(io.StringIO(arch.read("indice.csv").decode("utf-8-sig"))))
+    assert {f["base"] for f in filas} == {"CORPRD", "CRMPRD"} and all(f["estado"] == "exitosa" for f in filas)
+    for f in filas:
+        assert hashlib.sha256(arch.read(f["archivo"])).hexdigest() == f["sha256"]
+    # otro perfil no ve esas ejecuciones
+    cm = TestClient(api_mod.crear_app(cfg, api_n))
+    cm.post("/api/auth/dev/ingresar", json={"login": "cm.demo"}, headers=H)
+    assert cm.get("/api/reportes/zip", params={"ids": ",".join(ids)}).status_code == 404

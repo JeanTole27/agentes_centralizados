@@ -34,21 +34,25 @@ export function useEnAmbiente() {
   return (a?: string | null) => !ambiente || (a ?? "").toUpperCase() === ambiente;
 }
 
-/** Campo "Ambiente" de la vista. Sin `items` ofrece los ambientes del inventario completo.
- *  `alCambiar` limpia lo que dependía del ambiente (la base o el servidor elegidos). */
+/** Campo "Ambiente" de la vista. Ofrece siempre los cinco ambientes (PROD, DRP, QA, TEST, DESA) más
+ *  cualquier otro que traiga el inventario. Con `items`, los ambientes sin registros en esa lista se
+ *  muestran igual, marcados "sin registros" (p. ej. DRP en una vista de bases si el inventario no tiene
+ *  bases DRP). `alCambiar` limpia lo que dependía del ambiente (la base o el servidor elegidos). */
 export function CampoAmbiente({ items, alCambiar, id = "f-ambiente" }: {
   items?: { ambiente: string }[]; alCambiar?: () => void; id?: string;
 }) {
   const { ambiente, setAmbiente } = useContext(Ambiente);
   const inv = useInventario();
-  const fuente = items ?? [...(inv.data?.bases ?? []), ...(inv.data?.servidores ?? []), ...(inv.data?.dominios ?? [])];
-  const ambs = ordenarAmbientes(fuente.map((i) => i.ambiente));
+  const todo = [...(inv.data?.bases ?? []), ...(inv.data?.servidores ?? []), ...(inv.data?.dominios ?? [])];
+  const fuente = items ?? todo;
+  const ambs = ordenarAmbientes([...ORDEN_AMBIENTES, ...todo.map((i) => i.ambiente), ...fuente.map((i) => i.ambiente)].filter(Boolean));
+  const cuenta = (a: string) => fuente.filter((i) => i.ambiente === a).length;
   return (
     <div>
       <label className="lb" htmlFor={id}>Ambiente</label>
       <select id={id} className="f" value={ambiente} onChange={(e) => { setAmbiente(e.target.value); alCambiar?.(); }}>
         <option value="">Todos</option>
-        {ambs.map((a) => <option key={a} value={a}>{a}</option>)}
+        {ambs.map((a) => <option key={a} value={a}>{a}{cuenta(a) ? "" : " · sin registros"}</option>)}
       </select>
     </div>
   );
@@ -60,7 +64,9 @@ export function OpcionesActivo({ items }: { items: { id: string; ambiente: strin
   const ambiente = useAmbiente();
   const op = (i: { id: string; etiqueta?: string }) => <option key={i.id} value={i.id}>{i.etiqueta ?? i.id}</option>;
   if (ambiente) {
-    return <>{items.filter((i) => i.ambiente === ambiente).map(op)}</>;
+    const deAmb = items.filter((i) => i.ambiente === ambiente);
+    if (!deAmb.length) return <option value="" disabled>Sin registros en {ambiente} (el inventario no los tiene)</option>;
+    return <>{deAmb.map(op)}</>;
   }
   return (
     <>

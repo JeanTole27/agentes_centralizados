@@ -96,6 +96,10 @@ export type EstadoObj<T = any> = {
   actualizado: string;
   error: string | null;
   antiguedad_s: number;
+  intentado?: string | null;
+  intento_s?: number | null;   // segundos desde el último intento (exitoso o no)
+  con_dato?: boolean;          // hay un dato bueno guardado
+  ambiente?: string;           // del inventario (también en filas con error)
   filtrado?: string;
 };
 

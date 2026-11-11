@@ -174,15 +174,6 @@ class ConexionFalsa:
                 raise ErrorBD("ORA-20031: el usuario no existe")
             e["usuarios"][u] = "OPEN"
             return "OPEN"
-        if p == "ACTUALIZAR_LINEA_BASE":
-            o = {"owner": args["propietario"], "object_name": args["objeto"], "object_type": args["tipo_objeto"],
-                 "justificacion": args["justificacion"], "registrado_por": self.persona, "fecha_registro": datetime.now()}
-            if args["operacion"] == "AGREGAR":
-                e["linea_base"].append(o)
-            else:
-                e["linea_base"] = [x for x in e["linea_base"] if (x["owner"], x["object_name"]) !=
-                                   (o["owner"], o["object_name"])]
-            return args["operacion"]
         return "OK (simulado)"
 
 

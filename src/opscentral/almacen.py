@@ -143,9 +143,13 @@ estado_actual = Table(
     Column("tipo", String(40), nullable=False, index=True),
     Column("datos", JSONV, nullable=False),
     Column("origen", String(40), nullable=False),          # recoleccion | evento | refresco | ejecucion
-    TS("actualizado", nullable=False),
+    TS("actualizado", nullable=False),                     # último dato bueno (o primer intento si nunca hubo)
     Column("error", Text),
+    TS("intentado"),                                       # último intento de recolección, exitoso o no
 )
+
+# Columnas agregadas después de la primera versión: crear_esquema las añade a tablas existentes.
+COLUMNAS_NUEVAS = [("estado_actual", "intentado", "TIMESTAMP")]
 
 refresco = Table(
     "estado_refresco", meta,
@@ -246,6 +250,13 @@ class Almacen:
 
     def crear_esquema(self) -> None:
         meta.create_all(self.engine)
+        from sqlalchemy import inspect, text
+        insp = inspect(self.engine)
+        for tabla, col, tipo in COLUMNAS_NUEVAS:
+            if col not in {c["name"] for c in insp.get_columns(tabla)}:
+                tipo_real = "TIMESTAMP WITH TIME ZONE" if self.es_postgres and tipo == "TIMESTAMP" else tipo
+                with self.engine.begin() as con:
+                    con.execute(text(f"ALTER TABLE {tabla} ADD COLUMN {col} {tipo_real}"))
 
     @contextmanager
     def tx(self):

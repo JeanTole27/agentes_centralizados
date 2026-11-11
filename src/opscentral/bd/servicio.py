@@ -28,6 +28,13 @@ Emitir = Callable[[str], None]
 TOPSQL = {"CPU": "topsql_cpu", "ELAPSED": "topsql_elapsed", "GETS": "topsql_gets"}
 
 
+def _es_error_linea_base(ex: Exception) -> bool:
+    """Errores de la tabla de línea base que no deben frenar una comparación:
+    ORA-00942 (no existe o sin GRANT) y ORA-00904 (columna inexistente: la tabla tiene otra estructura)."""
+    t = str(ex)
+    return "ORA-00942" in t or "ORA-00904" in t
+
+
 class MotorBD:
     clase_conexion = ConexionOracle   # las pruebas lo reemplazan por un doble; el producto siempre usa Oracle
 
@@ -67,7 +74,7 @@ class MotorBD:
         if acc.id == "bd.snap.tomar":
             return self.tomar_snapshot(base, grupo, p["momento"], persona=quien, ejecucion_id=eid, emitir=emitir)
         if acc.id in ("bd.snap.comparar", "bd.inv.generar"):
-            comp = self.comparar(base, grupo, persona=quien, ejecucion_id=eid)
+            comp = self.comparar(base, grupo, persona=quien, ejecucion_id=eid, emitir=emitir)
             if acc.id == "bd.inv.generar":
                 comp["plan"] = recompilar.plan(comp["nuevos"])
                 emitir(f"{len(comp['plan'])} sentencia(s) generadas (vista previa; se ejecutan por el paquete)")
@@ -432,19 +439,36 @@ class MotorBD:
                 .order_by(t_snapshot.c.tomado.desc()).limit(1)).first()
         return f[0] if f else None
 
-    def comparar(self, base: str, cambio: str, *, persona: str, ejecucion_id: str) -> dict:
+    def comparar(self, base: str, cambio: str, *, persona: str, ejecucion_id: str,
+                 emitir: Emitir | None = None) -> dict:
+        """ANTES contra DESPUÉS/FINAL, sin contar la línea base. Si la línea base no se puede leer
+        (tabla ausente, sin GRANT o con otra estructura) la comparación sigue sin ella y lo avisa:
+        los «nuevos» salen de ANTES vs DESPUÉS, así que lo ya inválido antes del cambio no entra igual."""
         antes = self._ultimo(base, cambio, ("ANTES",))
         despues = self._ultimo(base, cambio, ("FINAL", "DESPUES"))
         if not antes or not despues:
             raise ErrorBD(f"faltan snapshots para {cambio} en {base}: se necesitan ANTES y DESPUÉS")
-        with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="línea base") as c:
-            lb = c.consultar("linea_base")
+        aviso = None
+        try:
+            with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="línea base") as c:
+                lb = c.consultar("linea_base")
+        except Exception as ex:  # noqa: BLE001
+            if not _es_error_linea_base(ex):
+                raise
+            lb = []
+            aviso = ("Línea base de inválidos no disponible (ADMINBD.TBL_BASE_OBJETOS_INVALIDOS): "
+                     f"{str(ex).splitlines()[0][:200]}. Se compara solo ANTES contra DESPUÉS.")
+            if emitir:
+                emitir("Advertencia: " + aviso)
         comp = snapshot.comparar(antes, despues, lb)
+        comp["linea_base_disponible"] = aviso is None
+        if aviso:
+            comp["aviso_linea_base"] = aviso
         estado.guardar(self.a, f"bd:{base}:snapshot:{cambio}", "bd.snapshot", comp, origen="ejecucion")
         return comp
 
     def recompilar(self, base: str, cambio: str, *, persona: str, ejecucion_id: str, emitir: Emitir) -> dict:
-        comp = self.comparar(base, cambio, persona=persona, ejecucion_id=ejecucion_id)
+        comp = self.comparar(base, cambio, persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
         if not comp["nuevos"]:
             emitir("No hay objetos nuevos por el cambio: nada que recompilar")
             return {"comparacion": comp, "recompilacion": None}
@@ -454,7 +478,7 @@ class MotorBD:
             r = recompilar.ejecutar(c, comp["nuevos"], emitir=emitir)
         emitir("Snapshot FINAL automático")
         self.tomar_snapshot(base, cambio, "FINAL", persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
-        final = self.comparar(base, cambio, persona=persona, ejecucion_id=ejecucion_id)
+        final = self.comparar(base, cambio, persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
         self._actualizar_salud(base, emitir)
         return {"recompilacion": r, "comparacion_final": final}
 
@@ -490,33 +514,60 @@ class MotorBD:
                 "bloqueadas_despues": despues["total_bloqueadas"]}
 
     # ------------------------------------------------------------ recolección programada
+    # Secciones que se pueden perder sin descartar la pasada: si fallan se anota el motivo y se sigue.
+    # La instancia (salud_instancia) es obligatoria: sin ella no hay semáforo.
+    # `bloqueos` va al final: es la que suele exceder call_timeout_s en bases grandes, y un timeout
+    # puede dejar la conexión inutilizable para las consultas que vinieran después.
+    SECCIONES_OPCIONALES = {
+        "tablespaces": "tablespaces", "diskgroups": "ASM", "invalidos": "objetos inválidos",
+        "linea_base": "línea base de inválidos", "bloqueos": "bloqueos",
+    }
+
     def recolectar_base(self, base: str, *, origen: str = "recoleccion") -> dict:
-        """Una pasada liviana por base: salud, tablespaces, diskgroups, bloqueos e inválidos."""
+        """Una pasada liviana por base: salud, tablespaces, diskgroups, bloqueos e inválidos.
+
+        Solo la conexión y `salud_instancia` son obligatorias. Cada otra consulta va en su propio
+        try: si una falla (p. ej. `linea_base` con ORA-00942 porque falta ADMINBD.TBL_BASE_OBJETOS_INVALIDOS,
+        o `bloqueos` con DPY-4024 por timeout) se guarda lo demás y la falla queda en `datos.parciales`."""
         eid = f"rec-{utc():%Y%m%d%H%M}"
         b = self._base(base)
+        parciales: dict[str, str] = {}
+        res: dict[str, list] = {}
         try:
             with self.conectar(base, "consulta", persona="sistema", ejecucion_id=eid, motivo="recolección") as c:
                 inst = (c.consultar("salud_instancia") or [None])[0]
-                ts = c.consultar("tablespaces")
-                try:
-                    dg = c.consultar("diskgroups")
-                except Exception:  # sin ASM
-                    dg = []
-                blq = bloqueos.arbol(c.consultar("bloqueos"))
-                inv = c.consultar("invalidos")
-                lb = c.consultar("linea_base")
+                for sec in self.SECCIONES_OPCIONALES:
+                    try:
+                        res[sec] = c.consultar(sec)
+                    except Exception as ex:  # noqa: BLE001 — la sección se pierde, la pasada sigue
+                        if sec != "diskgroups":           # sin ASM es normal: no es una falla
+                            parciales[sec] = str(ex)[:500]
         except Exception as ex:
             estado.marcar_error(self.a, f"bd:{base}:salud", "bd.salud", str(ex), origen=origen)
             return {"base": base, "semaforo": "sin_dato", "error": str(ex)}
-        lbk = {snapshot.clave(o) for o in lb}
-        fuera_lb = [o for o in inv if snapshot.clave(o) not in lbk and not snapshot.es_papelera(o)]
-        sem = salud.evaluar(inst, ts, dg, bloqueadas=blq["total_bloqueadas"], invalidos_nuevos=len(fuera_lb))
+        ts, dg, inv = res.get("tablespaces", []), res.get("diskgroups", []), res.get("invalidos")
+        blq = bloqueos.arbol(res["bloqueos"]) if "bloqueos" in res else None
+        fuera_lb: list | None = None
+        if inv is not None and "linea_base" in res:
+            lbk = {snapshot.clave(o) for o in res["linea_base"]}
+            fuera_lb = [o for o in inv if snapshot.clave(o) not in lbk and not snapshot.es_papelera(o)]
+        sem = salud.evaluar(inst, ts, dg, bloqueadas=blq["total_bloqueadas"] if blq else 0,
+                            invalidos_nuevos=len(fuera_lb) if fuera_lb is not None else 0)
+        avisos = [f"{self.SECCIONES_OPCIONALES[k]} no disponible: {v.splitlines()[0][:160]}" for k, v in parciales.items()]
+        if inv is not None and fuera_lb is None:
+            avisos.append(f"{len(inv)} objetos inválidos (sin línea base para comparar)")
         datos = {"base": base, "ambiente": b.ambiente, "instancia": inst, "tablespaces": ts, "diskgroups": dg,
-                 "bloqueadas": blq["total_bloqueadas"], "invalidos_fuera_lb": len(fuera_lb), **sem}
+                 "bloqueadas": blq["total_bloqueadas"] if blq else None,
+                 "invalidos": len(inv) if inv is not None else None,
+                 "invalidos_fuera_lb": len(fuera_lb) if fuera_lb is not None else None,
+                 "parciales": parciales, **sem}
+        if avisos:
+            datos["motivos"] = list(sem.get("motivos") or []) + avisos
         estado.guardar(self.a, f"bd:{base}:salud", "bd.salud", datos, origen=origen)
-        estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", blq, origen=origen)
+        if blq is not None:
+            estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", blq, origen=origen)
         self._series(base, ts, dg)
-        return {"base": base, "semaforo": sem["semaforo"]}
+        return {"base": base, "semaforo": sem["semaforo"], "parcial": sorted(parciales)}
 
     def _series(self, base: str, ts: list[dict], dg: list[dict]) -> None:
         hora = utc().replace(minute=0, second=0, microsecond=0)
@@ -537,5 +588,8 @@ class MotorBD:
         conteo: dict[str, int] = {}
         for r in res:
             conteo[r["semaforo"]] = conteo.get(r["semaforo"], 0) + 1
-            emitir(f"  {r['base']}: {r['semaforo']}" + (f" ({r['error']})" if r.get("error") else ""))
-        return {"bases": res, "conteo": conteo}
+            extra = f" ({r['error']})" if r.get("error") else (f" (parcial: {', '.join(r['parcial'])})" if r.get("parcial") else "")
+            emitir(f"  {r['base']}: {r['semaforo']}{extra}")
+        con_error = sum(1 for r in res if r.get("error"))
+        return {"bases": res, "conteo": conteo, "con_error": con_error,
+                "parciales": sum(1 for r in res if r.get("parcial")), "total": len(res)}
