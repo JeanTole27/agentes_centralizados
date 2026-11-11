@@ -28,3 +28,50 @@ details.plegable > summary::-webkit-details-marker{display:none}
 details.plegable > summary::before{content:"▸";display:inline-block;transition:transform .15s;font-size:.9em}
 details.plegable[open] > summary::before{transform:rotate(90deg)}
 details.plegable .plegable-cuerpo{margin-top:8px;max-height:240px;overflow:auto;font-weight:400;word-break:break-word}
+
+/* ---------- tablas y grillas que se ajustan al ancho de la pantalla ----------
+   - Las celdas pueden partir textos largos (ids, listas, DSN, mensajes de error), así la tabla
+     se encoge con la ventana en lugar de salirse.
+   - Los encabezados pueden ocupar dos líneas.
+   - En pantallas angostas, si aun así no entra, la tabla se desplaza dentro de su tarjeta y la
+     primera columna queda fija como referencia. */
+.tbl-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tbl-wrap table { width: 100%; }
+th { white-space: normal; min-width: 0; vertical-align: bottom; }
+td { overflow-wrap: anywhere; min-width: 0; }
+td .tag, td .btn { overflow-wrap: normal; }
+.hm td.nm { white-space: normal; overflow-wrap: normal; }
+.hm td.cell { overflow-wrap: normal; }
+/* Ítems de grilla: sin esto un texto largo estira la columna y empuja la página. */
+.tgrid > *, .g2 > *, .g3 > *, .g21 > *, .fgrid > *, .kpis > * { min-width: 0; }
+.tcard b, .tcard span { overflow-wrap: anywhere; }
+.dbc { min-width: min(220px, 100%); max-width: 100%; }
+.ph > div { min-width: 0; }
+.ph h1, .ph p { overflow-wrap: anywhere; }
+.modal .tbl-wrap { max-width: 100%; }
+@media (max-width: 700px) {
+  table { font-size: 12px; }
+  th, td { padding: 6px 7px; }
+  .tbl-wrap th:first-child, .tbl-wrap td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--line); }
+  .hm td.nm:first-child { background: var(--surface); }
+  .modal { padding: 16px; }
+}
+/* Tablas anchas (p. ej. Salud): en pantallas medianas se compactan encabezados y botones. */
+@media (max-width: 1100px) {
+  th { letter-spacing: 0; font-size: 10px; }
+  .btn .btn-txt { display: none; }
+  .hm td { padding: 5px 4px; }
+}
+/* Entre tablet y escritorio, los nombres largos de base pueden partirse para que la tabla entre. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .hm td.nm:first-child { overflow-wrap: anywhere; }
+}
+/* En móvil la tabla se desplaza: el nombre de la base no se parte y la columna fija no deja ver
+   lo que pasa por debajo (el relleno de la tarjeta queda fuera del área de desplazamiento). */
+@media (max-width: 700px) {
+  .hm td.nm { white-space: nowrap; }
+  .card.tbl-wrap { padding: 8px 0; }
+  .card.tbl-wrap th:first-child, .card.tbl-wrap td:first-child { padding-left: 12px; }
+}
+/* Identificadores que no deben partirse (p. ej. el id de la acción en Ejecuciones). */
+td.nw { white-space: nowrap; overflow-wrap: normal; }
