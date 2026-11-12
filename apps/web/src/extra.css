@@ -75,3 +75,55 @@ td .tag, td .btn { overflow-wrap: normal; }
 }
 /* Identificadores que no deben partirse (p. ej. el id de la acción en Ejecuciones). */
 td.nw { white-space: nowrap; overflow-wrap: normal; }
+
+/* ---------- pantallas grandes (monitores de 24" o más, proyección) ----------
+   El contenido ocupa todo el ancho disponible (antes tenía un tope de 1440 px). A partir de
+   ~1600 px las grillas agregan columnas y la letra crece un poco para leerse a distancia. */
+@media (min-width: 1600px) {
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .chart-box { height: 380px; }
+  .json { max-height: 420px; }
+}
+@media (min-width: 1800px) {
+  body { font-size: 15px; }
+  table { font-size: 13.5px; }
+  th { font-size: 11.5px; }
+  .nav-it { font-size: 14px; }
+  .side { width: 248px; }
+  .ph h1 { font-size: 24px; }
+  .card { padding: 18px 20px; }
+  .card h3 { font-size: 15.5px; }
+  .k b { font-size: 1.15em; }
+  .chart-box { height: 440px; }
+}
+@media (min-width: 2400px) {
+  body { font-size: 16px; }
+  table { font-size: 14.5px; }
+  th { font-size: 12px; }
+  .side { width: 270px; }
+  .chart-box { height: 520px; }
+}
+/* En pantallas anchas el chat queda acoplado al costado: el contenido se corre en vez de quedar tapado. */
+@media (min-width: 1600px) {
+  #app.con-chat .main { padding-right: 440px; transition: padding-right .22s; }
+}
+
+/* ---------- lista desplegable con búsqueda (SelectBuscable) ---------- */
+.sb { position: relative; width: 100%; }
+.sb-in { width: 100%; padding-right: 26px; cursor: text; }
+.sb-in::placeholder { color: var(--fg); opacity: .55; }
+.sb-flecha { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 11px; }
+.sb-lista { position: absolute; z-index: 45; left: 0; right: 0; top: calc(100% + 3px); margin: 0; padding: 4px 0; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); max-height: 320px; overflow: auto; min-width: 220px; }
+.sb-op { padding: 6px 12px; cursor: pointer; font-size: 13px; overflow-wrap: anywhere; }
+.sb-op.act { background: var(--sunk); }
+.sb-op.sel { font-weight: 600; color: var(--acc-ink); }
+.sb-op.dis { color: var(--muted); cursor: not-allowed; }
+.sb-grupo { padding: 6px 12px 3px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.sb-vacio { padding: 8px 12px; color: var(--muted); font-size: 12.5px; }
+
+/* Buscador del encabezado: en pantallas angostas se oculta el título para dejarle espacio. */
+@media (max-width: 760px) { .top .top-titulo { display: none; } .top .search { max-width: none; } }
+@media (max-width: 480px) { .top .search { display: none; } }

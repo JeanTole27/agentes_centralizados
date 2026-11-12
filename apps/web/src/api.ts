@@ -37,6 +37,8 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise
 export const api = {
   get: <T,>(ruta: string) => pedir<T>("GET", ruta),
   post: <T,>(ruta: string, cuerpo: unknown = {}) => pedir<T>("POST", ruta, cuerpo),
+  put: <T,>(ruta: string, cuerpo: unknown = {}) => pedir<T>("PUT", ruta, cuerpo),
+  del: <T,>(ruta: string) => pedir<T>("DELETE", ruta),
 };
 
 export function mensajeError(e: unknown): string {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SelectBuscable } from "./SelectBuscable";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, mensajeError } from "./api";
 import { CampoAmbiente, Clase, Consola, Modal, OpcionesActivo, Resultado, useAccion, useSegundoFactor, useSesion } from "./comun";
@@ -313,27 +314,27 @@ function Campo({ nombre, esp, valor, cambiar, inv, disabled }: {
   let control;
   if (esp.tipo === "base" && inv) {
     control = (
-      <select id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
+      <SelectBuscable id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
         <option value="">— elegir —</option>
         <OpcionesActivo items={inv.bases} />
-      </select>
+      </SelectBuscable>
     );
   } else if (esp.tipo === "enum" || esp.tipo === "tipo_objeto") {
     const ops = esp.valores ?? TIPOS_OBJETO;
     control = (
-      <select id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
+      <SelectBuscable id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
         <option value="">— elegir —</option>
         {ops.map((o) => <option key={o}>{o}</option>)}
-      </select>
+      </SelectBuscable>
     );
   } else if (esp.tipo === "booleano") {
     control = <input id={id} type="checkbox" checked={Boolean(valor)} disabled={disabled} onChange={(e) => cambiar(e.target.checked)} />;
   } else if (nombre === "host" && inv) {
     control = (
-      <select id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
+      <SelectBuscable id={id} className="f" value={s} disabled={disabled} onChange={(e) => cambiar(e.target.value)}>
         <option value="">— elegir —</option>
         <OpcionesActivo items={inv.servidores} />
-      </select>
+      </SelectBuscable>
     );
   } else {
     control = (
