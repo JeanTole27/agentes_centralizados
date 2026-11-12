@@ -1176,7 +1176,8 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
       <div className="fgrid mt">
         {t.alcance === "base" && !enCurso && <CampoAmbiente id="rep-amb" items={bases} alCambiar={() => setAlcance("")} />}
         <label className="lb">Alcance
-          <SelectBuscable className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}>
+          <SelectBuscable className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}
+            placeholder={t.alcance === "base" ? "Escribe base o servidor (ej. tron)…" : undefined}>
             <option value="">— elegir —</option>
             {t.alcance === "ambiente"
               ? ambientes.map((a) => {
