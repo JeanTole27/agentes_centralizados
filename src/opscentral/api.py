@@ -656,7 +656,10 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         suyas = _bases_visibles(u)
         if suyas is not None and base.upper() not in suyas:
             raise HTTPException(404, "esa base no la usan los dominios de tu equipo")
-        f = estado.leer(n.almacen, f"bd:{base.upper()}:bloqueos")
+        f = estado.leer(n.almacen, f"bd:{n.inventario.representante(base)}:bloqueos")
+        if f:
+            f["vigente"] = (f.get("antiguedad_s") or 0) <= int(n.cfg["bd"].get("bloqueos_vigencia_s", 900))
+            f["grupo"] = n.inventario.grupo_rac(base)
         if not f:
             raise HTTPException(404, "sin datos todavía: pide un refresco")
         if "cm" in u.perfiles and not ({"dba", "lid"} & set(u.perfiles)):
@@ -814,7 +817,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         _exigir_ver(u, "com.inv.servidores")
         por_tipo: dict[str, list] = {"servidor": [], "dominio": [], "base": []}
         for a in n.inventario.activos.values():
-            d = {k: v for k, v in a.datos.items() if k not in ("dsn",)}
+            d = dict(a.datos)
             por_tipo[a.tipo].append({"id": a.id, "ambiente": a.ambiente, **d,
                                      "relacionados": sorted(n.inventario.relacionados(a.clave, 1) - {a.clave})})
         return {"servidores": por_tipo["servidor"], "dominios": por_tipo["dominio"], "bases": por_tipo["base"],
@@ -890,13 +893,21 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     def bloqueos_flota(u: Usuario = Depends(usuario)):
         _exigir_ver(u, "bd.ses.flota")
         suyas = _bases_visibles(u)
+        # Una tarjeta por base real: los alias RAC (PROD_TRON1..3) son la misma base que su representante.
+        # `vigente`: la lectura es reciente; una vieja se muestra aparte, sin contar como bloqueo actual.
+        vigencia = int(n.cfg["bd"].get("bloqueos_vigencia_s", 900))
         out = []
         for f in estado.leer_tipo(n.almacen, "bd.bloqueos"):
-            if suyas is not None and f["objeto"].split(":")[1] not in suyas:
+            b = f["objeto"].split(":")[1]
+            if not n.inventario.base(b) or n.inventario.representante(b) != b:
+                continue
+            grupo = n.inventario.grupo_rac(b)
+            if suyas is not None and not set(grupo) & suyas:
                 continue
             d = f["datos"] or {}
-            out.append({"base": f["objeto"].split(":")[1], "bloqueadas": d.get("total_bloqueadas", 0),
-                        "arboles": len(d.get("arboles", [])), "antiguedad_s": f["antiguedad_s"], "error": f["error"]})
+            out.append({"base": b, "grupo": grupo, "bloqueadas": d.get("total_bloqueadas", 0),
+                        "arboles": len(d.get("arboles", [])), "antiguedad_s": f["antiguedad_s"], "error": f["error"],
+                        "vigente": (f["antiguedad_s"] or 0) <= vigencia})
         return out
 
     @app.get("/api/inicio")

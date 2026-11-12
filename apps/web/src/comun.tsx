@@ -61,9 +61,13 @@ export function CampoAmbiente({ items, alCambiar, id = "f-ambiente" }: {
 
 /** Opciones de un <select> de bases o servidores. Con filtro de ambiente: solo ese ambiente y solo el
  *  nombre ("ABBYY"). Sin filtro: agrupadas por ambiente ("Ambiente TEST" → ABBYY), sin repetirlo en cada fila. */
-export function OpcionesActivo({ items }: { items: { id: string; ambiente: string; etiqueta?: string }[] }) {
+export function OpcionesActivo({ items }: { items: { id: string; ambiente: string; etiqueta?: string; [k: string]: any }[] }) {
   const ambiente = useAmbiente();
-  const op = (i: { id: string; etiqueta?: string }) => <option key={i.id} value={i.id}>{i.etiqueta ?? i.id}</option>;
+  // data-buscar: otros nombres con que se conoce el activo (alias prod_tron, servicio, DSN, servidor, IP, host
+  // de Zabbix). La lista con búsqueda los usa para encontrarlo aunque se escriba distinto al id.
+  const extra = (i: Record<string, any>) => Array.from(new Set(["alias", "servicio", "dsn", "servidor", "ip", "zabbix_host"]
+    .map((k) => i[k]).filter((x) => x && String(x).toUpperCase() !== String(i.id).toUpperCase()).map(String))).join(" ");
+  const op = (i: { id: string; etiqueta?: string }) => <option key={i.id} value={i.id} data-buscar={extra(i)}>{i.etiqueta ?? i.id}</option>;
   if (ambiente) {
     const deAmb = items.filter((i) => i.ambiente === ambiente);
     if (!deAmb.length) return <option value="" disabled>Sin registros en {ambiente} (el inventario no los tiene)</option>;
@@ -183,7 +187,7 @@ export function TablaFilas({ filas, max = 200 }: { filas: Record<string, unknown
   const cols = Array.from(new Set(filas.flatMap((f) => Object.keys(f)))).filter((c) => c !== "hijos").slice(0, 12);
   return (
     <div className="tbl-wrap">
-      <table>
+      <table className="tbl-std">
         <thead><tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>
           {filas.slice(0, max).map((f, i) => (

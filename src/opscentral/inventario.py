@@ -49,6 +49,20 @@ class Inventario:
                 self._unir(a.clave, f"servidor:{b['servidor'].upper()}")
         for r in datos.get("relaciones", []):
             self._unir(f"dominio:{r['dominio']}", f"base:{r['base'].upper()}")
+        # Grupos RAC: varios alias del kit apuntan a la MISMA base por distintos nodos (PROD_TRON,
+        # PROD_TRON1..3 con servicio TRON). Las consultas GV$ y DBA_ devuelven lo mismo desde cualquiera:
+        # se leen una sola vez, en el representante, y los demás alias reutilizan ese dato.
+        # Grupo = mismo servicio y ambiente; la recolección lo confirma con el DBID de V$DATABASE.
+        grupos: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for a in self.activos.values():
+            if a.tipo == "base" and a.datos.get("servicio"):
+                grupos[(str(a.datos["servicio"]).upper(), a.ambiente)].append(a.id)
+        self._grupo: dict[str, list[str]] = {}
+        for ids in grupos.values():
+            if len(ids) > 1:
+                orden = sorted(ids, key=lambda x: (len(x), x))   # PROD_TRON antes que PROD_TRON1
+                for i in ids:
+                    self._grupo[i] = orden
 
     @classmethod
     def desde_archivo(cls, ruta: Path) -> "Inventario":
@@ -104,6 +118,13 @@ class Inventario:
 
     def bases(self, ambiente: str | None = None) -> list[Activo]:
         return [a for a in self.activos.values() if a.tipo == "base" and (not ambiente or a.ambiente == ambiente)]
+
+    def grupo_rac(self, base: str) -> list[str]:
+        """Alias que son la misma base (representante primero); [base] si no comparte servicio."""
+        return list(self._grupo.get(base.upper(), [base.upper()]))
+
+    def representante(self, base: str) -> str:
+        return self.grupo_rac(base)[0]
 
     def hosts_zabbix(self, tipo: str | None = None) -> dict[str, Activo]:
         """Nombre del host en Zabbix → activo (solo los que tienen zabbix_host)."""

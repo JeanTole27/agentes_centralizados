@@ -120,6 +120,9 @@ class Worker:
         self.motor_bd.barrido(p.get("ambiente"), persona="sistema", ejecucion_id="recoleccion",
                               emitir=lambda _t: None, secciones=p.get("secciones"))
 
+    def _t_bloqueos_vigentes(self, p: dict) -> None:
+        self.motor_bd.revisar_bloqueos()
+
     def _t_zbx_vincular(self, p: dict) -> None:
         from . import estado
         try:

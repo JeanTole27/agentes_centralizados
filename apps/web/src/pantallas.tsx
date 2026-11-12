@@ -179,7 +179,7 @@ export function Prevencion() {
         <div className="g21">
           <div className="card">
             <div className="tbl-wrap">
-              <table>
+              <table className="tbl-std">
                 <thead><tr><th>Serie</th><th>Actual</th><th>%/día</th><th>Llega al 100 %</th><th>Confianza</th></tr></thead>
                 <tbody>
                   {filas.map((p) => {
@@ -378,22 +378,35 @@ export function Bloqueos() {
   const enAmb = useEnAmbiente();
   const ambDe = (b: string) => inv.data?.bases.find((x) => x.id === b)?.ambiente;
   const delAmb = flotaQ.data?.filter((b) => enAmb(ambDe(b.base)));
-  // Por defecto solo las bases con sesiones bloqueadas; las demás quedan en un resumen.
+  // Solo cuentan los bloqueos con lectura VIGENTE (reciente). Las lecturas viejas no se presentan como
+  // bloqueo actual: van aparte, marcadas "sin confirmar", hasta que la revisión automática las confirme o limpie.
   const [verTodas, setVerTodas] = useState(false);
-  const conBloqueo = (delAmb ?? []).filter((b) => b.bloqueadas > 0).sort((a, b) => b.bloqueadas - a.bloqueadas);
+  const conBloqueo = (delAmb ?? []).filter((b) => b.bloqueadas > 0 && b.vigente).sort((a, b) => b.bloqueadas - a.bloqueadas);
+  const viejas = (delAmb ?? []).filter((b) => b.bloqueadas > 0 && !b.vigente);
   const sinBloqueo = (delAmb ?? []).filter((b) => !(b.bloqueadas > 0) && !b.error).length;
   const conError = (delAmb ?? []).filter((b) => !(b.bloqueadas > 0) && b.error).length;
-  const flota = { ...flotaQ, data: delAmb && (verTodas ? delAmb : conBloqueo) };
+  const visibles = delAmb && (verTodas ? delAmb : [...conBloqueo, ...viejas]);
   const [base, setBase] = useState("");
-  const actual = (base && flota.data?.some((b) => b.base === base) ? base : "") || conBloqueo[0]?.base || "";
-  const det = useQuery({ queryKey: ["bd", "bloqueos", actual], enabled: Boolean(actual), queryFn: () => api.get<EstadoObj>(`/api/estado/bd/${actual}/bloqueos`) });
+  const actual = (base && visibles?.some((b) => b.base === base) ? base : "") || conBloqueo[0]?.base || "";
+  const det = useQuery({ queryKey: ["bd", "bloqueos", actual], enabled: Boolean(actual), queryFn: () => api.get<EstadoObj & { vigente?: boolean; grupo?: string[] }>(`/api/estado/bd/${actual}/bloqueos`) });
   const refrescar = useRefresco();
   const cat = useCatalogo();
   const puedeRefrescar = cat.data?.find((a) => a.id === "com.refresco")?.permiso === "ejecuta";
   const [terminar, setTerminar] = useState<any>(null);
+  const min = (s: number) => Math.round((s ?? 0) / 60);
+  const tarjeta = (b: any) => (
+    <button key={b.base} className={"dbc" + (actual === b.base ? " on" : "") + (b.bloqueadas > 0 && !b.vigente ? " viejo" : "")} onClick={() => setBase(b.base)}
+            aria-label={`${b.base}: ${b.bloqueadas} sesiones bloqueadas`} aria-pressed={actual === b.base}>
+      <div className="fila entre"><b>{b.base} <span className="muted small">{ambDe(b.base)}</span></b>
+        {b.bloqueadas > 0 ? (b.vigente ? <span className="tag t-crit">{b.bloqueadas} bloqueadas</span> : <span className="tag">sin confirmar</span>)
+          : <span className="tag t-ok">sin bloqueos</span>}</div>
+      <small>{b.error ? "error: " + b.error : `${b.arboles} árboles · leído hace ${min(b.antiguedad_s)} min`}</small>
+      {b.grupo?.length > 1 && <small className="muted d-block">RAC: también {b.grupo.filter((x: string) => x !== b.base).join(", ")}</small>}
+    </button>
+  );
   return (
     <>
-      <Cabecera titulo="Bloqueos" sub="Árbol de bloqueo por base: quién bloquea a quién, desde cuándo y sobre qué objeto.">
+      <Cabecera titulo="Bloqueos" sub="Sesiones de usuario esperando un bloqueo de aplicación: quién bloquea a quién, desde cuándo y sobre qué objeto.">
         {actual && puedeRefrescar && <button className="btn" onClick={() => refrescar(actual)}>Refrescar {actual}</button>}
       </Cabecera>
       <div className="card"><div className="fgrid"><CampoAmbiente id="blq-amb" items={inv.data?.bases ?? []} alCambiar={() => setBase("")} /></div></div>
@@ -401,8 +414,9 @@ export function Bloqueos() {
       {delAmb && delAmb.length > 0 && (
         <div className="fila entre small muted" style={{ margin: "4px 2px 8px" }}>
           <span>
-            {conBloqueo.length ? `${conBloqueo.length} base(s) con sesiones bloqueadas` : "Ninguna base tiene sesiones bloqueadas"}
-            {` · ${sinBloqueo} sin bloqueos`}{conError ? ` · ${conError} sin dato (error al recolectar)` : ""}
+            {conBloqueo.length ? `${conBloqueo.length} base(s) con sesiones bloqueadas ahora` : "Ninguna base tiene sesiones bloqueadas ahora"}
+            {` · ${sinBloqueo} sin bloqueos`}{viejas.length ? ` · ${viejas.length} con lectura vieja sin confirmar` : ""}
+            {conError ? ` · ${conError} sin dato (error al recolectar)` : ""}
           </span>
           <label className="fila" style={{ gap: 6, cursor: "pointer" }}>
             <input type="checkbox" checked={verTodas} onChange={(e) => { setVerTodas(e.target.checked); setBase(""); }} />
@@ -410,27 +424,27 @@ export function Bloqueos() {
           </label>
         </div>
       )}
-      <div className="dbsel">
-        {flota.data?.map((b) => (
-          <button key={b.base} className={"dbc" + (actual === b.base ? " on" : "")} onClick={() => setBase(b.base)}
-                  aria-label={`${b.base}: ${b.bloqueadas} sesiones bloqueadas`} aria-pressed={actual === b.base}>
-            <div className="fila entre"><b>{b.base} <span className="muted small">{ambDe(b.base)}</span></b>{b.bloqueadas > 0 ? <span className="tag t-crit">{b.bloqueadas} bloqueadas</span> : <span className="tag t-ok">sin bloqueos</span>}</div>
-            <small>{b.error ? "error: " + b.error : `${b.arboles} árboles · actualizado hace ${Math.round(b.antiguedad_s / 60)} min`}</small>
-          </button>
-        ))}
-      </div>
+      <div className="dbsel">{(verTodas ? delAmb : conBloqueo)?.map(tarjeta)}</div>
+      {!verTodas && viejas.length > 0 && (
+        <details className="card mt">
+          <summary className="small"><b>{viejas.length} lectura(s) vieja(s) sin confirmar</b> <span className="muted">· se releen solas cada 5 min; pide un refresco para confirmarlas ya</span></summary>
+          <div className="dbsel mt">{viejas.map(tarjeta)}</div>
+        </details>
+      )}
       {delAmb?.length === 0 && <div className="card"><Vacio>Sin datos de bloqueos en este ambiente todavía. Pide un refresco desde Salud.</Vacio></div>}
-      {!!delAmb?.length && flota.data?.length === 0 && (
-        <div className="card"><Vacio>No hay sesiones bloqueantes en las {delAmb.length} bases revisadas.</Vacio></div>
+      {!!delAmb?.length && !conBloqueo.length && !viejas.length && !verTodas && (
+        <div className="card"><Vacio>No hay sesiones bloqueadas en las {delAmb.length} bases revisadas.</Vacio></div>
       )}
       {det.data && (
         <div className="card">
           <h3>{actual} <span className="fila">{det.data.filtrado && <span className="tag t-cm">{det.data.filtrado}</span>}<Antiguedad s={det.data.antiguedad_s} origen={det.data.origen} /></span></h3>
+          {det.data.grupo && det.data.grupo.length > 1 && <div className="info small">Base RAC: {det.data.grupo.join(", ")} son la misma base por distintos nodos; se muestra una sola vez.</div>}
+          {det.data.vigente === false && <div className="warnbox small mt">Lectura de hace {min(det.data.antiguedad_s)} min: puede que el bloqueo ya no exista. Pide un refresco antes de actuar; mientras tanto no se permite terminar sesiones.</div>}
           {det.data.datos.arboles.length === 0 ? <Vacio>No hay sesiones bloqueadas.</Vacio> :
             det.data.datos.arboles.map((a: any, i: number) => (
               <div key={i} className="tree mt">
                 <div className="small muted" style={{ marginBottom: 6 }}>{a.afectadas} sesiones afectadas · espera máx. {a.espera_max_s} s · {a.objetos.join(", ") || "objeto no identificado"}</div>
-                <Nodo n={a.arbol} raiz alTerminar={setTerminar} />
+                <Nodo n={a.arbol} raiz alTerminar={setTerminar} vigente={det.data.vigente !== false} />
               </div>
             ))}
         </div>
@@ -455,20 +469,25 @@ export function Bloqueos() {
   );
 }
 
-function Nodo({ n, raiz, alTerminar }: { n: any; raiz?: boolean; alTerminar: (n: any) => void }) {
+function Nodo({ n, raiz, alTerminar, vigente }: { n: any; raiz?: boolean; alTerminar: (n: any) => void; vigente: boolean }) {
   const cat = useCatalogo();
   const puede = cat.data?.find((a) => a.id === "bd.ses.terminar")?.permiso === "ejecuta";
+  // Nunca se ofrece terminar un proceso de background (LGWR, SMON…: tumba la instancia) ni sobre una lectura vieja.
+  const motivoNo = n.background ? "Proceso de background de Oracle: no se termina" : !vigente ? "Lectura vieja: refresca primero" : "";
   return (
     <div>
       <div className={"node" + (raiz ? " root" : "")}>
         <div className="grow" style={{ flex: 1 }}>
           <b>{raiz ? "Raíz · " : ""}SID {n.sid}{n.serial ? "," + n.serial : ""}</b> <span className="muted small">inst {n.inst_id}</span>
+          {n.background && <span className="tag" style={{ marginLeft: 6 }}>background</span>}
           <div className="small">{n.username ?? "?"} · {n.machine ?? "?"} · {n.module ?? n.program ?? ""}</div>
           <div className="small muted">{n.event ?? ""}{n.seconds_in_wait ? ` · ${n.seconds_in_wait} s` : ""}{n.sql_id ? ` · SQL_ID ${n.sql_id}` : ""}{n.objeto ? ` · ${n.objeto}` : ""}</div>
         </div>
-        {raiz && puede && !n.incompleto && <button className="btn sm red" onClick={() => alTerminar(n)}>Terminar</button>}
+        {raiz && puede && !n.incompleto && (motivoNo
+          ? <span className="small muted">{motivoNo}</span>
+          : <button className="btn sm red" onClick={() => alTerminar(n)}>Terminar</button>)}
       </div>
-      {n.hijos?.length > 0 && <div className="kids">{n.hijos.map((h: any) => <Nodo key={`${h.inst_id}-${h.sid}`} n={h} alTerminar={alTerminar} />)}</div>}
+      {n.hijos?.length > 0 && <div className="kids">{n.hijos.map((h: any) => <Nodo key={`${h.inst_id}-${h.sid}`} n={h} alTerminar={alTerminar} vigente={vigente} />)}</div>}
     </div>
   );
 }
@@ -620,6 +639,18 @@ export function Salud() {
               <div className="k"><small>Inválidos propios (sin papelera ni esquemas de Oracle)</small><b>{sel.datos.invalidos}</b></div>
             </div>
           )}
+          {sel.datos?.rac && <div className="info small mt">Base RAC: {sel.datos.rac.grupo.join(", ")} son la misma base.
+            {sel.datos.rac.representante !== sel.datos.base ? ` Espacio, inválidos y bloqueos se leen en ${sel.datos.rac.representante}; aquí solo la instancia.` : " Espacio, inválidos y bloqueos se leen aquí una sola vez para todo el grupo."}</div>}
+          {sel.datos?.invalidos_esquemas?.length > 0 && (
+            <details className="mt">
+              <summary className="small"><b>De dónde sale el número de inválidos</b> <span className="muted">· por esquema (si alguno no debe contar, se agrega a [bd] invalidos_excluir)</span></summary>
+              <div className="tbl-wrap mt"><table className="tbl-std">
+                <thead><tr><th>Esquema</th><th className="num">Inválidos</th><th className="num">Fuera de línea base</th></tr></thead>
+                <tbody>{sel.datos.invalidos_esquemas.map((e: any) => (
+                  <tr key={e.owner}><td>{e.owner}</td><td className="num">{e.total}</td><td className="num">{e.fuera_lb ?? "—"}</td></tr>))}</tbody>
+              </table></div>
+            </details>
+          )}
           {sel.datos?.leidas && (
             <p className="muted small mt">Última lectura por sección: {Object.entries(sel.datos.leidas as Record<string, string>)
               .filter(([k]) => k !== "linea_base").map(([k, v]) => `${k} ${fecha(v)}`).join(" · ")}
@@ -766,7 +797,7 @@ export function Ejecuciones() {
         {q.data?.length === 0 && <Vacio>Sin ejecuciones con ese filtro.</Vacio>}
         {q.data && q.data.length > 0 && (
           <div className="tbl-wrap">
-            <table>
+            <table className="tbl-std">
               <thead><tr><th>Creada</th><th>Acción</th><th>Destino · ambiente</th><th>Clase</th><th>Ejecutó</th><th>Caso</th><th>Motivo</th><th>Estado</th></tr></thead>
               <tbody>
                 {q.data.map((e) => (
@@ -948,7 +979,7 @@ export function Reportes() {
         {q.data && q.data.length === 0 && <Vacio>Todavía no hay reportes generados{ambiente ? ` en ${ambiente}` : ""}.</Vacio>}
         {q.data && q.data.length > 0 && (
           <div className="tbl-wrap">
-            <table>
+            <table className="tbl-std">
               <thead><tr><th>Reporte</th><th>Alcance</th><th>Generado por</th><th></th></tr></thead>
               <tbody>
                 {q.data.map((r) => (

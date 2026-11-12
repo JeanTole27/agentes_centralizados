@@ -6,7 +6,6 @@ import { ConAmbiente, Sesion } from "./comun";
 import type { Yo } from "./tipos";
 import * as P from "./pantallas";
 import { Chat } from "./Chat";
-import { Buscador } from "./Buscador";
 
 const ICONOS: Record<string, string> = {
   inicio: "⌂", ventana: "◷", incidentes: "!", inventario: "▤", alertas: "⚑", prevencion: "↗",
@@ -84,7 +83,6 @@ export default function Shell({ yo }: { yo: Yo }) {
           <header className="top">
             <button className="menu-btn" aria-label="Menú" onClick={() => setAbierto((x) => !x)}>☰</button>
             <b className="top-titulo">{nombreActual}</b>
-            <Buscador pantallas={yo.menu.flatMap((g) => g.pantallas)} />
             <span className="sp" />
             {yo.mfa_reciente && <span className="tag t-ok" title="Segundo factor confirmado recientemente">MFA</span>}
             <div className="user">

@@ -42,8 +42,13 @@ DEFECTOS: dict[str, Any] = {
            # Recolección: periódica liviana (solo espacio), completa una vez al día; lo demás por alerta.
            "recoleccion_periodica_s": 3600, "secciones_periodicas": ["tablespaces", "diskgroups"],
            "recoleccion_completa_s": 86400, "linea_base_cache_s": 21600, "max_bases_por_evento": 10,
+           # Bloqueos: las bases que muestran bloqueos se releen cada bloqueos_revision_s para confirmarlos o
+           # limpiarlos; una lectura más vieja que bloqueos_vigencia_s se muestra como "sin confirmar" y no
+           # cuenta. Una espera menor a bloqueo_min_espera_s no se considera bloqueo (contención normal).
+           "bloqueos_revision_s": 300, "bloqueos_vigencia_s": 900, "bloqueo_min_espera_s": 5,
            # Esquemas que no cuentan como inválidos propios (comodín %): Oracle no los marca como suyos.
-           "invalidos_excluir": ["PUBLIC", "APEX_%", "FLOWS_%", "ORDS_METADATA", "ORDS_PUBLIC_USER", "GGSYS",
+           "invalidos_excluir": ["PUBLIC", "SYS", "SYSTEM", "DBSNMP", "OUTLN", "ORACLE_OCM", "APPQOSSYS", "AUDSYS",
+                                 "DBSFWUSER", "REMOTE_SCHEDULER_AGENT", "SYS$UMF","APEX_%", "FLOWS_%", "ORDS_METADATA", "ORDS_PUBLIC_USER", "GGSYS",
                                  "GSMADMIN_INTERNAL", "GSMCATUSER", "GSMUSER", "SYSMAN", "MGMT_VIEW", "XDB",
                                  "OJVMSYS", "DVSYS", "LBACSYS", "MDSYS", "OLAPSYS", "WMSYS", "CTXSYS", "ORDSYS",
                                  "ORDDATA", "SI_INFORMTN_SCHEMA", "EXFSYS", "OWBSYS%", "SQLTXPLAIN", "SQLTXADMIN"]},

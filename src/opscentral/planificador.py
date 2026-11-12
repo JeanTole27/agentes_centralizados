@@ -3,6 +3,7 @@
 - BD liviana cada [bd] recoleccion_periodica_s (1 h): instancia + espacio ([bd] secciones_periodicas).
 - BD completa cada [bd] recoleccion_completa_s (1 día): incluye inválidos y bloqueos.
   Bloqueos, inválidos y tablespaces se actualizan además por alerta de Zabbix (refresco dirigido).
+- Bases con bloqueos a la vista: se releen cada [bd] bloqueos_revision_s (5 min) hasta que se limpien.
 - Scoring de predicciones cada hora (en sombra).
 - Zabbix: problemas abiertos cada 5 min, trends de capacidad cada hora y vínculo de hosts por IP diario.
 - Vence aprobaciones sin respuesta y libera trabajos de workers caídos.
@@ -25,6 +26,8 @@ def tareas(cfg) -> dict[str, tuple[int, str, str, dict]]:
         "recolectar": (int(bd["recoleccion_periodica_s"]), "bd", "recolectar",
                        {"secciones": list(bd["secciones_periodicas"])}),
         "recolectar_completo": (int(bd["recoleccion_completa_s"]), "bd", "recolectar", {}),
+        # solo las bases que hoy muestran bloqueos: los confirma o los limpia (no deja lecturas viejas)
+        "bloqueos_vigentes": (int(bd.get("bloqueos_revision_s", 300)), "bd", "bloqueos_vigentes", {}),
         "scoring": (3600, "ml", "scoring", {}),
         "zbx_problemas": (300, "ingesta", "zbx_problemas", {}),    # respaldo del webhook
         "zbx_capacidad": (3600, "ingesta", "zbx_capacidad", {}),   # trends → series de capacidad → scoring
