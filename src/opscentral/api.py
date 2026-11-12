@@ -71,6 +71,19 @@ class PedidoRefresco(BaseModel):
     objeto: str
 
 
+class RefrescoVista(BaseModel):
+    vista: str                    # bloqueos | salud
+    ambiente: str | None = None   # None = todos
+    forzar: bool = False          # botón "Refrescar todo": acorta el límite a [bd] refresco_min_s
+
+
+# Al abrir una vista se pide una lectura actual de lo que muestra (no solo lo guardado). Solo secciones
+# livianas; inválidos sigue en la pasada diaria y por alerta. Con límite por vista y ambiente
+# ([bd] refresco_vista_s) para que varias personas abriendo la pantalla no multipliquen las consultas.
+VISTAS_REFRESCO = {"bloqueos": (["bloqueos"], "bd.ses.flota"),
+                   "salud": (["tablespaces", "diskgroups", "bloqueos"], "bd.salud.flota")}
+
+
 class Feedback(BaseModel):
     valor: str
 
@@ -725,6 +738,46 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                            cola_destino="bd", payload={"base": partes[1].upper(), "motivo": f"persona:{u.login}"})
         n.auditoria.registrar("refresco_pedido", u.login, objeto=p.objeto, estado=r["estado"])
         return r
+
+    def _vista(vista: str, ambiente: str | None, u: Usuario) -> tuple[list[str], str | None, str]:
+        if vista not in VISTAS_REFRESCO:
+            raise ErrorValidacion("vista inválida: bloqueos o salud")
+        secciones, permiso = VISTAS_REFRESCO[vista]
+        _exigir_ver(u, permiso)
+        amb = (ambiente or "").upper() or None
+        return secciones, amb, f"vista:{vista}:{amb or 'TODOS'}"
+
+    def _estado_refresco(objeto: str) -> dict:
+        from .almacen import refresco, trabajo
+        with n.almacen.tx() as con:
+            f = con.execute(select(refresco).where(refresco.c.objeto == objeto)).first()
+            t = con.execute(select(trabajo.c.estado, trabajo.c.tomado_en).where(trabajo.c.id == f.trabajo_id)).first() \
+                if f and f.trabajo_id else None
+        res = (estado.leer(n.almacen, objeto) or {}).get("datos") or None
+        return {"ultimo": f.ultimo.isoformat() if f else None, "trabajo": t.estado if t else None,
+                "en_curso": bool(t and t.estado in ("pendiente", "tomado")), "resultado": res}
+
+    @app.post("/api/refresco/vista", status_code=202)
+    def refrescar_vista(p: RefrescoVista, u: Usuario = Depends(usuario)):
+        """Lectura actual de lo que muestra la vista (todas las bases del ambiente). Solo lectura y con
+        límite de frecuencia, así que cualquiera que ve la pantalla la puede disparar al abrirla."""
+        secciones, amb, objeto = _vista(p.vista, p.ambiente, u)
+        minimo = int(cfg["bd"].get("refresco_vista_s", 300))
+        if p.forzar:
+            # pedido explícito: requiere permiso de refresco y respeta un mínimo corto entre lecturas completas
+            if permiso_de(u, n.catalogo["com.refresco"]) != "ejecuta":
+                raise HTTPException(403, "tu perfil no puede pedir refrescos")
+            minimo = int(cfg["bd"]["refresco_min_s"])
+        r = pedir_refresco(n.almacen, n.cola, objeto, minimo_s=minimo,
+                           cola_destino="bd", payload={"barrido": True, "ambiente": amb, "secciones": secciones,
+                                                       "motivo": f"vista:{u.login}"})
+        if r["estado"] == "encolado":
+            n.auditoria.registrar("refresco_vista", u.login, vista=p.vista, ambiente=amb or "TODOS", forzado=p.forzar)
+        return {**r, **_estado_refresco(objeto)}
+
+    @app.get("/api/refresco/vista")
+    def estado_refresco_vista(vista: str, ambiente: str | None = None, u: Usuario = Depends(usuario)):
+        return _estado_refresco(_vista(vista, ambiente, u)[2])
 
     # ============================================================== Zabbix
     @app.post("/api/zabbix/webhook", status_code=202)

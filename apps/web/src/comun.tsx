@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { SelectBuscable } from "./SelectBuscable";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ErrorApi } from "./api";
+import { api, ErrorApi, mensajeError } from "./api";
 import type { AccionCat, Inventario, Yo } from "./tipos";
 
 // ---------------------------------------------------------------- contexto de sesión y avisos
@@ -266,6 +266,73 @@ export function Consola({ id, alTerminar }: { id: string; alTerminar?: (estado: 
         </div>
       ))}
       {fin && <div className={fin === "exitosa" ? "ok" : "er"}>── fin: {fin}</div>}
+    </div>
+  );
+}
+
+/** Al abrir una vista de BD (Bloqueos, Salud) pide una lectura ACTUAL del ambiente visible: sin esto la
+ *  pantalla solo muestra lo último guardado (la pasada periódica, una alerta o un refresco anterior).
+ *  Mientras se lee, avisa y recarga los datos cada pocos segundos; el servidor limita la frecuencia. */
+export function ActualizandoVista({ vista }: { vista: "bloqueos" | "salud" }) {
+  const ambiente = useAmbiente();
+  const qc = useQueryClient();
+  const { avisar } = useSesion();
+  const cat = useCatalogo();
+  const puedeRefrescar = cat.data?.find((a) => a.id === "com.refresco")?.permiso === "ejecuta";
+  const [r, setR] = useState<{ estado?: string; en_curso?: boolean; ultimo?: string | null; reintentar_en_s?: number;
+    resultado?: { total: number; con_error: number } | null } | null>(null);
+  const [termino, setTermino] = useState(false);
+  async function pedir(forzar: boolean) {
+    const x = await api.post<any>("/api/refresco/vista", { vista, ambiente: ambiente || null, forzar });
+    setR(x); setTermino(false);
+    return x;
+  }
+  useEffect(() => {
+    let vivo = true;
+    setR(null); setTermino(false);
+    api.post<any>("/api/refresco/vista", { vista, ambiente: ambiente || null })
+      .then((x) => vivo && setR(x)).catch(() => vivo && setR({ estado: "error" }));
+    return () => { vivo = false; };
+  }, [vista, ambiente]);
+  useEffect(() => {
+    if (!r?.en_curso) return;
+    const t = setInterval(async () => {
+      qc.invalidateQueries({ queryKey: ["bd"] });
+      try {
+        const e = await api.get<any>(`/api/refresco/vista?vista=${vista}${ambiente ? "&ambiente=" + ambiente : ""}`);
+        if (!e.en_curso) { setR((p) => ({ ...p, ...e })); setTermino(true); qc.invalidateQueries({ queryKey: ["bd"] }); }
+      } catch { /* se reintenta en el próximo ciclo */ }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [r?.en_curso, vista, ambiente, qc]);
+
+  async function refrescarTodo() {
+    try {
+      const x = await pedir(true);
+      if (x.estado === "reciente" && !x.en_curso) avisar(`Se acaba de leer todo; se puede volver a pedir en ${x.reintentar_en_s} s.`);
+    } catch (e) { avisar(mensajeError(e)); }
+  }
+
+  const hace = r?.ultimo ? Math.max(0, Math.round((Date.now() - new Date(r.ultimo).getTime()) / 60000)) : null;
+  const texto = !r || r.estado === "error" ? "" :
+    r.en_curso ? `Leyendo datos actuales de Oracle${ambiente ? ` (${ambiente})` : ""}… Mientras tanto se muestran los últimos guardados; se actualizan solos.` :
+    termino && r.resultado ? (r.resultado.con_error
+      ? `Lectura terminada: ${r.resultado.total - r.resultado.con_error} de ${r.resultado.total} bases respondieron; ${r.resultado.con_error} sin conexión (se muestra su último dato guardado).`
+      : `Lectura terminada: ${r.resultado.total} bases con datos actuales.`) :
+    termino ? "Lectura terminada." :
+    hace != null ? `Última lectura completa hace ${hace} min.` : "";
+  return (
+    <div className={"fila entre lectura-vista" + (r?.en_curso ? " info" : "")} role="status">
+      <span className="small fila" style={{ gap: 8 }}>
+        {r?.en_curso && <span className="giro" aria-hidden>↻</span>}
+        <span className={r?.en_curso ? "" : "muted"}>{texto}</span>
+      </span>
+      {puedeRefrescar && (
+        <button className="btn" disabled={Boolean(r?.en_curso)} onClick={refrescarTodo}
+                title={`Vuelve a leer en Oracle todas las bases ${ambiente ? "de " + ambiente : "de todos los ambientes"}`}>
+          {r?.en_curso ? "Leyendo…" : `↻ Refrescar todo${ambiente ? ` (${ambiente})` : ""}`}
+        </button>
+      )}
     </div>
   );
 }
