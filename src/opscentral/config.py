@@ -46,6 +46,9 @@ DEFECTOS: dict[str, Any] = {
            # limpiarlos; una lectura más vieja que bloqueos_vigencia_s se muestra como "sin confirmar" y no
            # cuenta. Una espera menor a bloqueo_min_espera_s no se considera bloqueo (contención normal).
            "bloqueos_revision_s": 300, "bloqueos_vigencia_s": 900, "bloqueo_min_espera_s": 5,
+           # Al abrir Bloqueos o Salud se pide una lectura actual del ambiente visible, como mucho cada
+           # refresco_vista_s por vista y ambiente (aunque la abran varias personas).
+           "refresco_vista_s": 300,
            # Esquemas que no cuentan como inválidos propios (comodín %): Oracle no los marca como suyos.
            "invalidos_excluir": ["PUBLIC", "SYS", "SYSTEM", "DBSNMP", "OUTLN", "ORACLE_OCM", "APPQOSSYS", "AUDSYS",
                                  "DBSFWUSER", "REMOTE_SCHEDULER_AGENT", "SYS$UMF","APEX_%", "FLOWS_%", "ORDS_METADATA", "ORDS_PUBLIC_USER", "GGSYS",

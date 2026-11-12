@@ -137,3 +137,38 @@ def test_alias_rac_reutiliza_el_dato_del_representante(cfg_rac):
     assert ali["invalidos"] == rep["invalidos"] and ali["rac"]["representante"] == "CORPRD"
     # los bloqueos se guardan una sola vez, en el representante
     assert estado.leer(api.almacen, "bd:CORPRD1:bloqueos") is None
+
+
+# ---------------------------------------------------------------- lectura actual al abrir la vista
+def test_abrir_bloqueos_pide_lectura_actual_una_vez_y_el_worker_la_hace(cfg, api_n, bd_n):
+    from fastapi.testclient import TestClient
+    from opscentral.api import crear_app
+    h = {"X-Ops-Central": "1"}
+    c = TestClient(crear_app(cfg, api_n))
+    assert c.post("/api/auth/dev/ingresar", json={"login": "dba.demo"}, headers=h).status_code == 200
+    r = c.post("/api/refresco/vista", json={"vista": "bloqueos", "ambiente": "PROD"}, headers=h).json()
+    assert r["estado"] == "encolado" and r["en_curso"] is True
+    # otra persona abre la misma vista enseguida: se une a la lectura en curso, no lanza otra
+    assert c.post("/api/refresco/vista", json={"vista": "bloqueos", "ambiente": "PROD"}, headers=h).json()["estado"] == "reciente"
+    w = Worker("bd", bd_n)
+    while w.una_vez():
+        pass
+    assert c.get("/api/refresco/vista?vista=bloqueos&ambiente=PROD").json()["en_curso"] is False
+    assert estado.leer(api_n.almacen, "bd:CORPRD:bloqueos")["antiguedad_s"] < 60
+    assert estado.leer(api_n.almacen, "bd:CORTST:bloqueos") is None          # solo el ambiente visible
+    assert c.post("/api/refresco/vista", json={"vista": "otra"}, headers=h).status_code == 422
+
+
+def test_refrescar_todo_exige_permiso_y_respeta_minimo(cfg, api_n):
+    from fastapi.testclient import TestClient
+    from opscentral.api import crear_app
+    h = {"X-Ops-Central": "1"}
+    app = crear_app(cfg, api_n)
+    dba, consulta = TestClient(app), TestClient(app)
+    dba.post("/api/auth/dev/ingresar", json={"login": "dba.demo"}, headers=h)
+    consulta.post("/api/auth/dev/ingresar", json={"login": "consulta.demo"}, headers=h)
+    cuerpo = {"vista": "salud", "ambiente": "TEST", "forzar": True}
+    assert consulta.post("/api/refresco/vista", json=cuerpo, headers=h).status_code == 403
+    assert dba.post("/api/refresco/vista", json=cuerpo, headers=h).json()["estado"] == "encolado"
+    # pulsarlo de nuevo enseguida no lanza otra lectura completa (mínimo [bd] refresco_min_s)
+    assert dba.post("/api/refresco/vista", json=cuerpo, headers=h).json()["estado"] == "reciente"

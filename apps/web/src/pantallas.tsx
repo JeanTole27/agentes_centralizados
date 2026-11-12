@@ -6,7 +6,7 @@ import { api, mensajeError } from "./api";
 import Accion from "./Accion";
 import { ComentarEnJira, EvidenciaSnapshot } from "./Jira";
 import {
-  Antiguedad, Cabecera, Cargando, Clase, Consola, EstadoEj, Modal, Resultado, TablaFilas, Vacio, fecha,
+  ActualizandoVista, Antiguedad, Cabecera, Cargando, Clase, Consola, EstadoEj, Modal, Resultado, TablaFilas, Vacio, fecha,
   CampoAmbiente, OpcionesActivo, useAccion, useAmbiente, useCatalogo, useEnAmbiente, useInventario, useSegundoFactor, useSesion,
 } from "./comun";
 import type { Ejecucion, EstadoObj, Inventario } from "./tipos";
@@ -407,9 +407,9 @@ export function Bloqueos() {
   return (
     <>
       <Cabecera titulo="Bloqueos" sub="Sesiones de usuario esperando un bloqueo de aplicación: quién bloquea a quién, desde cuándo y sobre qué objeto.">
-        {actual && puedeRefrescar && <button className="btn" onClick={() => refrescar(actual)}>Refrescar {actual}</button>}
       </Cabecera>
       <div className="card"><div className="fgrid"><CampoAmbiente id="blq-amb" items={inv.data?.bases ?? []} alCambiar={() => setBase("")} /></div></div>
+      <ActualizandoVista vista="bloqueos" />
       <Cargando q={flotaQ} />
       {delAmb && delAmb.length > 0 && (
         <div className="fila entre small muted" style={{ margin: "4px 2px 8px" }}>
@@ -437,7 +437,8 @@ export function Bloqueos() {
       )}
       {det.data && (
         <div className="card">
-          <h3>{actual} <span className="fila">{det.data.filtrado && <span className="tag t-cm">{det.data.filtrado}</span>}<Antiguedad s={det.data.antiguedad_s} origen={det.data.origen} /></span></h3>
+          <h3>{actual} <span className="fila">{det.data.filtrado && <span className="tag t-cm">{det.data.filtrado}</span>}<Antiguedad s={det.data.antiguedad_s} origen={det.data.origen} />
+            {puedeRefrescar && <button className="btn sm" onClick={() => refrescar(actual)} title={`Vuelve a leer solo ${actual}`}>↻ Solo esta base</button>}</span></h3>
           {det.data.grupo && det.data.grupo.length > 1 && <div className="info small">Base RAC: {det.data.grupo.join(", ")} son la misma base por distintos nodos; se muestra una sola vez.</div>}
           {det.data.vigente === false && <div className="warnbox small mt">Lectura de hace {min(det.data.antiguedad_s)} min: puede que el bloqueo ya no exista. Pide un refresco antes de actuar; mientras tanto no se permite terminar sesiones.</div>}
           {det.data.datos.arboles.length === 0 ? <Vacio>No hay sesiones bloqueadas.</Vacio> :
@@ -556,8 +557,9 @@ export function Salud() {
   return (
     <>
       <Cabecera titulo="Salud de bases de datos"
-        sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base. Se recolecta cada 15 min." />
+        sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base. Al abrir se leen datos actuales de espacio y bloqueos; inválidos, a diario y por alerta." />
       <div className="card"><div className="fgrid"><CampoAmbiente id="salud-amb" items={inv.data?.bases ?? []} alCambiar={() => setFiltro("")} /></div></div>
+      <ActualizandoVista vista="salud" />
       <Cargando q={q} />
       {q.data && q.data.length === 0 && <div className="card"><Vacio>Sin datos de salud todavía{ambiente ? ` en ${ambiente}` : ""}.</Vacio></div>}
       {filas.length > 0 && (

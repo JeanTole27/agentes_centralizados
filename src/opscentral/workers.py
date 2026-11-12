@@ -111,6 +111,14 @@ class Worker:
                          resultado={"traza": traceback.format_exc(limit=5)})
 
     def _t_refrescar(self, p: dict) -> None:
+        if self.cola == "bd" and p.get("barrido"):          # al abrir una vista: todas las bases del ambiente
+            from . import estado
+            r = self.motor_bd.barrido(p.get("ambiente"), persona="sistema", ejecucion_id="refresco-vista",
+                                      emitir=lambda _t: None, secciones=p.get("secciones"))
+            # resumen para la pantalla: cuántas bases se leyeron y cuántas no respondieron
+            estado.guardar(self.n.almacen, p["objeto"], "refresco.vista",
+                           {"total": r["total"], "con_error": r["con_error"]}, origen="refresco")
+            return
         if self.cola == "bd":
             origen = "evento" if str(p.get("motivo", "")).startswith("zabbix:") else "refresco"
             self.motor_bd.recolectar_base(p["base"], origen=origen, secciones=p.get("secciones"))

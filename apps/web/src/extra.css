@@ -152,3 +152,8 @@ table.tbl-std .col-acc { width: 1%; white-space: nowrap; text-align: right; }
 /* las palabras no se cortan a la mitad ("con c"): si no caben, la tabla se desplaza en horizontal */
 table.tbl-std td, table.tbl-std th { overflow-wrap: normal; word-break: normal; }
 table.tbl-std.compacta td { white-space: nowrap; }
+.giro { display: inline-block; animation: giro 1.2s linear infinite; }
+@keyframes giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .giro { animation: none; } }
+.lectura-vista { margin: 0 0 10px; padding: 6px 2px; gap: 12px; flex-wrap: wrap; }
+.lectura-vista.info { padding: 8px 12px; }
