@@ -25,6 +25,15 @@ class Activo:
 
 class Inventario:
     def __init__(self, datos: dict):
+        self._armar(datos)
+
+    def recargar(self, datos: dict) -> None:
+        """Rearma el grafo en el mismo objeto (lo comparten la API, los workers y los servicios)."""
+        nuevo = Inventario(datos)
+        self.__dict__.update(nuevo.__dict__)
+
+    def _armar(self, datos: dict) -> None:
+        self.fuente = datos
         self.activos: dict[str, Activo] = {}
         self._por_zbx: dict[str, Activo] = {}
         self._vecinos: dict[str, set[str]] = defaultdict(set)
@@ -99,6 +108,17 @@ class Inventario:
     def hosts_zabbix(self, tipo: str | None = None) -> dict[str, Activo]:
         """Nombre del host en Zabbix → activo (solo los que tienen zabbix_host)."""
         return {h: a for h, a in self._por_zbx.items() if tipo is None or a.tipo == tipo}
+
+    def bases_en(self, servidor: str) -> list[Activo]:
+        """Bases alojadas en un servidor (una alerta del host de BD en Zabbix afecta a estas bases)."""
+        return sorted((self.activos[c] for c in self._vecinos.get(f"servidor:{servidor.upper()}", ())
+                       if c.startswith("base:")), key=lambda a: a.id)
+
+    def servidor_por_ip(self, ip: str) -> Activo | None:
+        for a in self.activos.values():
+            if a.tipo == "servidor" and a.datos.get("ip") == ip:
+                return a
+        return None
 
     def servidores_de_equipo(self, equipo: str) -> set[str]:
         return {a.id for a in self.activos.values() if a.tipo == "servidor" and a.datos.get("equipo") == equipo}

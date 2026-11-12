@@ -4,6 +4,7 @@
 // /api/cm/opciones. Lo que no tiene configuración detallada se marca y, en la demo (cmops en
 // simulación), se ejecuta con una configuración estándar. No piden caso ni motivo: ambos son opcionales.
 import { useState } from "react";
+import { SelectBuscable } from "./SelectBuscable";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import Accion from "./Accion";
@@ -109,16 +110,16 @@ export function Orquestacion() {
           <div className="fgrid">
             <CampoAmbiente id="orq-amb" items={hosts} alCambiar={() => elegirHost("")} />
             <label className="lb">Servidor
-              <select className="f" value={host} onChange={(e) => elegirHost(e.target.value)}>
+              <SelectBuscable className="f" value={host} onChange={(e) => elegirHost(e.target.value)}>
                 <option value="">— elegir —</option>
                 <OpcionesActivo items={hosts.map((h) => ({ id: h.host, ambiente: h.ambiente }))} />
-              </select>
+              </SelectBuscable>
             </label>
             {H && H.instalaciones.length > 1 && (
               <label className="lb">Instalación
-                <select className="f" value={N?.id ?? ""} onChange={(e) => { setInst(e.target.value); setDoms([]); }}>
+                <SelectBuscable className="f" value={N?.id ?? ""} onChange={(e) => { setInst(e.target.value); setDoms([]); }}>
                   {H.instalaciones.map((i) => <option key={i.id} value={i.id}>{i.id} · usuario {i.usuario_so || "—"} · {i.dominios.length} dominio(s)</option>)}
-                </select>
+                </SelectBuscable>
               </label>
             )}
           </div>
@@ -184,10 +185,10 @@ export function UsuariosWL() {
           <div className="fgrid">
             <CampoAmbiente id="usr-amb" items={doms.map((d) => ({ ambiente: d.ambiente }))} alCambiar={() => setDom("")} />
             <label className="lb">Dominio WebLogic
-              <select className="f" value={dom} onChange={(e) => setDom(e.target.value)}>
+              <SelectBuscable className="f" value={dom} onChange={(e) => setDom(e.target.value)}>
                 <option value="">— elegir —</option>
                 <OpcionesActivo items={doms.map((d) => ({ id: clave(d), ambiente: d.ambiente, etiqueta: `${d.nombre} · ${d.host}` }))} />
-              </select>
+              </SelectBuscable>
             </label>
             {D && <div><div className="lb">Servidor</div><div className="mono-sm" style={{ paddingTop: 8 }}>{D.host}</div></div>}
           </div>
@@ -250,15 +251,15 @@ export function Frmweb() {
           <div className="fgrid">
             <CampoAmbiente id="frm-amb" items={hosts} alCambiar={() => setHost("")} />
             <label className="lb">Servidor
-              <select className="f" value={host} onChange={(e) => setHost(e.target.value)}>
+              <SelectBuscable className="f" value={host} onChange={(e) => setHost(e.target.value)}>
                 <option value="">— elegir —</option>
                 <OpcionesActivo items={hosts.map((h) => ({ id: h.host, ambiente: h.ambiente }))} />
-              </select>
+              </SelectBuscable>
             </label>
             <label className="lb">Tamaño de lote (mitigar)
-              <select className="f" value={lote} onChange={(e) => setLote(e.target.value)}>
+              <SelectBuscable className="f" value={lote} onChange={(e) => setLote(e.target.value)}>
                 <option value="10">10 (prudente)</option><option value="20">20 (por defecto)</option><option value="40">40</option>
-              </select>
+              </SelectBuscable>
             </label>
           </div>
           {H && H.configurado && <p className="muted small" style={{ marginBottom: 0 }}>{H.descripcion} · Managed servers: {H.managed_servers.join(", ") || "—"}</p>}

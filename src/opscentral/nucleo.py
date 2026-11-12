@@ -10,7 +10,10 @@ from .catalogo import Catalogo
 from .cola import Cola
 from .ejecuciones import ServicioEjecuciones
 from .evidencia import Evidencia
+import json
+
 from .inventario import Inventario
+from .inventario_ajustes import ServicioInventario
 from .secretos import Secretos, crear_proveedor
 
 
@@ -26,6 +29,7 @@ class Nucleo:
     evidencia: Evidencia
     secretos: Secretos
     ejecuciones: ServicioEjecuciones
+    inv_ajustes: ServicioInventario | None = None
 
 
 def crear(contexto: str, cfg: config_mod.Config | None = None, *, almacen: Almacen | None = None) -> Nucleo:
@@ -34,9 +38,11 @@ def crear(contexto: str, cfg: config_mod.Config | None = None, *, almacen: Almac
     alm.crear_esquema()
     aud = Auditoria(alm)
     cat = Catalogo.cargar()
-    inv = Inventario.desde_archivo(cfg.ruta("inventario", "archivo"))
+    base_inv = json.loads(cfg.ruta("inventario", "archivo").read_text(encoding="utf-8"))
+    inv = Inventario(base_inv)
+    ajustes = ServicioInventario(cfg, alm, inv, base_inv)   # aplica los ajustes guardados (CRUD) sobre el archivo
     cola = Cola(alm)
     evid = Evidencia(cfg.ruta("evidencia", "ruta"))
     sec = Secretos(crear_proveedor(cfg), contexto, auditar=None)
     ejec = ServicioEjecuciones(cfg, alm, cat, inv, aud, cola, sec, evid)
-    return Nucleo(cfg, contexto, alm, cat, inv, aud, cola, evid, sec, ejec)
+    return Nucleo(cfg, contexto, alm, cat, inv, aud, cola, evid, sec, ejec, ajustes)

@@ -10,7 +10,7 @@ from opscentral import estado
 from opscentral.almacen import episodio, evento_zbx, prediccion, serie_punto
 from opscentral.api import crear_app
 from opscentral.ml.servicio import scoring
-from opscentral.planificador import TAREAS
+from opscentral.planificador import tareas
 from opscentral.workers import Worker
 from opscentral.zabbix import ingesta, metricas
 
@@ -124,8 +124,12 @@ def test_worker_de_ingesta_pide_scoring_cuando_hay_datos_nuevos(cfg, ing_n):
     assert w.una_vez()
     assert Worker("ml", ing_n).una_vez()        # el scoring quedó en cola
     assert estado.leer(ing_n.almacen, "zbx:capacidad")["datos"]["puntos_nuevos"] > 0
-    assert TAREAS["zbx_capacidad"][1:] == ("ingesta", "zbx_capacidad")
-    assert TAREAS["zbx_problemas"] == (300, "ingesta", "zbx_problemas")
+    t = tareas(cfg)
+    assert t["zbx_capacidad"][1:3] == ("ingesta", "zbx_capacidad")
+    assert t["zbx_problemas"][:3] == (300, "ingesta", "zbx_problemas")
+    # BD: la pasada periódica es liviana (solo espacio) y la completa es diaria
+    assert t["recolectar"][3] == {"secciones": ["tablespaces", "diskgroups"]} and t["recolectar"][0] >= 3600
+    assert t["recolectar_completo"][3] == {} and t["recolectar_completo"][0] == 86400
 
 
 # ---------------------------------------------------------------- problemas (respaldo del webhook)

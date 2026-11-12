@@ -5,6 +5,8 @@ import { api } from "./api";
 import { ConAmbiente, Sesion } from "./comun";
 import type { Yo } from "./tipos";
 import * as P from "./pantallas";
+import { Chat } from "./Chat";
+import { Buscador } from "./Buscador";
 
 const ICONOS: Record<string, string> = {
   inicio: "⌂", ventana: "◷", incidentes: "!", inventario: "▤", alertas: "⚑", prevencion: "↗",
@@ -27,6 +29,8 @@ export default function Shell({ yo }: { yo: Yo }) {
   const loc = useLocation();
   const [toasts, setToasts] = useState<{ id: number; t: string }[]>([]);
   const [abierto, setAbierto] = useState(false);
+  const [chat, setChat] = useState(false);
+  const cerrarChat = useCallback(() => setChat(false), []);
   const inicio = useQuery({ queryKey: ["inicio"], queryFn: () => api.get<any>("/api/inicio"), refetchInterval: 30_000 });
 
   const avisar = useCallback((t: string) => {
@@ -55,7 +59,7 @@ export default function Shell({ yo }: { yo: Yo }) {
 
   return (
     <Sesion.Provider value={{ yo, avisar, soloLectura }}>
-      <div id="app">
+      <div id="app" className={chat ? "con-chat" : ""}>
         <aside className={"side" + (abierto ? " open" : "")} onClick={() => setAbierto(false)}>
           <div className="brand">
             <div className="logo">OC</div>
@@ -79,13 +83,15 @@ export default function Shell({ yo }: { yo: Yo }) {
         <div className="main">
           <header className="top">
             <button className="menu-btn" aria-label="Menú" onClick={() => setAbierto((x) => !x)}>☰</button>
-            <b>{nombreActual}</b>
+            <b className="top-titulo">{nombreActual}</b>
+            <Buscador pantallas={yo.menu.flatMap((g) => g.pantallas)} />
             <span className="sp" />
             {yo.mfa_reciente && <span className="tag t-ok" title="Segundo factor confirmado recientemente">MFA</span>}
             <div className="user">
               <span className="av">{iniciales}</span>
               <span className="nm">{yo.nombre}<br /><small>{yo.login} · {yo.perfiles.map((p) => PERFIL[p] ?? p).join(", ")}</small></span>
             </div>
+            <button className="btn pri sm" onClick={() => setChat(true)} aria-expanded={chat}>💬 Asistente</button>
             <button className="btn ghost sm" onClick={salir}>Salir</button>
           </header>
           <main className="content">
@@ -99,6 +105,9 @@ export default function Shell({ yo }: { yo: Yo }) {
             </Routes>
           </main>
         </div>
+        <Chat abierto={chat} cerrar={cerrarChat} pantalla={actual} nombrePantalla={nombreActual}
+          perfil={yo.perfiles.map((p) => PERFIL[p] ?? p).join(" + ")} nombre={yo.nombre} permitidas={new Set(permitidas.keys())} />
+        {!chat && <button className="fab" onClick={() => setChat(true)}>💬 Preguntar</button>}
         <div className="toasts">{toasts.map((t) => <div key={t.id} className="toast">{t.t}</div>)}</div>
       </div>
     </Sesion.Provider>

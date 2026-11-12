@@ -60,6 +60,8 @@ class Worker:
         if not t:
             return False
         try:
+            if self.n.inv_ajustes:
+                self.n.inv_ajustes.sincronizar()     # ajustes del inventario hechos desde la interfaz
             getattr(self, f"_t_{t.tipo}")(t.payload)
             self.n.cola.completar(t.id)
         except _Reprogramar as r:
@@ -110,11 +112,24 @@ class Worker:
 
     def _t_refrescar(self, p: dict) -> None:
         if self.cola == "bd":
-            self.motor_bd.recolectar_base(p["base"], origen="refresco")
+            origen = "evento" if str(p.get("motivo", "")).startswith("zabbix:") else "refresco"
+            self.motor_bd.recolectar_base(p["base"], origen=origen, secciones=p.get("secciones"))
 
     def _t_recolectar(self, p: dict) -> None:
+        # p["secciones"]: lista (pasada liviana) o ausente/None (completa)
         self.motor_bd.barrido(p.get("ambiente"), persona="sistema", ejecucion_id="recoleccion",
-                              emitir=lambda _t: None)
+                              emitir=lambda _t: None, secciones=p.get("secciones"))
+
+    def _t_zbx_vincular(self, p: dict) -> None:
+        from . import estado
+        try:
+            r = self._zabbix(lambda ing, cli: ing.vincular_hosts(self.n.almacen, self.n.inventario, cli,
+                                                                 self.n.inv_ajustes))
+        except Exception as e:
+            estado.marcar_error(self.n.almacen, "zbx:vinculos", "zbx.vinculos", str(e), origen="zabbix")
+            raise
+        if r["vinculados"]:
+            self.n.auditoria.registrar("zabbix_vinculos", self.nombre, vinculados=len(r["vinculados"]))
 
     # -------------------------------------------------------------- Zabbix (cola ingesta)
     def _zabbix(self, fn):

@@ -172,6 +172,19 @@ snapshot = Table(
 )
 
 # ----------------------------------------------------------------- eventos de Zabbix y episodios
+# Ajustes del inventario hechos desde la interfaz (alta, cambio, baja) y vínculos con Zabbix.
+# Se superponen al archivo generado (config/inventario.json): regenerarlo no los borra.
+inventario_ajuste = Table(
+    "ops_inventario_ajuste", meta,
+    Column("clave", String(200), primary_key=True),        # tipo:id, p. ej. base:ABBYY
+    Column("tipo", String(20), nullable=False),
+    Column("id", String(160), nullable=False),
+    Column("operacion", String(10), nullable=False),       # alta | cambio | baja
+    Column("datos", JSONV, nullable=False),
+    Column("por", String(120), nullable=False),
+    TS("actualizado", nullable=False),
+)
+
 evento_zbx = Table(
     "evento_zabbix", meta,
     Column("eventid", String(40), primary_key=True),

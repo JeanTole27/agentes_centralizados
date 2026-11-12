@@ -177,6 +177,11 @@ class ClienteZabbix:
         return self.llamar("host.get", {"output": ["hostid", "host", "name", "status"],
                                         "filter": {"host": nombres}})  # type: ignore[return-value]
 
+    def hosts_con_ip(self) -> list[dict]:
+        """Todos los hosts con sus interfaces (para vincular el inventario por IP)."""
+        return self.llamar("host.get", {"output": ["hostid", "host", "name", "status"],
+                                        "selectInterfaces": ["ip", "main"]})  # type: ignore[return-value]
+
     def hostids(self, nombres: list[str]) -> list[str]:
         return [h["hostid"] for h in self.hosts(nombres)]
 

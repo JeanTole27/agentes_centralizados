@@ -97,6 +97,23 @@ def generar(rutas: dict[str, Path | None]) -> tuple[dict, list[str]]:
                 extra_csv[r["alias"].strip().lower()] = r
     mapa = _mapa_oracle(rutas.get("mapa_oracle"))
     kit = json.loads(Path(rutas["bases"]).read_text(encoding="utf-8")).get("databases", [])
+    # Fuentes adicionales de bases (p. ej. otra copia del kit con las bases DESA): se agregan los alias
+    # que el kit principal no tiene; si un alias está en ambos, gana el kit principal.
+    vistos_alias = {str(b.get("alias", "")).lower() for b in kit}
+    for extra in rutas.get("bases_adicionales") or []:
+        if not extra or not Path(extra).exists():
+            avisos.append(f"fuente adicional de bases no encontrada: {extra}")
+            continue
+        nuevas = [b for b in json.loads(Path(extra).read_text(encoding="utf-8")).get("databases", [])
+                  if str(b.get("alias", "")).lower() not in vistos_alias]
+        vistos_alias |= {str(b.get("alias", "")).lower() for b in nuevas}
+        kit += nuevas
+        if nuevas:
+            avisos.append(f"{len(nuevas)} base(s) agregadas desde {Path(extra).name} ({Path(extra).parent})")
+    faltan_amb = [a for a in ORDEN if a not in {_amb(b.get("environment")) for b in kit}]
+    if faltan_amb:
+        avisos.append(f"ninguna base en los ambientes {', '.join(faltan_amb)}: agregarlas desde Inventario "
+                      "(alta) o con [inventario] bases_adicionales")
     entradas = []
     for b in kit:
         try:

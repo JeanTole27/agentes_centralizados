@@ -1169,6 +1169,13 @@
       ]
     },
     {
+      "id": "BD-10.1.2.76",
+      "ip": "10.1.2.76",
+      "ambiente": "DESA",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
       "id": "BD-10.1.20.23",
       "ip": "10.1.20.23",
       "ambiente": "TEST",
@@ -1214,6 +1221,27 @@
       "id": "BD-10.1.20.98",
       "ip": "10.1.20.98",
       "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.7.81",
+      "ip": "10.1.7.81",
+      "ambiente": "DESA",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.7.83",
+      "ip": "10.1.7.83",
+      "ambiente": "DESA",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.1.7.99",
+      "ip": "10.1.7.99",
+      "ambiente": "DESA",
       "zabbix_host": null,
       "equipo": "dba"
     },
@@ -1326,6 +1354,13 @@
       "id": "BD-10.7.2.3",
       "ip": "10.7.2.3",
       "ambiente": "TEST",
+      "zabbix_host": null,
+      "equipo": "dba"
+    },
+    {
+      "id": "BD-10.7.3.3",
+      "ip": "10.7.3.3",
+      "ambiente": "DESA",
       "zabbix_host": null,
       "equipo": "dba"
     },
@@ -4026,6 +4061,17 @@
       "zabbix_host": null
     },
     {
+      "id": "AVALUOSN",
+      "alias": "avaluosn",
+      "servicio": "AVALUOS",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.20.90:1521/AVALUOS",
+      "zabbix_host": null
+    },
+    {
       "id": "AVALUOSW",
       "alias": "prod_avaluosw",
       "servicio": "AVALUOSW",
@@ -4235,6 +4281,402 @@
       "zabbix_host": null
     },
     {
+      "id": "DEV_ASTB",
+      "alias": "dev_astb",
+      "servicio": "ASTB",
+      "servidor": "BD-10.1.7.83",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.83:1521/ASTB",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_AVALUOSW",
+      "alias": "dev_avaluosw",
+      "servicio": "AVALUOS",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/AVALUOS",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_BIZAGI",
+      "alias": "dev_bizagi",
+      "servicio": "BIZAGI",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/BIZAGI",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_CAPIMASK",
+      "alias": "dev_capimask",
+      "servicio": "CAPI",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/CAPI",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_DESA11G",
+      "alias": "dev_desa11g",
+      "servicio": "PROD11",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/PROD11",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_DGH",
+      "alias": "dev_dgh",
+      "servicio": "DGH",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/DGH",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_DMCIA",
+      "alias": "dev_dmcia",
+      "servicio": "DMCIA",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/DMCIA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_FILENET",
+      "alias": "dev_filenet",
+      "servicio": "FILENET",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/FILENET",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_FONDOS",
+      "alias": "dev_fondos",
+      "servicio": "FONDOS",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/FONDOS",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_GRPBOLIVAR",
+      "alias": "dev_grpbolivar",
+      "servicio": "GRPBOLIVAR",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/GRPBOLIVAR",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_HPCCENTER",
+      "alias": "dev_hpccenter",
+      "servicio": "HPCCENTER",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/HPCCENTER",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_INTRANET",
+      "alias": "dev_intranet",
+      "servicio": "INTRANET",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/INTRANET",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_INVESA",
+      "alias": "dev_invesa",
+      "servicio": "INVESA",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/INVESA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_LOGERR",
+      "alias": "dev_logerr",
+      "servicio": "LOGERR",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/LOGERR",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_PARP",
+      "alias": "dev_parp",
+      "servicio": "PARP",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/PARP",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_PRESMASK",
+      "alias": "dev_presmask",
+      "servicio": "PRES",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/PRES",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_PSAI",
+      "alias": "dev_psai",
+      "servicio": "PSAI",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/PSAI",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_RCUFORMS",
+      "alias": "dev_rcuforms",
+      "servicio": "RCUFORMS",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/RCUFORMS",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_RIGHTNOW",
+      "alias": "dev_rightnow",
+      "servicio": "RIGHTNOW",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/RIGHTNOW",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SAGHI",
+      "alias": "dev_saghi",
+      "servicio": "SAGHI",
+      "servidor": "BD-10.1.7.83",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.83:1521/SAGHI",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SAIFORMS",
+      "alias": "dev_saiforms",
+      "servicio": "SAIFORMS",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/SAIFORMS",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SALU",
+      "alias": "dev_salu",
+      "servicio": "SALU",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SALU",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SANT",
+      "alias": "dev_sant",
+      "servicio": "SANT",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SANT",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SARLMASK",
+      "alias": "dev_sarlmask",
+      "servicio": "SALUDARP",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SALUDARP",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIEBEL",
+      "alias": "dev_siebel",
+      "servicio": "SIEBEL",
+      "servidor": "BD-10.1.7.83",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.83:1521/SIEBEL",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIFV",
+      "alias": "dev_sifv",
+      "servicio": "SIFV",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/SIFV",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIMASOL",
+      "alias": "dev_simasol",
+      "servicio": "SIMASOL",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/SIMASOL",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIPAB",
+      "alias": "dev_sipab",
+      "servicio": "SIPAB",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SIPAB",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIPLA",
+      "alias": "dev_sipla",
+      "servicio": "SIPLA",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SIPLA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SIPN",
+      "alias": "dev_sipn",
+      "servicio": "SIPN",
+      "servidor": "BD-10.7.3.3",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.3.3:1521/SIPN",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SITR",
+      "alias": "dev_sitr",
+      "servicio": "SITR",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/SITR",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SOA",
+      "alias": "dev_soa",
+      "servicio": "SOA",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/SOA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_SVPA",
+      "alias": "dev_svpa",
+      "servicio": "SVPA",
+      "servidor": "BD-10.1.7.81",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.81:1521/SVPA",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_TERCMASK",
+      "alias": "dev_tercmask",
+      "servicio": "TERCEROS",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/TERCEROS",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_TRON",
+      "alias": "dev_tron",
+      "servicio": "TRON",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.2.76:1521/TRON",
+      "zabbix_host": null
+    },
+    {
+      "id": "DEV_VENTAS",
+      "alias": "dev_ventas",
+      "servicio": "VENTAS",
+      "servidor": "BD-10.1.7.99",
+      "ambiente": "DESA",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.7.99:1521/VENTAS",
+      "zabbix_host": null
+    },
+    {
       "id": "DGH",
       "alias": "dgh",
       "servicio": "DGH",
@@ -4345,17 +4787,6 @@
       "zabbix_host": null
     },
     {
-      "id": "FONDOS",
-      "alias": "prod_fondos",
-      "servicio": "FONDOS",
-      "servidor": "BD-10.7.0.49",
-      "ambiente": "PROD",
-      "criticidad": "sin definir",
-      "equipo_dueno": null,
-      "dsn": "10.7.0.49:1521/fondos",
-      "zabbix_host": null
-    },
-    {
       "id": "FOO",
       "alias": "foo",
       "servicio": "FOO",
@@ -4452,17 +4883,6 @@
       "criticidad": "media",
       "equipo_dueno": "dba-aoc",
       "dsn": "10.1.20.23:1521/INTRANET",
-      "zabbix_host": null
-    },
-    {
-      "id": "INVESA",
-      "alias": "prod_invesa",
-      "servicio": "INVESA",
-      "servidor": "BD-10.7.0.49",
-      "ambiente": "PROD",
-      "criticidad": "sin definir",
-      "equipo_dueno": null,
-      "dsn": "10.7.0.49:1521/invesa",
       "zabbix_host": null
     },
     {
@@ -4895,6 +5315,17 @@
       "zabbix_host": null
     },
     {
+      "id": "PROD_FONDOS",
+      "alias": "prod_fondos",
+      "servicio": "FONDOS",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/fondos",
+      "zabbix_host": null
+    },
+    {
       "id": "PROD_GADATA1",
       "alias": "prod_gadata1",
       "servicio": "GADATA",
@@ -4980,6 +5411,17 @@
       "criticidad": "sin definir",
       "equipo_dueno": null,
       "dsn": "10.7.0.63:1521/intranet",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_INVESA",
+      "alias": "prod_invesa",
+      "servicio": "INVESA",
+      "servidor": "BD-10.7.0.49",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.49:1521/invesa",
       "zabbix_host": null
     },
     {
@@ -5178,6 +5620,17 @@
       "criticidad": "sin definir",
       "equipo_dueno": null,
       "dsn": "10.7.0.70:1521/rightnow",
+      "zabbix_host": null
+    },
+    {
+      "id": "PROD_SAIFORMS",
+      "alias": "prod_saiforms",
+      "servicio": "SAIFORMS",
+      "servidor": "BD24SBCC04",
+      "ambiente": "PROD",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.7.0.47:1521/saiforms",
       "zabbix_host": null
     },
     {
@@ -5478,6 +5931,17 @@
       "zabbix_host": null
     },
     {
+      "id": "RCUFORMST",
+      "alias": "rcuformst",
+      "servicio": "RCUFORMS",
+      "servidor": "BD-10.1.20.8",
+      "ambiente": "TEST",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.20.8:1521/RCUFORMS",
+      "zabbix_host": null
+    },
+    {
       "id": "RIGHTNOW",
       "alias": "rightnow",
       "servicio": "RIGHTNOW",
@@ -5522,14 +5986,14 @@
       "zabbix_host": null
     },
     {
-      "id": "SAIFORMS",
-      "alias": "prod_saiforms",
-      "servicio": "SAIFORMS",
-      "servidor": "BD24SBCC04",
-      "ambiente": "PROD",
+      "id": "SAIJMASK",
+      "alias": "dev_saijmask",
+      "servicio": "SAIJMASK",
+      "servidor": "BD-10.1.2.76",
+      "ambiente": "DESA",
       "criticidad": "sin definir",
       "equipo_dueno": null,
-      "dsn": "10.7.0.47:1521/saiforms",
+      "dsn": "10.1.2.76:1521/SAIJMASK",
       "zabbix_host": null
     },
     {
@@ -5775,6 +6239,17 @@
       "zabbix_host": null
     },
     {
+      "id": "SOA_T",
+      "alias": "soa_t",
+      "servicio": "SOA",
+      "servidor": "BD-10.1.20.98",
+      "ambiente": "TEST",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.20.98:1521/SOA",
+      "zabbix_host": null
+    },
+    {
       "id": "SPYG",
       "alias": "spyg",
       "servicio": "SPYG",
@@ -5871,6 +6346,17 @@
       "criticidad": "media",
       "equipo_dueno": "dba-aoc",
       "dsn": "10.1.20.5:1521/TERCEROS",
+      "zabbix_host": null
+    },
+    {
+      "id": "TEST11G",
+      "alias": "test11g",
+      "servicio": "PROD11",
+      "servidor": "BD-10.1.20.90",
+      "ambiente": "TEST",
+      "criticidad": "sin definir",
+      "equipo_dueno": null,
+      "dsn": "10.1.20.90:1521/PROD11",
       "zabbix_host": null
     },
     {

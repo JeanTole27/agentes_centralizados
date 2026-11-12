@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { SelectBuscable } from "./SelectBuscable";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ErrorApi } from "./api";
 import type { AccionCat, Inventario, Yo } from "./tipos";
@@ -50,10 +51,10 @@ export function CampoAmbiente({ items, alCambiar, id = "f-ambiente" }: {
   return (
     <div>
       <label className="lb" htmlFor={id}>Ambiente</label>
-      <select id={id} className="f" value={ambiente} onChange={(e) => { setAmbiente(e.target.value); alCambiar?.(); }}>
+      <SelectBuscable id={id} className="f" value={ambiente} onChange={(e) => { setAmbiente(e.target.value); alCambiar?.(); }}>
         <option value="">Todos</option>
         {ambs.map((a) => <option key={a} value={a}>{a}{cuenta(a) ? "" : " · sin registros"}</option>)}
-      </select>
+      </SelectBuscable>
     </div>
   );
 }

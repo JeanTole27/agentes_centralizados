@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { SelectBuscable } from "./SelectBuscable";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, mensajeError } from "./api";
 import Accion from "./Accion";
+import { ComentarEnJira, EvidenciaSnapshot } from "./Jira";
 import {
   Antiguedad, Cabecera, Cargando, Clase, Consola, EstadoEj, Modal, Resultado, TablaFilas, Vacio, fecha,
   CampoAmbiente, OpcionesActivo, useAccion, useAmbiente, useCatalogo, useEnAmbiente, useInventario, useSegundoFactor, useSesion,
@@ -75,34 +77,7 @@ function Kpi({ t, v, c = "", sub, ir }: { t: string; v: number; c?: string; sub?
 }
 
 // ======================================================================== INVENTARIO
-export function InventarioP() {
-  const inv = useInventario();
-  const enAmb = useEnAmbiente();
-  const [tab, setTab] = useState<"servidores" | "dominios" | "bases">("servidores");
-  const datos = inv.data && {
-    servidores: inv.data.servidores.filter((x) => enAmb(x.ambiente)),
-    dominios: inv.data.dominios.filter((x) => enAmb(x.ambiente)),
-    bases: inv.data.bases.filter((x) => enAmb(x.ambiente)),
-  };
-  const q = inv;
-  return (
-    <>
-      <Cabecera titulo="Inventario" sub="Servidores, dominios WebLogic y bases, con sus relaciones. Fuente: inventario de Ops Central." />
-      <div className="card">
-        <div className="fgrid" style={{ marginBottom: 12 }}><CampoAmbiente id="inv-amb" /></div>
-        <div className="tabs">
-          {(["servidores", "dominios", "bases"] as const).map((t) => (
-            <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-              {t[0].toUpperCase() + t.slice(1)} {datos && <span className="muted">({datos[t].length})</span>}
-            </button>
-          ))}
-        </div>
-        <Cargando q={q} />
-        {datos && <TablaFilas filas={datos[tab].map((x: any) => ({ ...x, relacionados: x.relacionados.join(", ") }))} />}
-      </div>
-    </>
-  );
-}
+export { InventarioP } from "./Inventario";
 
 // ======================================================================== ALERTAS (Zabbix)
 export function Alertas() {
@@ -294,6 +269,7 @@ export { Frmweb, Orquestacion, UsuariosWL } from "./capamedia";
 // ======================================================================== SNAPSHOT DE INVÁLIDOS
 export function Snapshot() {
   const qc = useQueryClient();
+  const { soloLectura } = useSesion();
   const inv = useQuery({ queryKey: ["inventario"], queryFn: () => api.get<Inventario>("/api/inventario"), staleTime: 300_000 });
   const [base, setBase] = useState("");
   const [cambio, setCambio] = useState("");
@@ -313,10 +289,10 @@ export function Snapshot() {
         <div className="fgrid">
           {inv.data && <CampoAmbiente id="snap-amb" items={inv.data.bases} alCambiar={() => setBase("")} />}
           <label className="lb">Base
-            <select className="f" value={base} onChange={(e) => setBase(e.target.value)}>
+            <SelectBuscable className="f" value={base} onChange={(e) => setBase(e.target.value)}>
               <option value="">— elegir —</option>
               {inv.data && <OpcionesActivo items={inv.data.bases} />}
-            </select>
+            </SelectBuscable>
           </label>
           <label className="lb">Referencia (opcional: caso, despliegue, tarea…)
             <input className="f" value={cambio} maxLength={40} placeholder="Vacío = se agrupa con el último ANTES" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
@@ -363,6 +339,7 @@ export function Snapshot() {
                 {c.corregidos.length > 0 && <div className="mt"><h3 className="small">Corregidos</h3><TablaFilas filas={c.corregidos} /></div>}
               </>
             )}
+            {(comp.data?.grupo || cambio) && c && <EvidenciaSnapshot base={base} grupo={comp.data?.grupo || cambio} soloLectura={soloLectura("snapshot")} />}
           </div>
         </div>
       )}
@@ -636,6 +613,19 @@ export function Salud() {
             </div>
           )}
           {sel.datos?.motivos?.length > 0 && <div className="list mt">{sel.datos.motivos.map((m: string) => <div key={m} className="li"><span className="dot d-warn" />{m}</div>)}</div>}
+          {sel.datos?.invalidos != null && (
+            <div className="kpis mt">
+              <div className={"k " + (sel.datos.invalidos_fuera_lb ? "warn" : "ok")}><small>Inválidos fuera de línea base</small><b>{sel.datos.invalidos_fuera_lb ?? "—"}</b></div>
+              <div className="k"><small>En línea base</small><b>{sel.datos.invalidos_en_lb ?? "—"}</b></div>
+              <div className="k"><small>Inválidos propios (sin papelera ni esquemas de Oracle)</small><b>{sel.datos.invalidos}</b></div>
+            </div>
+          )}
+          {sel.datos?.leidas && (
+            <p className="muted small mt">Última lectura por sección: {Object.entries(sel.datos.leidas as Record<string, string>)
+              .filter(([k]) => k !== "linea_base").map(([k, v]) => `${k} ${fecha(v)}`).join(" · ")}
+              {sel.datos.ultima_pasada && <> · última pasada: {sel.datos.ultima_pasada.origen === "evento" ? "alerta de Zabbix" : sel.datos.ultima_pasada.origen}
+                ({(sel.datos.ultima_pasada.secciones as string[]).join(", ") || "solo instancia"})</>}</p>
+          )}
           {sel.datos?.instancia && <><h3 className="small mt">Instancia</h3><TablaFilas filas={[sel.datos.instancia]} /></>}
           {sel.datos?.tablespaces?.length > 0 && <><h3 className="small mt">Tablespaces</h3><TablaFilas filas={sel.datos.tablespaces} /></>}
           {sel.datos?.diskgroups?.length > 0 && <><h3 className="small mt">Diskgroups</h3><TablaFilas filas={sel.datos.diskgroups} /></>}
@@ -764,9 +754,9 @@ export function Ejecuciones() {
         <div className="fgrid" style={{ marginBottom: 12 }}>
           <CampoAmbiente id="ej-amb" />
           <label className="lb">Estado
-            <select className="f" value={estado} onChange={(e) => setEstado(e.target.value)}>
+            <SelectBuscable className="f" value={estado} onChange={(e) => setEstado(e.target.value)}>
               {ESTADOS.map((s) => <option key={s} value={s}>{s ? s.replace("_", " ") : "Todos"}</option>)}
-            </select>
+            </SelectBuscable>
           </label>
           <label className="lb">Caso / referencia
             <input className="f" value={cambio} placeholder="OPS-123…" onChange={(e) => setCambio(e.target.value.toUpperCase().trim())} />
@@ -837,6 +827,7 @@ function DetalleEjecucion({ id, cerrar }: { id: string; cerrar: () => void }) {
           {e.estado !== "pendiente_aprobacion" && <><p className="small muted mt">Salida</p><Consola key={e.id + String(activa)} id={e.id} /></>}
           {e.error && <div className="critbox mt">{e.error}</div>}
           {e.resultado && <><p className="small muted mt">Resultado</p><Resultado r={e.resultado} /></>}
+          {["exitosa", "fallida"].includes(e.estado) && <ComentarEnJira ejecucionId={e.id} claveInicial={e.cambio} />}
           {evid && (
             <div className="mt">
               <div className={evid.integra ? "info" : "critbox"}>
@@ -1152,7 +1143,7 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
       <div className="fgrid mt">
         {t.alcance === "base" && !enCurso && <CampoAmbiente id="rep-amb" items={bases} alCambiar={() => setAlcance("")} />}
         <label className="lb">Alcance
-          <select className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}>
+          <SelectBuscable className="f" value={alcance} disabled={enCurso} onChange={(e) => setAlcance(e.target.value)}>
             <option value="">— elegir —</option>
             {t.alcance === "ambiente"
               ? ambientes.map((a) => {
@@ -1165,7 +1156,7 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
                     : <option value={TODAS} disabled>★ Todas las bases (elige primero un ambiente)</option>}
                   <OpcionesActivo items={bases} />
                 </>}
-          </select>
+          </SelectBuscable>
         </label>
         <label className="lb">Formato
           <select className="f" disabled><option>HTML interactivo</option></select>
@@ -1176,9 +1167,9 @@ function GenerarReporte({ t, cerrar }: { t: TipoReporte; cerrar: () => void }) {
           return (
             <label key={k} className="lb">{NOMBRE_EXTRA[k] ?? k}
               {esp.tipo === "enum" ? (
-                <select className="f" disabled={enCurso} value={val} onChange={(e) => poner(e.target.value)}>
+                <SelectBuscable className="f" disabled={enCurso} value={val} onChange={(e) => poner(e.target.value)}>
                   {(esp.valores ?? []).map((o) => <option key={o}>{o}</option>)}
-                </select>
+                </SelectBuscable>
               ) : (
                 <input className="f" type={esp.tipo === "entero" ? "number" : "text"} min={esp.min} max={esp.max}
                        disabled={enCurso} value={val} onChange={(e) => poner(e.target.value)} />

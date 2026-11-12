@@ -64,3 +64,12 @@ def comparar(antes: dict, despues: dict, linea_base: list[dict]) -> dict:
                     "en_linea_base": len(en_lb), "papelera": len(papelera)},
         "veredicto": veredicto,
     }
+
+
+def excluir(invalidos: list[dict], patrones: list[str]) -> list[dict]:
+    """Quita los objetos de esquemas excluidos. Patrones con % como comodín (p. ej. "APEX_%")."""
+    import re as _re
+    if not patrones:
+        return list(invalidos)
+    rx = [_re.compile("^" + _re.escape(p.upper()).replace("%", ".*") + "$") for p in patrones]
+    return [o for o in invalidos if not any(r.match(str(o.get("owner", "")).upper()) for r in rx)]

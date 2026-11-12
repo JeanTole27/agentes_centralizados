@@ -102,6 +102,22 @@ class ClienteJira:
         d = self._pedir("POST", "/rest/api/3/search/jql", json={"jql": jql, "maxResults": maximo, "fields": campos})
         return d.get("issues", [])
 
+    # ------------------------------------------------------------------ escritura (flujo del caso)
+    def comentar(self, clave: str, parrafos: list[str]) -> dict:
+        cuerpo = {"type": "doc", "version": 1,
+                  "content": [{"type": "paragraph", "content": [{"type": "text", "text": p}]} for p in parrafos if p]}
+        return self._pedir("POST", f"/rest/api/3/issue/{clave}/comment", json={"body": cuerpo})
+
+    def adjuntar(self, clave: str, nombre: str, contenido: bytes, tipo: str = "application/zip") -> list:
+        return self._pedir("POST", f"/rest/api/3/issue/{clave}/attachments",  # type: ignore[return-value]
+                           headers={"X-Atlassian-Token": "no-check"}, files={"file": (nombre, contenido, tipo)})
+
+    def transiciones(self, clave: str) -> list[dict]:
+        return self._pedir("GET", f"/rest/api/3/issue/{clave}/transitions").get("transitions", [])
+
+    def transicionar(self, clave: str, transicion_id: str) -> None:
+        self._pedir("POST", f"/rest/api/3/issue/{clave}/transitions", json={"transition": {"id": str(transicion_id)}})
+
 
 class ServicioCasos:
     def __init__(self, cfg, secretos: Secretos, inventario: Inventario, catalogo: Catalogo,
@@ -206,3 +222,45 @@ class ServicioCasos:
             if "hosts" in sug and "host" in sug:
                 sug.pop("host")
         return sug
+
+    # -------------------------------------------------------------- escritura (flujo integrado)
+    def _clave(self, clave: str) -> str:
+        clave = (clave or "").strip().upper()
+        if not RE_CLAVE_JIRA.match(clave):
+            raise ValueError("clave de Jira inválida (PROYECTO-123)")
+        return clave
+
+    def comentar_ejecucion(self, clave: str, e: dict, quien: str) -> dict:
+        """Comenta en el caso el resultado de una ejecución de Ops Central (qué, dónde, quién, resultado)."""
+        clave = self._clave(clave)
+        res = e.get("resultado") or {}
+        resumen = res.get("resumen") if isinstance(res.get("resumen"), dict) else None
+        parrafos = [f"Ops Central · {e['accion']} en {e['destino']} ({e.get('ambiente') or 's/a'})",
+                    f"Estado: {e['estado']} · solicitó {e['solicitante']} · {str(e.get('terminada') or e.get('creada'))[:19]} UTC",
+                    f"Motivo: {e['motivo']}" if e.get("motivo") else "",
+                    f"Resumen: {', '.join(f'{k}={v}' for k, v in resumen.items())}" if resumen else "",
+                    f"Error: {str(e['error'])[:500]}" if e.get("error") else "",
+                    f"Evidencia SHA-256: {e['evidencia_sha256']}" if e.get("evidencia_sha256") else "",
+                    f"Publicado por {quien} desde Ops Central (ejecución {e['id']})."]
+        self.cliente().comentar(clave, parrafos)
+        return {"clave": clave, "comentado": True}
+
+    def publicar_evidencia(self, clave: str, nombre: str, contenido: bytes, parrafos: list[str]) -> dict:
+        """Adjunta el ZIP de evidencia al caso y deja un comentario con el resultado."""
+        clave = self._clave(clave)
+        c = self.cliente()
+        adj = c.adjuntar(clave, nombre, contenido)
+        c.comentar(clave, parrafos)
+        return {"clave": clave, "adjunto": nombre, "adjuntos": len(adj or []), "comentado": True}
+
+    def transiciones(self, clave: str) -> list[dict]:
+        return [{"id": t.get("id"), "nombre": t.get("name"), "a": (t.get("to") or {}).get("name")}
+                for t in self.cliente().transiciones(self._clave(clave))]
+
+    def transicionar(self, clave: str, transicion_id: str) -> dict:
+        clave = self._clave(clave)
+        ids = {t["id"] for t in self.transiciones(clave)}
+        if str(transicion_id) not in ids:
+            raise ValueError("esa transición no está disponible para el caso en su estado actual")
+        self.cliente().transicionar(clave, transicion_id)
+        return {"clave": clave, "transicion": transicion_id}

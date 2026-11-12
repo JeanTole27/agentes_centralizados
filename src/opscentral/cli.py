@@ -8,6 +8,7 @@
   ops-central dev                      API + workers + planificador en un proceso (solo desarrollo)
   ops-central verificar-auditoria      Revisa la cadena de hash
   ops-central generar-inventario       Arma config/inventario.json desde los insumos reales
+  ops-central zabbix-vincular          Completa el host de Zabbix de cada servidor buscando su IP en Zabbix
   ops-central zabbix-probar            Prueba la conexión con la API de Zabbix
 """
 from __future__ import annotations
@@ -99,11 +100,26 @@ def cmd_zabbix_probar(a):
     print(_json.dumps(ingesta.probar(n.cfg, n.secretos, n.inventario), indent=2, ensure_ascii=False))
 
 
+def cmd_zabbix_vincular(a):
+    import json as _json
+    from .nucleo import crear
+    from .zabbix import ingesta
+    n = crear("cli")
+    cli = ingesta.crear_cliente(n.cfg, n.secretos, n.inventario)
+    try:
+        r = ingesta.vincular_hosts(n.almacen, n.inventario, cli, n.inv_ajustes, por="cli")
+    finally:
+        cli.cerrar()
+    print(_json.dumps({k: (v if not isinstance(v, list) or len(v) < 40 else f"{len(v)} elementos")
+                       for k, v in r.items()}, indent=2, ensure_ascii=False))
+
+
 def cmd_generar_inventario(a):
     import json as _json
     from .inventario_insumos import generar
     cfg = cargar()
     rutas = {k: (RAIZ / v).resolve() for k, v in cfg["inventario"]["insumos"].items()}
+    rutas["bases_adicionales"] = [(RAIZ / v).resolve() for v in cfg["inventario"].get("bases_adicionales") or []]
     faltan = [str(rutas[k]) for k in ("servidores_cm", "bases") if not rutas[k].exists()]
     if faltan:
         sys.exit("No se encuentran los insumos obligatorios: " + ", ".join(faltan))
@@ -126,6 +142,11 @@ def cmd_verificar(a):
 
 
 def main(argv=None):
+    for flujo in (sys.stdout, sys.stderr):     # consola de Windows (cp1252): no fallar con → ó …
+        try:
+            flujo.reconfigure(errors="replace")
+        except Exception:  # noqa: BLE001
+            pass
     p = argparse.ArgumentParser(prog="ops-central", description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     s = p.add_subparsers(dest="cmd", required=True)
     s.add_parser("iniciar-almacen").set_defaults(f=cmd_iniciar_almacen)
@@ -145,6 +166,7 @@ def main(argv=None):
     x.set_defaults(f=cmd_dev)
     s.add_parser("verificar-auditoria").set_defaults(f=cmd_verificar)
     s.add_parser("zabbix-probar").set_defaults(f=cmd_zabbix_probar)
+    s.add_parser("zabbix-vincular").set_defaults(f=cmd_zabbix_vincular)
     x = s.add_parser("generar-inventario")
     x.add_argument("--salida", help="ruta de salida (por defecto [inventario].archivo)")
     x.set_defaults(f=cmd_generar_inventario)
