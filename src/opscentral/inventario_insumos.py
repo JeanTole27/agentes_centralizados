@@ -97,6 +97,8 @@ def generar(rutas: dict[str, Path | None]) -> tuple[dict, list[str]]:
                 extra_csv[r["alias"].strip().lower()] = r
     mapa = _mapa_oracle(rutas.get("mapa_oracle"))
     kit = json.loads(Path(rutas["bases"]).read_text(encoding="utf-8")).get("databases", [])
+    for b in kit:
+        b["_origen"] = "kit principal"
     # Fuentes adicionales de bases (p. ej. otra copia del kit con las bases DESA): se agregan los alias
     # que el kit principal no tiene; si un alias está en ambos, gana el kit principal.
     vistos_alias = {str(b.get("alias", "")).lower() for b in kit}
@@ -107,6 +109,8 @@ def generar(rutas: dict[str, Path | None]) -> tuple[dict, list[str]]:
         nuevas = [b for b in json.loads(Path(extra).read_text(encoding="utf-8")).get("databases", [])
                   if str(b.get("alias", "")).lower() not in vistos_alias]
         vistos_alias |= {str(b.get("alias", "")).lower() for b in nuevas}
+        for b in nuevas:
+            b["_origen"] = f"{Path(extra).parent.parent.name}/{Path(extra).name}"
         kit += nuevas
         if nuevas:
             avisos.append(f"{len(nuevas)} base(s) agregadas desde {Path(extra).name} ({Path(extra).parent})")
@@ -147,7 +151,7 @@ def generar(rutas: dict[str, Path | None]) -> tuple[dict, list[str]]:
         bases.append({"id": bid, "alias": b["alias"], "servicio": servicio.upper(), "servidor": srv, "ambiente": amb,
                       "criticidad": CRITICIDAD.get(str(x.get("criticality", "")).lower(), "sin definir"),
                       "equipo_dueno": x.get("owner_team") or None, "dsn": f"{ip}:{puerto}/{servicio}",
-                      "zabbix_host": None})
+                      "zabbix_host": None, "origen": b.get("_origen", "kit principal")})
     if compartidos:
         avisos.append(f"{compartidos} conexión(es) comparten nombre de servicio con otra (RAC o PROD/TEST): "
                       "se identifican por su alias del kit")

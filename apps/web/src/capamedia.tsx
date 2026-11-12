@@ -205,7 +205,7 @@ export function UsuariosWL() {
         <div className="card">
           <h3>Acciones de usuarios <span className="sub">para “Crear / eliminar / admin / grupo”</span></h3>
           <div className="tbl-wrap">
-            <table>
+            <table className="tbl-std">
               <thead><tr><th>Acción</th><th>Usuario</th><th>Grupo</th><th /></tr></thead>
               <tbody>
                 {filas.map((f, i) => (

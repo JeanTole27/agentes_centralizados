@@ -47,7 +47,7 @@ class MotorBD:
     def _leer_bloqueos(self, c) -> list[dict]:
         """Sesiones bloqueadas y sus raíces. El nombre del objeto en espera se busca aparte y solo si hay
         bloqueos (lo normal es que no haya: así no se toca DBA_OBJECTS en cada pasada)."""
-        filas = c.consultar("bloqueos")
+        filas = self._filtrar_bloqueos(c.consultar("bloqueos"))
         faltan = {int(f["obj_id"]) for f in filas if f.get("obj_id") and int(f["obj_id"]) > 0 and not f.get("objeto")}
         if faltan:
             try:
@@ -58,6 +58,30 @@ class MotorBD:
                 if not f.get("objeto") and f.get("obj_id"):
                     f["objeto"] = nombres.get(int(f["obj_id"]))
         return filas
+
+    def _filtrar_bloqueos(self, filas: list[dict]) -> list[dict]:
+        """Deja solo bloqueos reales: la bloqueada es de usuario y lleva esperando al menos
+        [bd] bloqueo_min_espera_s; las raíces que ya no bloquean a nadie se descartan. Marca las sesiones de
+        background (no se pueden terminar) y anula el objeto cuando el evento no es TX/TM (row_wait_obj# queda
+        con un valor viejo en otros eventos y apuntaba a objetos que no tenían nada que ver)."""
+        minimo = int(self.cfg["bd"].get("bloqueo_min_espera_s", 5))
+        for f in filas:
+            f["background"] = str(f.get("type") or "").upper() == "BACKGROUND" or (
+                f.get("username") is None and str(f.get("program") or "").rstrip().endswith(")"))
+            ev = str(f.get("event") or "")
+            if f.get("blocking_session") is not None and not (ev.startswith("enq: TX") or ev.startswith("enq: TM")):
+                f["obj_id"] = None
+
+        def bloqueada(f):
+            return (f.get("blocking_session") is not None and not f["background"]
+                    and int(f.get("seconds_in_wait") or 0) >= minimo)
+
+        esperan = [f for f in filas if bloqueada(f)]
+        quedan = {(int(f.get("inst_id") or 1), int(f["sid"])) for f in esperan}
+        padres = {(int(f.get("blocking_instance") or f.get("inst_id") or 1), int(f["blocking_session"]))
+                  for f in esperan}
+        # una bloqueada que a su vez bloquea a otra se conserva por estar en `esperan`
+        return esperan + [f for f in filas if (int(f.get("inst_id") or 1), int(f["sid"])) in padres - quedan]
 
     def _leer_invalidos(self, c) -> list[dict]:
         """Inválidos sin los esquemas excluidos por configuración ([bd] invalidos_excluir: productos
@@ -144,7 +168,7 @@ class MotorBD:
             emitir(f"{len(filas)} fila(s)")
             if acc.plantilla == "bloqueos":
                 r = bloqueos.arbol(filas)
-                estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", r, origen="ejecucion")
+                estado.guardar(self.a, f"bd:{self.inv.representante(base)}:bloqueos", "bd.bloqueos", r, origen="ejecucion")
                 self._actualizar_salud(base, emitir, secciones=["bloqueos"])
                 return r
             if acc.plantilla == "invalidos":
@@ -542,6 +566,12 @@ class MotorBD:
             antes = bloqueos.arbol(self._leer_bloqueos(c))
         raices = {(a["raiz"]["inst_id"], a["raiz"]["sid"]) for a in antes["arboles"]}
         objetivo = (p.get("inst_id", 1), p["sid"])
+        nodo = next((x for a in antes["arboles"] for x in bloqueos._aplanar(a["arbol"])
+                     if (x.get("inst_id"), x.get("sid")) == objetivo), None)
+        if nodo and nodo.get("background"):
+            # LGWR, SMON, PMON...: terminarlos tumba la instancia. Nunca se hace desde Ops Central.
+            raise ValueError(f"la sesión {p['sid']} es un proceso de background de Oracle "
+                             f"({nodo.get('program') or 'sin programa'}): no se termina desde Ops Central")
         if objetivo not in raices:
             emitir("Advertencia: la sesión ya no es raíz de un bloqueo; el paquete validará antes de terminar")
         with self.conectar(base, "dba", persona=e["solicitante"], ejecucion_id=e["id"], motivo="terminar sesión") as c:
@@ -550,7 +580,7 @@ class MotorBD:
         emitir(f"TERMINAR_SESION → {r}")
         with self.conectar(base, "consulta", persona=e["solicitante"], ejecucion_id=e["id"], motivo="verificar") as c:
             despues = bloqueos.arbol(self._leer_bloqueos(c))
-        estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", despues, origen="ejecucion")
+        estado.guardar(self.a, f"bd:{self.inv.representante(base)}:bloqueos", "bd.bloqueos", despues, origen="ejecucion")
         sigue = any((a["raiz"]["inst_id"], a["raiz"]["sid"]) == objetivo for a in despues["arboles"])
         emitir("El bloqueo desapareció" if not sigue else "El bloqueo continúa: revisar")
         self._actualizar_salud(base, emitir, secciones=["bloqueos"])
@@ -570,7 +600,45 @@ class MotorBD:
         "linea_base": "línea base de inválidos", "bloqueos": "bloqueos",
     }
 
-    def recolectar_base(self, base: str, *, origen: str = "recoleccion", secciones: list[str] | None = None) -> dict:
+    def recolectar_base(self, base: str, *, origen: str = "recoleccion", secciones: list[str] | None = None,
+                        refrescar_representante: bool = True) -> dict:
+        """Recolecta una base. Si es un alias más de una base RAC (mismo servicio y ambiente que otro alias),
+        las secciones de toda la base (GV$/DBA_: espacio, inválidos, bloqueos) se leen UNA vez en el
+        representante y este alias solo lee su instancia; así PROD_TRON1..3 no repiten ni triplican el dato."""
+        base = base.upper()
+        rep = self.inv.representante(base)
+        if rep == base:
+            return self._recolectar_propia(base, origen=origen, secciones=secciones)
+        pedidas = list(self.SECCIONES_OPCIONALES) if secciones is None else list(secciones)
+        if refrescar_representante and pedidas:
+            self._recolectar_propia(rep, origen=origen, secciones=secciones)
+        return self._recolectar_alias(base, rep, origen=origen, secciones=secciones)
+
+    def _recolectar_alias(self, base: str, rep: str, *, origen: str, secciones: list[str] | None) -> dict:
+        b = self._base(base)
+        try:
+            with self.conectar(base, "consulta", persona="sistema", ejecucion_id=f"rec-{utc():%Y%m%d%H%M}",
+                               motivo="recolección") as c:
+                inst = (c.consultar("salud_instancia") or [None])[0]
+        except Exception as ex:
+            estado.marcar_error(self.a, f"bd:{base}:salud", "bd.salud", str(ex), origen=origen)
+            return {"base": base, "semaforo": "sin_dato", "error": str(ex)}
+        dr = (estado.leer(self.a, f"bd:{rep}:salud") or {}).get("datos") or {}
+        id_rep, id_yo = (dr.get("instancia") or {}).get("dbid"), (inst or {}).get("dbid")
+        if id_rep is not None and id_yo is not None and str(id_rep) != str(id_yo):
+            # mismo servicio pero otra base (DBID distinto): se recolecta como base independiente
+            return self._recolectar_propia(base, origen=origen, secciones=secciones)
+        sem = salud.evaluar(inst, dr.get("tablespaces") or [], dr.get("diskgroups") or [],
+                            bloqueadas=dr.get("bloqueadas") or 0, invalidos_nuevos=dr.get("invalidos_fuera_lb") or 0)
+        datos = {k: dr.get(k) for k in ("tablespaces", "diskgroups", "bloqueadas", "invalidos", "invalidos_fuera_lb",
+                                        "invalidos_en_lb", "invalidos_esquemas", "parciales", "leidas")}
+        datos.update({"base": base, "ambiente": b.ambiente, "instancia": inst,
+                      "rac": {"representante": rep, "grupo": self.inv.grupo_rac(base)},
+                      "ultima_pasada": {"origen": origen, "secciones": [], "datos_de": rep}, **sem})
+        estado.guardar(self.a, f"bd:{base}:salud", "bd.salud", datos, origen=origen)
+        return {"base": base, "semaforo": sem["semaforo"], "parcial": [], "secciones": [], "datos_de": rep}
+
+    def _recolectar_propia(self, base: str, *, origen: str = "recoleccion", secciones: list[str] | None = None) -> dict:
         """Lee la instancia y las secciones pedidas (todas si `secciones` es None) y actualiza el semáforo.
 
         Cada sección va en su propio try: si una falla (p. ej. `linea_base` con ORA-00942, o `bloqueos`
@@ -619,29 +687,56 @@ class MotorBD:
         if "invalidos" in res:
             inv = [o for o in res["invalidos"] if not snapshot.es_papelera(o)]
             n_inv, fuera_n, en_lb = len(inv), None, None
-            if "linea_base" in res:
-                lbk = {snapshot.clave(o) for o in res["linea_base"]}
+            lbk = {snapshot.clave(o) for o in res["linea_base"]} if "linea_base" in res else None
+            if lbk is not None:
                 fuera_n = sum(1 for o in inv if snapshot.clave(o) not in lbk)
                 en_lb = n_inv - fuera_n
             else:
                 avisos.append(f"{n_inv} objetos inválidos (sin línea base para comparar)")
+            # desglose por esquema: deja ver de dónde sale el número y qué esquema falta excluir
+            por_esq: dict[str, list[int]] = {}
+            for o in inv:
+                t = por_esq.setdefault(str(o.get("owner")), [0, 0])
+                t[0] += 1
+                t[1] += int(lbk is not None and snapshot.clave(o) not in lbk)
+            esquemas = [{"owner": k, "total": v[0], "fuera_lb": v[1] if lbk is not None else None}
+                        for k, v in sorted(por_esq.items(), key=lambda x: -x[1][0])[:20]]
         else:
             n_inv, fuera_n, en_lb = (previo.get("invalidos"), previo.get("invalidos_fuera_lb"),
                                      previo.get("invalidos_en_lb"))
+            esquemas = previo.get("invalidos_esquemas")
 
         sem = salud.evaluar(inst, ts, dg, bloqueadas=bloqueadas or 0, invalidos_nuevos=fuera_n or 0)
         datos = {"base": base, "ambiente": b.ambiente, "instancia": inst, "tablespaces": ts, "diskgroups": dg,
                  "bloqueadas": bloqueadas, "invalidos": n_inv, "invalidos_fuera_lb": fuera_n,
-                 "invalidos_en_lb": en_lb, "parciales": parciales, "leidas": leidas,
+                 "invalidos_en_lb": en_lb, "invalidos_esquemas": esquemas, "parciales": parciales, "leidas": leidas,
                  "ultima_pasada": {"origen": origen, "secciones": sorted(res)}, **sem}
+        grupo = self.inv.grupo_rac(base)
+        if len(grupo) > 1:
+            datos["rac"] = {"representante": grupo[0], "grupo": grupo}
         if avisos:
             datos["motivos"] = list(sem.get("motivos") or []) + avisos
         estado.guardar(self.a, f"bd:{base}:salud", "bd.salud", datos, origen=origen)
         if blq is not None:
-            estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", blq, origen=origen)
+            estado.guardar(self.a, f"bd:{self.inv.representante(base)}:bloqueos", "bd.bloqueos", blq, origen=origen)
         if "tablespaces" in res or "diskgroups" in res:
             self._series(base, res.get("tablespaces", []), res.get("diskgroups", []))
         return {"base": base, "semaforo": sem["semaforo"], "parcial": sorted(parciales), "secciones": sorted(res)}
+
+    def revisar_bloqueos(self) -> list[str]:
+        """Relee los bloqueos de las bases que hoy muestran sesiones bloqueadas, para confirmarlos o
+        limpiarlos ([bd] bloqueos_revision_s). Las demás se actualizan por alerta de Zabbix o la pasada diaria.
+        Así una lectura vieja no queda en pantalla como si el bloqueo siguiera."""
+        revisadas = []
+        for f in estado.leer_tipo(self.a, "bd.bloqueos"):
+            base = f["objeto"].split(":")[1]
+            if not (f.get("datos") or {}).get("total_bloqueadas") or not self.inv.base(base):
+                continue
+            if self.inv.representante(base) != base:
+                continue
+            self.recolectar_base(base, origen="revision", secciones=["bloqueos"])
+            revisadas.append(base)
+        return revisadas
 
     def _series(self, base: str, ts: list[dict], dg: list[dict]) -> None:
         hora = utc().replace(minute=0, second=0, microsecond=0)
@@ -659,8 +754,15 @@ class MotorBD:
         bases = [b.id for b in self.inv.bases(ambiente)]
         alcance = "completo" if secciones is None else ", ".join(secciones) or "solo instancia"
         emitir(f"Barrido de {len(bases)} base(s) ({alcance}) con máximo {self.cfg['bd']['max_paralelo']} en paralelo")
+        # primero los representantes (leen la base completa); después los demás alias RAC copian su dato
+        reps = [b for b in bases if self.inv.representante(b) == b]
+        alias = [b for b in bases if self.inv.representante(b) != b]
+        if alias:
+            emitir(f"  {len(alias)} alias de bases RAC reutilizan el dato de su representante")
         with ThreadPoolExecutor(max_workers=self.cfg["bd"]["max_paralelo"]) as ex:
-            res = list(ex.map(lambda b: self.recolectar_base(b, origen="barrido", secciones=secciones), bases))
+            res = list(ex.map(lambda b: self.recolectar_base(b, origen="barrido", secciones=secciones), reps))
+            res += list(ex.map(lambda b: self.recolectar_base(b, origen="barrido", secciones=secciones,
+                                                              refrescar_representante=False), alias))
         conteo: dict[str, int] = {}
         for r in res:
             conteo[r["semaforo"]] = conteo.get(r["semaforo"], 0) + 1

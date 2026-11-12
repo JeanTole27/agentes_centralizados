@@ -80,7 +80,10 @@ class ConexionFalsa:
         if plantilla == "salud_instancia":
             return [{"instance_name": self.base.id.lower(), "host_name": self.base.datos.get("servidor", "").lower(),
                      "version": "19.0.0.0.0", "status": "OPEN", "startup_time": ahora - timedelta(days=41),
-                     "database_role": "PRIMARY", "open_mode": "READ WRITE", "sesiones": 180, "procesos": 1500}]
+                     "database_role": "PRIMARY", "open_mode": "READ WRITE", "sesiones": 180, "procesos": 1500,
+                     # mismo servicio = misma base (alias RAC): mismo DBID
+                     "dbid": abs(hash(str(self.base.datos.get("servicio") or self.base.id).upper())) % 10**9,
+                     "db_name": str(self.base.datos.get("servicio") or self.base.id).upper()}]
         if plantilla == "tablespaces":
             return [{"tablespace_name": k, "usado_mb": int(v * 100), "maximo_mb": 10000, "pct_usado": round(v, 1)}
                     for k, v in sorted(e["ts_pct"].items(), key=lambda x: -x[1])]
@@ -95,12 +98,12 @@ class ConexionFalsa:
         if plantilla == "bloqueos":
             if not e["bloqueo"]:
                 return []
-            raiz = {"inst_id": 1, "sid": 1234, "serial": 5678, "username": "APP_BATCH", "status": "INACTIVE",
+            raiz = {"inst_id": 1, "sid": 1234, "serial": 5678, "username": "APP_BATCH", "type": "USER", "status": "INACTIVE",
                     "machine": "AP23SBCC04", "program": "JDBC Thin Client", "module": "BatchCierre",
                     "sql_id": None, "event": "SQL*Net message from client", "seconds_in_wait": 0,
                     "last_call_et": 840, "blocking_instance": None, "blocking_session": None,
                     "final_blocking_instance": None, "final_blocking_session": None, "obj_id": -1}
-            hijos = [{"inst_id": 1, "sid": 2000 + i, "serial": 100 + i, "username": "APP_WEB", "status": "ACTIVE",
+            hijos = [{"inst_id": 1, "sid": 2000 + i, "serial": 100 + i, "username": "APP_WEB", "type": "USER", "status": "ACTIVE",
                       "machine": "AP23SBCC09", "program": "JDBC Thin Client", "module": "ClientesWeb",
                       "sql_id": "7h35uxf5uhmm1", "event": "enq: TX - row lock contention",
                       "seconds_in_wait": 300 - i * 40, "last_call_et": 300 - i * 40, "blocking_instance": 1,

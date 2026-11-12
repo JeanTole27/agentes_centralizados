@@ -24,7 +24,7 @@ _TOPSQL = """
 PLANTILLAS: dict[str, str] = {
     "salud_instancia": """
         SELECT i.instance_name, i.host_name, i.version, i.status, i.startup_time,
-               d.database_role, d.open_mode,
+               d.database_role, d.open_mode, d.dbid, d.name AS db_name,
                (SELECT COUNT(*) FROM v$session WHERE type = 'USER') AS sesiones,
                (SELECT TO_NUMBER(value) FROM v$parameter WHERE name = 'processes') AS procesos
           FROM v$instance i CROSS JOIN v$database d""",
@@ -53,25 +53,41 @@ PLANTILLAS: dict[str, str] = {
     "linea_base": """
         SELECT owner, object_name, object_type, fecha_registro
           FROM adminbd.tbl_base_objetos_invalidos""",
-    # Una sola lectura de GV$SESSION (materializada) y sin unir a DBA_OBJECTS: el nombre del objeto en
-    # espera se trae con `objetos_bloqueo` solo cuando hay bloqueos (servicio._leer_bloqueos).
+    # Una sola lectura de GV$SESSION (materializada) y sin unir a DBA_OBJECTS ni GV$LOCK.
+    # Solo cuenta como bloqueada una sesión de USUARIO que espera un bloqueo de aplicación (enqueue,
+    # library/row cache): así no salen falsos positivos como SMON en "DFS lock handle" contra el LGWR de
+    # otro nodo, ni sesiones esperando "log file sync". Las raíces se traen aunque sean de background,
+    # marcadas, para mostrarlas sin permitir terminarlas. La espera mínima se filtra en servicio._leer_bloqueos.
     "bloqueos": """
         WITH s AS (
-            SELECT /*+ MATERIALIZE */ inst_id, sid, serial# AS serial, username, status, machine, program, module,
-                   sql_id, event, seconds_in_wait, last_call_et, blocking_instance, blocking_session,
-                   final_blocking_instance, final_blocking_session, row_wait_obj# AS obj_id
-              FROM gv$session)
+            SELECT /*+ MATERIALIZE */ inst_id, sid, serial# AS serial, username, type, status, machine, program,
+                   module, sql_id, event, wait_class, state,
+                   CASE WHEN state = 'WAITING' THEN ROUND(wait_time_micro / 1000000) ELSE 0 END AS seconds_in_wait,
+                   last_call_et, blocking_instance, blocking_session, final_blocking_instance,
+                   final_blocking_session, row_wait_obj# AS obj_id
+              FROM gv$session),
+        w AS (
+            SELECT *
+              FROM s
+             WHERE s.blocking_session IS NOT NULL
+               AND s.type = 'USER'
+               AND (s.event LIKE 'enq: %'
+                    OR s.event IN ('library cache lock', 'library cache pin', 'row cache lock',
+                                   'cursor: pin S wait on X')))
+        SELECT w.* FROM w
+        UNION ALL
         SELECT s.*
           FROM s
-         WHERE s.blocking_session IS NOT NULL
-            OR (s.inst_id, s.sid) IN (SELECT b.blocking_instance, b.blocking_session
-                                        FROM s b WHERE b.blocking_session IS NOT NULL)""",
+         WHERE (s.inst_id, s.sid) IN (SELECT w.blocking_instance, w.blocking_session FROM w)
+           AND (s.inst_id, s.sid) NOT IN (SELECT w.inst_id, w.sid FROM w)""",
     "objetos_bloqueo": """
         SELECT o.object_id, o.owner || '.' || o.object_name AS objeto
           FROM dba_objects o
          WHERE o.object_id IN (SELECT DISTINCT s.row_wait_obj#
                                  FROM gv$session s
-                                WHERE s.blocking_session IS NOT NULL AND s.row_wait_obj# > 0)""",
+                                WHERE s.blocking_session IS NOT NULL AND s.type = 'USER'
+                                  AND (s.event LIKE 'enq: TX%' OR s.event LIKE 'enq: TM%')
+                                  AND s.row_wait_obj# > 0)""",
     "sesiones_activas": """
         SELECT inst_id, sid, serial# AS serial, username, machine, module, sql_id, event, last_call_et
           FROM gv$session
