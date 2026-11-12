@@ -81,7 +81,8 @@ class RefrescoVista(BaseModel):
 # livianas; inválidos sigue en la pasada diaria y por alerta. Con límite por vista y ambiente
 # ([bd] refresco_vista_s) para que varias personas abriendo la pantalla no multipliquen las consultas.
 VISTAS_REFRESCO = {"bloqueos": (["bloqueos"], "bd.ses.flota"),
-                   "salud": (["tablespaces", "diskgroups", "bloqueos"], "bd.salud.flota")}
+                   "salud": (["tablespaces", "diskgroups", "bloqueos", "fra", "respaldo", "dataguard"],
+                             "bd.salud.flota")}
 
 
 class Feedback(BaseModel):
@@ -129,7 +130,10 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     seguro = cfg.es_produccion
     sin_auth = cfg["auth"]["proveedor"] in ("dev", "demo") and not cfg.es_produccion
     directa = cfg["aprobaciones"].get("ejecucion_directa", cfg["aprobaciones"].get("dba_ejecuta_directo", True))
-    ocultar = frozenset({"aprobaciones"}) if directa else frozenset()
+    # Pantallas fuera del menú: Aprobaciones con ejecución directa y las que aún son "próxima etapa"
+    # ([general] pantallas_ocultas, por defecto Ventana de cambio e Incidentes): nadie entra a una vacía.
+    ocultar = frozenset(({"aprobaciones"} if directa else set())
+                        | set(cfg["general"].get("pantallas_ocultas", ["ventana", "incidentes"]) or []))
     oidc = None
     if cfg["auth"]["proveedor"] == "oidc":
         from .oidc import ClienteOIDC
@@ -465,7 +469,24 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         def ambiente_de(host: str) -> str:
             a = n.inventario.buscar(host) if host else None
             return a.ambiente if a else ""
-        return opciones(r, ambiente_de, servidores_desde_json(n.cfg.ruta("inventario", "archivo")))
+        res = opciones(r, ambiente_de, servidores_desde_json(n.cfg.ruta("inventario", "archivo")))
+        # Panel de la flota: la última acción de orquestación por servidor (estado del dominio la última vez
+        # que alguien lo miró o lo operó) y el tope de lote de frmweb por ambiente.
+        ultima: dict[str, dict] = {}
+        with n.almacen.tx() as con:
+            for f in con.execute(select(t_ejecucion.c.id, t_ejecucion.c.accion, t_ejecucion.c.destino,
+                                        t_ejecucion.c.estado, t_ejecucion.c.creada, t_ejecucion.c.solicitante)
+                                 .where(t_ejecucion.c.accion.like("orq.%"))
+                                 .order_by(t_ejecucion.c.creada.desc()).limit(1000)):
+                for h in str(f.destino or "").split(","):
+                    h = h.strip()
+                    if h and h not in ultima:
+                        ultima[h] = {"id": f.id, "accion": f.accion, "estado": f.estado,
+                                     "creada": f.creada.isoformat() if f.creada else None,
+                                     "solicitante": f.solicitante}
+        res["ultima_orquestacion"] = ultima
+        res["frm_lote_max"] = n.cfg["cm"].get("frm_lote_max") or {}
+        return res
 
     @app.get("/api/reportes/tipos")
     def reportes_tipos(u: Usuario = Depends(usuario)):
@@ -841,6 +862,22 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         filas.sort(key=lambda f: ((f["datos"].get("umbrales", {}).get("100") or {}).get("dias") or 1e9))
         return {"en_sombra": True, "nota": "En evaluación: aún no se publican en Zabbix", "predicciones": filas}
 
+    def _equipo_serie(serie: str) -> str:
+        if serie.startswith(("ts:", "asm:", "fra:")):
+            return "bd"
+        s = n.inventario.servidor(serie.split(":")[1]) if serie.startswith(("fs:", "mem:", "cpu:")) else None
+        return "bd" if s and s.datos.get("equipo") == "dba" else "cm"
+
+    @app.get("/api/prevencion/anomalias")
+    def anomalias(equipo: str | None = None, u: Usuario = Depends(usuario)):
+        """Series cuyo último valor se sale de lo normal para ese día y hora de la semana (M3, en sombra)."""
+        _exigir_ver(u, "ml.anomalias")
+        f = estado.leer(n.almacen, "ml:anomalias")
+        filas = ((f or {}).get("datos") or {}).get("anomalias") or []
+        if equipo in ("bd", "cm"):
+            filas = [a for a in filas if _equipo_serie(a["serie"]) == equipo]
+        return {"en_sombra": True, "calculada": (f or {}).get("actualizado"), "anomalias": filas}
+
     @app.post("/api/prevencion/predicciones/{pid}/feedback")
     def feedback(pid: int, f: Feedback, u: Usuario = Depends(usuario)):
         if permiso_de(u, n.catalogo["ml.feedback"]) != "ejecuta":
@@ -963,12 +1000,44 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                         "vigente": (f["antiguedad_s"] or 0) <= vigencia})
         return out
 
+    def _de_mi_equipo(u: Usuario, e: dict) -> bool:
+        """Por defecto el Inicio muestra lo del equipo de quien entra: DBA ve las acciones de BD y Capa Media
+        las de cm; las comunes (portal, refresco, ml…) y las propias se ven siempre. Líder y admin ven todo."""
+        if u.equipo not in ("dba", "cm") or "lid" in u.perfiles or e.get("solicitante") == u.login:
+            return True
+        try:
+            motor = n.catalogo[e["accion"]].motor
+        except KeyError:
+            return True
+        if motor not in ("bd", "cm"):
+            return True
+        return motor == ("bd" if u.equipo == "dba" else "cm")
+
+    def _agrupar(ejecs: list[dict], maximo: int) -> list[dict]:
+        """Une las ejecuciones seguidas con la misma acción, destino y estado (p. ej. 6 orq.status fallidas
+        contra el mismo servidor) en una sola fila con `veces`."""
+        out: list[dict] = []
+        for e in ejecs:
+            ult = out[-1] if out else None
+            if ult and (ult["accion"], ult["destino"], ult["estado"]) == (e["accion"], e["destino"], e["estado"]):
+                ult["veces"] += 1
+                continue
+            if len(out) == maximo:
+                break
+            out.append({**e, "veces": 1})
+        return out
+
     @app.get("/api/inicio")
-    def inicio(u: Usuario = Depends(usuario)):
-        """Resumen para el Inicio de cada perfil (01 §5.1). Todo sale del almacén."""
+    def inicio(todas: bool = False, u: Usuario = Depends(usuario)):
+        """Resumen para el Inicio de cada perfil (01 §5.1). Todo sale del almacén.
+        `todas=true` incluye las ejecuciones de los otros equipos."""
         from datetime import timedelta
         hace24 = utc() - timedelta(hours=24)
         visibles = n.ejecuciones.listar(u, limite=500)
+        otras = 0
+        if not todas:
+            propias = [e for e in visibles if _de_mi_equipo(u, e)]
+            otras, visibles = len(visibles) - len(propias), propias
         recientes = [e for e in visibles if (e["creada"] if e["creada"].tzinfo else e["creada"].replace(
             tzinfo=hace24.tzinfo)) >= hace24]
         salud = estado.leer_tipo(n.almacen, "bd.salud") if puede_ver(u, n.catalogo["bd.salud.flota"]) else []
@@ -1001,10 +1070,15 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             if d.get("semaforo") == "rojo":
                 atencion.append({"tipo": "salud", "texto": f"{d.get('base')} en rojo",
                                  "detalle": "; ".join(d.get("motivos", [])), "nivel": "crit", "ir": "salud"})
+        fallas: dict[tuple, list[dict]] = {}
         for e in recientes:
             if e["estado"] == "fallida" and e["solicitante"] == u.login:
-                atencion.append({"tipo": "ejecucion", "texto": f"Falló {e['accion']} en {e['destino']}",
-                                 "detalle": (e["error"] or "")[:160], "nivel": "crit", "ir": "ejecuciones", "id": e["id"]})
+                fallas.setdefault((e["accion"], e["destino"]), []).append(e)
+        for (acc_id, dest), es in fallas.items():      # una sola línea por acción y destino, con las veces
+            veces = f" ({len(es)} veces en 24 h)" if len(es) > 1 else ""
+            atencion.append({"tipo": "ejecucion", "texto": f"Falló {acc_id} en {dest}{veces}",
+                             "detalle": (es[0]["error"] or "")[:160], "nivel": "crit", "ir": "ejecuciones",
+                             "id": es[0]["id"]})
         return {
             "kpis": {"pendientes_aprobacion": sum(1 for a in atencion if a["tipo"] == "aprobacion"),
                      "en_curso": sum(1 for e in visibles if e["estado"] in ("en_cola", "ejecutando")),
@@ -1012,7 +1086,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                      "exitosas_24h": sum(1 for e in recientes if e["estado"] == "exitosa"),
                      "episodios_abiertos": len(eps), "riesgos_7d": sum(1 for r in riesgos if r["dias_100"] < 7),
                      "bases": sem},
-            "atencion": atencion[:20], "ultimas": visibles[:8],
+            "atencion": atencion[:20], "ultimas": _agrupar(visibles, 8), "otras_equipos": otras, "todas": todas,
         }
 
     # ============================================================== control

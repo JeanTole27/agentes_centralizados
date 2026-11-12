@@ -8,7 +8,8 @@ import { SelectBuscable } from "./SelectBuscable";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import Accion from "./Accion";
-import { Cabecera, Cargando, CampoAmbiente, Clase, OpcionesActivo, Vacio, useCatalogo, useEnAmbiente } from "./comun";
+import { useNavigate } from "react-router-dom";
+import { Cabecera, Cargando, CampoAmbiente, Clase, EstadoEj, OpcionesActivo, Vacio, fecha, useAmbiente, useCatalogo, useEnAmbiente } from "./comun";
 
 type OpcionesCM = {
   orquestacion: { host: string; ambiente: string; configurado: boolean;
@@ -16,6 +17,8 @@ type OpcionesCM = {
   usuarios_wl: { dominio: string; nombre: string; host: string; ambiente: string; configurado: boolean }[];
   frmweb: { host: string; ambiente: string; configurado: boolean; descripcion: string; managed_servers: string[] }[];
   fuente: string;
+  ultima_orquestacion?: Record<string, { id: string; accion: string; estado: string; creada: string | null; solicitante: string }>;
+  frm_lote_max?: Record<string, number>;
   ruta_cmops?: string;
   cmops_disponible?: boolean;
   aviso?: string;
@@ -40,12 +43,25 @@ function useOpcionesCM() {
   });
 }
 
-/** Pestañas de acciones + formulario de la acción elegida (con los valores que fija la pantalla). */
-function Acciones({ acciones, iniciales, listo, aviso }: {
-  acciones: string[]; iniciales: (accion: string) => Record<string, unknown>; listo: (accion: string) => boolean; aviso: string;
+type GrupoAcc = { titulo: string; acciones: string[] };
+
+/** Nombres cortos para las pestañas (el nombre completo del catálogo queda debajo y al pasar el mouse). */
+const CORTOS: Record<string, string> = {
+  "orq.status": "Estado", "orq.verificar": "Verificar", "orq.inventory": "Inventario", "orq.stop": "Bajar",
+  "orq.start": "Subir", "orq.credenciales": "Credenciales Node Manager", "rec.recolectar": "Recolectar configuración",
+  "sys.conectividad": "Conectividad", "usr.listar": "Listar", "usr.preparar": "Preparar dominio",
+  "usr.aplicar": "Aplicar cambios", "frm.validar": "Detectar (sin cambios)", "frm.mitigar": "Mitigar",
+};
+
+/** Pestañas de acciones agrupadas (Consultar · Operar · Configurar) + formulario de la acción elegida. */
+function Acciones({ grupos, iniciales, listo, aviso }: {
+  grupos: GrupoAcc[]; iniciales: (accion: string) => Record<string, unknown>;
+  listo: (accion: string) => boolean; aviso: string;
 }) {
   const cat = useCatalogo();
-  const disponibles = acciones.filter((a) => cat.data?.some((c) => c.id === a));
+  const gs = grupos.map((g) => ({ ...g, acciones: g.acciones.filter((a) => cat.data?.some((c) => c.id === a)) }))
+    .filter((g) => g.acciones.length);
+  const disponibles = gs.flatMap((g) => g.acciones);
   const [sel, setSel] = useState("");
   const actual = sel && disponibles.includes(sel) ? sel : disponibles[0];
   const acc = cat.data?.find((x) => x.id === actual);
@@ -53,16 +69,26 @@ function Acciones({ acciones, iniciales, listo, aviso }: {
   return (
     <div className="card">
       <Cargando q={cat} />
-      <div className="tabs">
-        {disponibles.map((a) => {
-          const c = cat.data!.find((x) => x.id === a)!;
-          return <button key={a} className={actual === a ? "on" : ""} onClick={() => setSel(a)}>{c.nombre.split("(")[0]}</button>;
-        })}
+      <div className="tabs tabs-grupos">
+        {gs.map((g) => (
+          <div key={g.titulo} className="tab-grupo">
+            <span className="tab-grupo-t">{g.titulo}</span>
+            {g.acciones.map((a) => {
+              const c = cat.data!.find((x) => x.id === a)!;
+              return (
+                <button key={a} className={actual === a ? "on" : ""} onClick={() => setSel(a)} title={`${c.nombre} · ${a}`}>
+                  {CORTOS[a] ?? c.nombre.split("(")[0]}{c.clase === "C" && <span className="tab-c" title="Acción de cambio"> ●</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
+      {acc && <p className="muted small" style={{ marginTop: 0 }}>{acc.nombre}</p>}
       {actual && listo(actual) ? (
         <Accion key={actual + JSON.stringify(ini)} accion={actual} compacto iniciales={ini} ocultos={["host", "hosts", "dominios"]} />
       ) : <Vacio>{aviso}</Vacio>}
-      {acc && <div className="fila mt small muted"><Clase c={acc.clase} /> <span className="mono-sm">{actual}</span></div>}
+      {acc && <details className="mt small muted"><summary>Detalle técnico</summary><Clase c={acc.clase} /> <span className="mono-sm">{actual}</span></details>}
     </div>
   );
 }
@@ -85,6 +111,53 @@ function SinConfiguracion({ modulo, fuente }: { modulo: string; fuente?: string 
 }
 
 // ------------------------------------------------------------------ Orquestación WebLogic
+/** Vista de la flota antes de elegir: servidores del ambiente, sus dominios y la última acción de orquestación. */
+function FlotaOrquestacion({ hosts, ultima, elegir }: {
+  hosts: OpcionesCM["orquestacion"]; ultima: NonNullable<OpcionesCM["ultima_orquestacion"]>; elegir: (h: string) => void;
+}) {
+  const ambiente = useAmbiente();
+  const nav = useNavigate();
+  const [texto, setTexto] = useState("");
+  const t = texto.trim().toLowerCase();
+  const filas = hosts.filter((h) => (!ambiente || h.ambiente === ambiente)
+    && (!t || h.host.toLowerCase().includes(t) || h.instalaciones.some((i) => i.dominios.some((d) => d.nombre.toLowerCase().includes(t)))))
+    // primero lo que falló, después lo que alguien operó hace poco, al final el resto (alfabético)
+    .sort((a, b) => {
+      const pa = ultima[a.host]?.estado === "fallida" ? 0 : ultima[a.host] ? 1 : 2;
+      const pb = ultima[b.host]?.estado === "fallida" ? 0 : ultima[b.host] ? 1 : 2;
+      return pa - pb || (ultima[b.host]?.creada ?? "").localeCompare(ultima[a.host]?.creada ?? "") || a.host.localeCompare(b.host);
+    });
+  const fallidas = filas.filter((h) => ultima[h.host]?.estado === "fallida").length;
+  return (
+    <div className="card">
+      <h3>Servidores{ambiente ? ` de ${ambiente}` : ""} <span className="sub">{filas.length} servidor(es){fallidas ? ` · ${fallidas} con la última acción fallida` : ""}</span></h3>
+      <input className="f" placeholder="Buscar servidor o dominio…" value={texto} onChange={(e) => setTexto(e.target.value)} style={{ maxWidth: 320, marginBottom: 10 }} />
+      {filas.length === 0 ? <Vacio>No hay servidores que coincidan.</Vacio> : (
+        <div className="tbl-wrap"><table className="tbl-std compacta">
+          <thead><tr><th>Servidor</th><th>Ambiente</th><th>Dominios</th><th>Última acción de orquestación</th><th /></tr></thead>
+          <tbody>{filas.map((h) => {
+            const doms = h.instalaciones.flatMap((i) => i.dominios.map((d) => d.nombre));
+            const u = ultima[h.host];
+            return (
+              <tr key={h.host}>
+                <td><b>{h.host}</b>{!h.configurado && <span className="tag" style={{ marginLeft: 6 }} title="Sin configuración detallada en capa-media-ops">sin detalle</span>}</td>
+                <td>{h.ambiente}</td>
+                <td title={doms.join(", ")}>{doms.length ? (doms.length > 3 ? `${doms.slice(0, 3).join(", ")} +${doms.length - 3}` : doms.join(", ")) : "—"}</td>
+                <td>{u ? (
+                  <span className="fila" style={{ gap: 6 }}><EstadoEj e={u.estado} />
+                    <button className="lnk" onClick={() => nav("/ejecuciones?id=" + u.id)}>{CORTOS[u.accion] ?? u.accion}</button>
+                    <span className="muted small">{fecha(u.creada)} · {u.solicitante}</span></span>
+                ) : <span className="muted small">nunca</span>}</td>
+                <td className="col-acc"><div className="acciones"><button className="btn sm pri" onClick={() => elegir(h.host)}>Operar</button></div></td>
+              </tr>
+            );
+          })}</tbody>
+        </table></div>
+      )}
+    </div>
+  );
+}
+
 export function Orquestacion() {
   const op = useOpcionesCM();
   const enAmb = useEnAmbiente();
@@ -139,11 +212,15 @@ export function Orquestacion() {
             </div>
           )}
           {H && !H.configurado && <SinDetalle que={`El servidor ${H.host}`} />}
+          {H && <button className="btn sm mt" onClick={() => elegirHost("")}>← Volver a la lista de servidores</button>}
         </div>
       )}
-      {hosts.length > 0 && (
+      {hosts.length > 0 && !H && <FlotaOrquestacion hosts={hosts} ultima={op.data?.ultima_orquestacion ?? {}} elegir={elegirHost} />}
+      {hosts.length > 0 && H && (
         <Acciones
-          acciones={["orq.status", "orq.verificar", "orq.inventory", "orq.stop", "orq.start", "orq.credenciales", "rec.recolectar", "sys.conectividad"]}
+          grupos={[{ titulo: "Consultar", acciones: ["orq.status", "orq.verificar", "orq.inventory"] },
+                   { titulo: "Operar", acciones: ["orq.stop", "orq.start"] },
+                   { titulo: "Configurar", acciones: ["orq.credenciales", "rec.recolectar", "sys.conectividad"] }]}
           iniciales={(a) => {
             if (a === "sys.conectividad" || a === "rec.recolectar") return { host };
             if (a === "orq.credenciales") return { host, instalacion: N?.id, dominio: doms[0] ?? "" };
@@ -196,7 +273,8 @@ export function UsuariosWL() {
         </div>
       )}
       {doms.length > 0 && (
-        <Acciones acciones={["usr.listar", "usr.preparar", "usr.aplicar"]}
+        <Acciones grupos={[{ titulo: "Consultar", acciones: ["usr.listar"] }, { titulo: "Configurar", acciones: ["usr.preparar"] },
+                           { titulo: "Operar", acciones: ["usr.aplicar"] }]}
           iniciales={(a) => ({ host: D?.host ?? "", dominio: D?.dominio ?? "", ...(a === "usr.aplicar" ? { acciones: validas } : {}) })}
           listo={(a) => Boolean(D && enAmb(D.ambiente)) && (a !== "usr.aplicar" || validas.length > 0)}
           aviso={!D ? "Elige el dominio para continuar." : "Agrega al menos una fila con usuario en la tabla de acciones."} />
@@ -240,6 +318,10 @@ export function Frmweb() {
   const [lote, setLote] = useState("20");
   const hosts = op.data?.frmweb ?? [];
   const H = hosts.find((h) => h.host === host);
+  const topes = op.data?.frm_lote_max ?? {};
+  const tope = H ? (topes[H.ambiente] ?? topes["*"] ?? 40) : 40;
+  const opcionesLote = [5, 10, 20, 40].filter((x) => x <= tope);
+  const loteEf = Math.min(Number(lote), tope);
   return (
     <>
       <Cabecera titulo="Procesos frmweb" sub="Detectar procesos huérfanos (sin sesión) y mitigarlos por lotes." />
@@ -257,9 +339,10 @@ export function Frmweb() {
               </SelectBuscable>
             </label>
             <label className="lb">Tamaño de lote (mitigar)
-              <SelectBuscable className="f" value={lote} onChange={(e) => setLote(e.target.value)}>
-                <option value="10">10 (prudente)</option><option value="20">20 (por defecto)</option><option value="40">40</option>
+              <SelectBuscable className="f" value={String(loteEf)} onChange={(e) => setLote(e.target.value)}>
+                {opcionesLote.map((x) => <option key={x} value={String(x)}>{x}{x === 10 ? " (prudente)" : x === 20 ? " (por defecto)" : ""}</option>)}
               </SelectBuscable>
+              {H && <span className="muted small">Máximo en {H.ambiente}: {tope}</span>}
             </label>
           </div>
           {H && H.configurado && <p className="muted small" style={{ marginBottom: 0 }}>{H.descripcion} · Managed servers: {H.managed_servers.join(", ") || "—"}</p>}
@@ -267,8 +350,12 @@ export function Frmweb() {
         </div>
       )}
       {hosts.length > 0 && (
-        <Acciones acciones={["frm.validar", "frm.mitigar"]}
-          iniciales={(a) => ({ host, ...(a === "frm.mitigar" ? { lote: Number(lote) } : {}) })}
+        <div className="info small">Primero <b>Detectar (sin cambios)</b>: lista los procesos huérfanos sin tocarlos. <b>Mitigar</b> los
+          termina de a {loteEf} por lote{H ? ` (tope en ${H.ambiente}: ${tope}; el servidor también lo aplica)` : ""}.</div>
+      )}
+      {hosts.length > 0 && (
+        <Acciones grupos={[{ titulo: "Consultar", acciones: ["frm.validar"] }, { titulo: "Operar", acciones: ["frm.mitigar"] }]}
+          iniciales={(a) => ({ host, ...(a === "frm.mitigar" ? { lote: loteEf } : {}) })}
           listo={() => Boolean(H && enAmb(H.ambiente))} aviso="Elige el servidor para continuar." />
       )}
     </>

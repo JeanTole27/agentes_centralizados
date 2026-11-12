@@ -598,7 +598,30 @@ class MotorBD:
     SECCIONES_OPCIONALES = {
         "tablespaces": "tablespaces", "diskgroups": "ASM", "invalidos": "objetos inválidos",
         "linea_base": "línea base de inválidos", "bloqueos": "bloqueos",
+        "fra": "FRA", "respaldo": "respaldos RMAN", "dataguard": "Data Guard",
     }
+    # Secciones de protección: se guardan juntas en datos["proteccion"] y entran al semáforo.
+    PROTECCION = ("fra", "respaldo", "dataguard")
+    # Sin estas no es una falla de la pasada (base sin standby, sin ASM).
+    SIN_AVISO = ("diskgroups", "dataguard")
+
+    def _umbrales_salud(self) -> dict:
+        return {**salud.UMBRALES, **(self.cfg["bd"].get("umbrales_salud") or {})}
+
+    def _exige_respaldo(self, ambiente: str | None) -> bool:
+        return str(ambiente or "").upper() in {a.upper() for a in self.cfg["bd"].get("respaldo_ambientes") or []}
+
+    def _leer_dataguard(self, c, inst: dict | None) -> dict:
+        """Primaria: estado de los destinos standby (error, gap). Standby: desfase de transporte y aplicación."""
+        rol = str((inst or {}).get("database_role") or "").upper()
+        r: dict = {"rol": rol or None, "destinos": [], "lag": {}}
+        if "STANDBY" in rol:
+            for f in c.consultar("dg_stats"):
+                if f.get("name") in ("transport lag", "apply lag"):
+                    r["lag"][f["name"]] = f.get("value")
+        else:
+            r["destinos"] = c.consultar("dg_destinos")
+        return r
 
     def recolectar_base(self, base: str, *, origen: str = "recoleccion", secciones: list[str] | None = None,
                         refrescar_representante: bool = True) -> dict:
@@ -629,9 +652,11 @@ class MotorBD:
             # mismo servicio pero otra base (DBID distinto): se recolecta como base independiente
             return self._recolectar_propia(base, origen=origen, secciones=secciones)
         sem = salud.evaluar(inst, dr.get("tablespaces") or [], dr.get("diskgroups") or [],
-                            bloqueadas=dr.get("bloqueadas") or 0, invalidos_nuevos=dr.get("invalidos_fuera_lb") or 0)
+                            bloqueadas=dr.get("bloqueadas") or 0, invalidos_nuevos=dr.get("invalidos_fuera_lb") or 0,
+                            proteccion=dr.get("proteccion"), exigir_respaldo=self._exige_respaldo(b.ambiente),
+                            u=self._umbrales_salud())
         datos = {k: dr.get(k) for k in ("tablespaces", "diskgroups", "bloqueadas", "invalidos", "invalidos_fuera_lb",
-                                        "invalidos_en_lb", "invalidos_esquemas", "parciales", "leidas")}
+                                        "invalidos_en_lb", "invalidos_esquemas", "proteccion", "parciales", "leidas")}
         datos.update({"base": base, "ambiente": b.ambiente, "instancia": inst,
                       "rac": {"representante": rep, "grupo": self.inv.grupo_rac(base)},
                       "ultima_pasada": {"origen": origen, "secciones": [], "datos_de": rep}, **sem})
@@ -664,10 +689,16 @@ class MotorBD:
                             res[sec] = self._leer_invalidos(c)
                         elif sec == "linea_base":
                             res[sec] = self._leer_linea_base(base, c)
+                        elif sec == "fra":
+                            res[sec] = c.consultar("fra_uso")
+                        elif sec == "respaldo":
+                            res[sec] = c.consultar("rman_ultimo")
+                        elif sec == "dataguard":
+                            res[sec] = self._leer_dataguard(c, inst)
                         else:
                             res[sec] = c.consultar(sec)
                     except Exception as ex:  # noqa: BLE001 — la sección se pierde, la pasada sigue
-                        if sec != "diskgroups":           # sin ASM es normal: no es una falla
+                        if sec not in self.SIN_AVISO:     # sin ASM o sin standby es normal: no es una falla
                             parciales[sec] = str(ex)[:500]
         except Exception as ex:
             estado.marcar_error(self.a, f"bd:{base}:salud", "bd.salud", str(ex), origen=origen)
@@ -706,10 +737,17 @@ class MotorBD:
                                      previo.get("invalidos_en_lb"))
             esquemas = previo.get("invalidos_esquemas")
 
-        sem = salud.evaluar(inst, ts, dg, bloqueadas=bloqueadas or 0, invalidos_nuevos=fuera_n or 0)
+        proteccion = dict(previo.get("proteccion") or {})
+        for sec in self.PROTECCION:
+            if sec in res:
+                proteccion[sec] = res[sec]
+        sem = salud.evaluar(inst, ts, dg, bloqueadas=bloqueadas or 0, invalidos_nuevos=fuera_n or 0,
+                            proteccion=proteccion, exigir_respaldo=self._exige_respaldo(b.ambiente),
+                            u=self._umbrales_salud())
         datos = {"base": base, "ambiente": b.ambiente, "instancia": inst, "tablespaces": ts, "diskgroups": dg,
                  "bloqueadas": bloqueadas, "invalidos": n_inv, "invalidos_fuera_lb": fuera_n,
-                 "invalidos_en_lb": en_lb, "invalidos_esquemas": esquemas, "parciales": parciales, "leidas": leidas,
+                 "invalidos_en_lb": en_lb, "invalidos_esquemas": esquemas, "proteccion": proteccion or None,
+                 "parciales": parciales, "leidas": leidas,
                  "ultima_pasada": {"origen": origen, "secciones": sorted(res)}, **sem}
         grupo = self.inv.grupo_rac(base)
         if len(grupo) > 1:

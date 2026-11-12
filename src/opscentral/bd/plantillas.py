@@ -6,6 +6,8 @@ política de solo lectura (SqlPolicyEngine del kit Oracle si está disponible).
 """
 from __future__ import annotations
 
+import re
+
 from .politica import validar_lectura
 
 _SIN_ORACLE = "(SELECT u.username FROM dba_users u WHERE u.oracle_maintained = 'Y')"
@@ -28,24 +30,49 @@ PLANTILLAS: dict[str, str] = {
                (SELECT COUNT(*) FROM v$session WHERE type = 'USER') AS sesiones,
                (SELECT TO_NUMBER(value) FROM v$parameter WHERE name = 'processes') AS procesos
           FROM v$instance i CROSS JOIN v$database d""",
+    # pct_usado es el uso REAL según el tipo de tablespace (pct_asignado es el de la vista de métricas):
+    #   - UNDO: solo los extents ACTIVE (transacciones en curso). Los UNEXPIRED/EXPIRED se reutilizan, por
+    #     eso UNDO "siempre se ve lleno" en DBA_TABLESPACE_USAGE_METRICS y daba alertas falsas.
+    #   - TEMP: los bloques en uso ahora (GV$SORT_SEGMENT, todas las instancias); lo asignado no se libera.
+    #   - el resto (PERMANENT): igual que antes.
     "tablespaces": """
-        SELECT m.tablespace_name,
-               ROUND(m.used_space * t.block_size / 1048576) AS usado_mb,
+        WITH u AS (SELECT tablespace_name, SUM(bytes) AS activos
+                     FROM dba_undo_extents
+                    WHERE status = 'ACTIVE'
+                    GROUP BY tablespace_name),
+             tp AS (SELECT tablespace_name, SUM(used_blocks) AS bloques
+                      FROM gv$sort_segment
+                     GROUP BY tablespace_name)
+        SELECT m.tablespace_name, t.contents AS tipo,
+               ROUND(CASE t.contents WHEN 'UNDO' THEN NVL(u.activos, 0) / 1048576
+                                     WHEN 'TEMPORARY' THEN NVL(tp.bloques, 0) * t.block_size / 1048576
+                                     ELSE m.used_space * t.block_size / 1048576 END) AS usado_mb,
                ROUND(m.tablespace_size * t.block_size / 1048576) AS maximo_mb,
-               ROUND(m.used_percent, 1) AS pct_usado
+               ROUND(100 * CASE t.contents WHEN 'UNDO' THEN NVL(u.activos, 0) / t.block_size
+                                           WHEN 'TEMPORARY' THEN NVL(tp.bloques, 0)
+                                           ELSE m.used_space END / NULLIF(m.tablespace_size, 0), 1) AS pct_usado,
+               ROUND(m.used_percent, 1) AS pct_asignado
           FROM dba_tablespace_usage_metrics m
           JOIN dba_tablespaces t ON t.tablespace_name = m.tablespace_name
-         ORDER BY m.used_percent DESC""",
+          LEFT JOIN u ON u.tablespace_name = m.tablespace_name
+          LEFT JOIN tp ON tp.tablespace_name = m.tablespace_name
+         ORDER BY pct_usado DESC NULLS LAST""",
+    # Con redundancia NORMAL/HIGH el espacio libre real es usable_file_mb (descuenta el espejo y lo que se
+    # reserva para reconstruir un disco caído). pct_usado se calcula sobre lo utilizable; pct_bruto es el
+    # de antes (free_mb / total_mb), que sobrestimaba el espacio disponible.
     "diskgroups": """
-        SELECT name, state, type, total_mb, free_mb, usable_file_mb,
-               ROUND(100 * (1 - free_mb / NULLIF(total_mb, 0)), 1) AS pct_usado
+        SELECT name, state, type, total_mb, free_mb, usable_file_mb, required_mirror_free_mb,
+               ROUND(100 * (1 - GREATEST(usable_file_mb, 0)
+                     / NULLIF((total_mb - required_mirror_free_mb)
+                              / DECODE(type, 'HIGH', 3, 'NORMAL', 2, 'EXTERN', 1, 2), 0)), 1) AS pct_usado,
+               ROUND(100 * (1 - free_mb / NULLIF(total_mb, 0)), 1) AS pct_bruto
           FROM v$asm_diskgroup
          ORDER BY name""",
     "invalidos": """
         SELECT o.owner, o.object_name, o.object_type, o.last_ddl_time
           FROM dba_objects o
          WHERE o.status = 'INVALID'
-           AND o.owner NOT IN (SELECT u.username FROM dba_users u WHERE u.oracle_maintained = 'Y')
+           AND o.owner NOT IN """ + _SIN_ORACLE + """
          ORDER BY o.owner, o.object_type, o.object_name""",
     # Solo columnas que existen en la tabla del equipo DBA (copia de DBA_OBJECTS + FECHA_REGISTRO,
     # cargada con INSERT ... SELECT FROM dba_objects WHERE status='INVALID'). No tiene ACTIVO ni
@@ -107,7 +134,7 @@ PLANTILLAS: dict[str, str] = {
         SELECT username, account_status, expiry_date, profile,
                ROUND(expiry_date - SYSDATE, 1) AS dias_restantes
           FROM dba_users
-         WHERE oracle_maintained = 'N'
+         WHERE username NOT IN """ + _SIN_ORACLE + """
            AND expiry_date IS NOT NULL
            AND expiry_date < SYSDATE + 15
            AND account_status IN ('OPEN', 'EXPIRED(GRACE)')
@@ -153,6 +180,20 @@ PLANTILLAS: dict[str, str] = {
         SELECT name, value, unit, time_computed
           FROM v$dataguard_stats
          WHERE name IN ('transport lag', 'apply lag', 'apply finish time')""",
+    # Destinos de standby vistos desde la primaria: error de transporte o gap de archivos.
+    "dg_destinos": """
+        SELECT d.dest_id, d.dest_name, d.status, d.error, s.gap_status, s.database_mode, s.recovery_mode
+          FROM v$archive_dest d
+          JOIN v$archive_dest_status s ON s.dest_id = d.dest_id
+         WHERE d.target = 'STANDBY' AND d.status <> 'INACTIVE'""",
+    # Último respaldo RMAN correcto por tipo (30 días de historia del controlfile).
+    "rman_ultimo": """
+        SELECT input_type, MAX(end_time) AS ultimo_ok,
+               ROUND((SYSDATE - MAX(end_time)) * 24, 1) AS horas
+          FROM v$rman_backup_job_details
+         WHERE status IN ('COMPLETED', 'COMPLETED WITH WARNINGS')
+           AND start_time > SYSDATE - 30
+         GROUP BY input_type""",
     "dg_gaps": """
         SELECT thread# AS hilo, low_sequence# AS secuencia_desde, high_sequence# AS secuencia_hasta
           FROM v$archive_gap""",
@@ -300,7 +341,64 @@ BINDS: dict[str, tuple[str, ...]] = {
     "plan_historia": ("sql_id",), "plan_actual": ("sql_id",),
 }
 
-for _n, _sql in PLANTILLAS.items():
+# ------------------------------------------------------------ variantes por versión de la base
+# Oracle 11g no tiene DBA_USERS.ORACLE_MAINTAINED ni FETCH FIRST: sin esto los inválidos, jobs, top SQL y
+# usuarios por expirar fallaban en PROD11/TEST11G. Ahí se usa la lista fija de esquemas de Oracle (más
+# [bd] invalidos_excluir, que se aplica siempre) y ROWNUM.
+_ESQUEMAS_ORACLE_11G = (
+    "('SYS', 'SYSTEM', 'OUTLN', 'DBSNMP', 'APPQOSSYS', 'ORACLE_OCM', 'DIP', 'XDB', 'ANONYMOUS', 'CTXSYS', "
+    "'EXFSYS', 'MDSYS', 'MDDATA', 'ORDSYS', 'ORDDATA', 'ORDPLUGINS', 'SI_INFORMTN_SCHEMA', 'OLAPSYS', "
+    "'WMSYS', 'XS$NULL', 'SYSMAN', 'MGMT_VIEW', 'FLOWS_FILES', 'APEX_PUBLIC_USER', 'OWBSYS', "
+    "'OWBSYS_AUDIT', 'SPATIAL_CSW_ADMIN_USR', 'SPATIAL_WFS_ADMIN_USR', 'LBACSYS', 'DVSYS', 'DVF', "
+    "'TSMSYS')")
+
+
+def _a_11g(sql: str) -> str:
+    sql = sql.replace(_SIN_ORACLE, _ESQUEMAS_ORACLE_11G)
+    m = re.search(r"\s+FETCH FIRST (\d+) ROWS ONLY\s*$", sql)
+    if m:
+        sql = f"SELECT * FROM ({sql[:m.start()]}\n        ) WHERE ROWNUM <= {m.group(1)}"
+    return sql
+
+
+# En 12.2+ el alert log se lee de TODAS las instancias (GV$); antes solo existe la vista local.
+_ALERTLOG_GV = """
+        SELECT inst_id, originating_timestamp AS momento, message_level AS nivel,
+               SUBSTR(message_text, 1, 500) AS mensaje
+          FROM gv$diag_alert_ext
+         WHERE originating_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY
+           AND message_text LIKE '%ORA-%'
+         ORDER BY originating_timestamp DESC
+         FETCH FIRST 500 ROWS ONLY"""
+
+PLANTILLAS_11G: dict[str, str] = {n: _a_11g(q) for n, q in PLANTILLAS.items() if _a_11g(q) != q}
+VARIANTES: dict[str, list[tuple[tuple[int, int], str]]] = {"alertlog_24h": [((12, 2), _ALERTLOG_GV)]}
+
+
+def version_tupla(version: str | None) -> tuple[int, int] | None:
+    """'19.0.0.0.0' -> (19, 0); '11.2.0.4.0' -> (11, 2). None si no se puede leer."""
+    try:
+        partes = str(version).split(".")
+        return int(partes[0]), int(partes[1]) if len(partes) > 1 else 0
+    except (TypeError, ValueError):
+        return None
+
+
+def sql_para(nombre: str, version: str | None = None) -> str:
+    """SQL de la plantilla para la versión de la base (sin versión: la de 12c+)."""
+    v = version_tupla(version)
+    if v is None:
+        return PLANTILLAS[nombre]
+    if v < (12, 1) and nombre in PLANTILLAS_11G:
+        return PLANTILLAS_11G[nombre]
+    for minima, sql in VARIANTES.get(nombre, []):
+        if v >= minima:
+            return sql
+    return PLANTILLAS[nombre]
+
+
+for _n, _sql in [*PLANTILLAS.items(), *PLANTILLAS_11G.items(),
+                 *((n, q) for n, vs in VARIANTES.items() for _, q in vs)]:
     _ok, _msg = validar_lectura(_sql)
     if not _ok:
         raise RuntimeError(f"la plantilla {_n} no pasa la política de solo lectura: {_msg}")

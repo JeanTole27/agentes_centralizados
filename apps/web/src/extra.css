@@ -162,3 +162,16 @@ table.tbl-std.compacta td { white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .giro { animation: none; } }
 .lectura-vista { margin: 0 0 10px; padding: 6px 2px; gap: 12px; flex-wrap: wrap; }
 .lectura-vista.info { padding: 8px 12px; }
+
+/* Pestañas de acciones agrupadas (Consultar · Operar · Configurar): envuelven en vez de cortarse */
+.tabs.tabs-grupos { flex-wrap: wrap; overflow-x: visible; gap: 4px 18px; align-items: flex-end; }
+.tab-grupo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; }
+.tab-grupo-t { width: 100%; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); padding: 0 12px; }
+.tab-c { color: var(--warn); font-size: 9px; vertical-align: super; }
+/* Enlace con aspecto de texto (dentro de tablas) */
+.lnk { border: 0; background: none; padding: 0; color: var(--acc); font: inherit; cursor: pointer; text-decoration: underline; }
+/* Fila de lista que abre un detalle */
+.li.li-btn { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line);
+  font: inherit; color: inherit; cursor: pointer; }
+.li.li-btn:hover { background: var(--acc-soft, rgba(0,0,0,.03)); }

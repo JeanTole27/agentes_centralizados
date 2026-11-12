@@ -17,7 +17,7 @@ acciones:
     con: ejecuta
   estado: catalogada
 - id: com.inv.servidores
-  nombre: Inventario de servidores (182) con ambientes y dominios
+  nombre: Inventario de servidores con ambientes y dominios
   motor: portal
   clase: L
   perfiles:
@@ -27,7 +27,7 @@ acciones:
     con: ejecuta
   estado: catalogada
 - id: com.inv.bases
-  nombre: Inventario de bases (182) con ambiente, criticidad, dueño
+  nombre: Inventario de bases con ambiente, criticidad, dueño
   motor: portal
   clase: L
   perfiles:
@@ -1249,7 +1249,7 @@ acciones:
     cm: ve
     lid: ve
     con: ve
-  estado: catalogada
+  estado: implementada
 - id: ml.anomalias
   nombre: Anomalías frente a la línea normal por hora de la semana
   motor: ml
@@ -1259,7 +1259,7 @@ acciones:
     cm: ve
     lid: ve
     con: ve
-  estado: catalogada
+  estado: implementada
 - id: ml.feedback
   nombre: Marcar una predicción como "útil" o "falsa alarma"
   motor: ml
@@ -1268,14 +1268,14 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+  estado: implementada
 - id: ml.scoring
   nombre: Calcular predicciones (cada hora)
   motor: ml
   clase: L
   sistema: true
   perfiles: {}
-  estado: catalogada
+  estado: implementada
 - id: ml.entrenar
   nombre: Reentrenar y hacer backtest contra el baseline; promover solo si mejora (nocturno)
   motor: ml

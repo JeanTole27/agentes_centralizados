@@ -44,6 +44,12 @@ def referencia_cmops(e: dict) -> str:
     return e.get("cambio") or f"OPS-{e['id']}"
 
 
+def lote_maximo(cfg, ambiente: str | None) -> int:
+    """Tope del lote de frm.mitigar por ambiente ([cm] frm_lote_max; '*' = el resto)."""
+    topes = cfg["cm"].get("frm_lote_max") or {}
+    return int(topes.get(str(ambiente or "").upper(), topes.get("*", 40)))
+
+
 class MotorCM:
     def __init__(self, cfg, secretos: Secretos):
         self.cfg, self.sec = cfg, secretos
@@ -65,6 +71,12 @@ class MotorCM:
                                        principal="svc_opscentral", ttl_min=self.cfg["cm"]["ttl_certificado_min"])
                 emitir(f"Certificado SSH emitido ({self.cfg['cm']['ttl_certificado_min']} min) para {e['solicitante']}")
             params = dict(e["params"])
+            if acc.id == "frm.mitigar":
+                tope = lote_maximo(self.cfg, e.get("ambiente"))
+                pedido = int(params.get("lote") or tope)
+                if pedido > tope:
+                    emitir(f"Lote pedido {pedido} > máximo de {e.get('ambiente')}: se usa {tope} ([cm] frm_lote_max)")
+                params["lote"] = max(1, min(pedido, tope))
             if acc.id in USAN_HOSTS and not params.get("hosts") and params.get("host"):
                 params["hosts"] = params.pop("host")
             req = {"ruta_cmops": str(self.ruta), "accion": acc.id, "params": params, "secretos": secretos,

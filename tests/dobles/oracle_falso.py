@@ -216,6 +216,10 @@ _EXTRA = {
                                 "force_logging": "YES"}],
     "dg_stats": lambda b, p, a: ErrorBD("ORA-00942: table or view does not exist"),
     "dg_gaps": lambda b, p, a: [],
+    "dg_destinos": lambda b, p, a: [{"dest_id": 2, "dest_name": "LOG_ARCHIVE_DEST_2", "status": "VALID",
+                                     "error": None, "gap_status": "NO GAP"}],
+    "rman_ultimo": lambda b, p, a: [{"input_type": "DB INCR", "ultimo_ok": a - timedelta(hours=20), "horas": 20.0},
+                                    {"input_type": "ARCHIVELOG", "ultimo_ok": a - timedelta(hours=1), "horas": 1.0}],
     "rman_7d": lambda b, p, a: [
         {"input_type": "DB INCR", "status": "COMPLETED", "start_time": a - timedelta(days=2, hours=1),
          "end_time": a - timedelta(days=2)},
