@@ -6,6 +6,7 @@ lectura con OPS_CONSULTA y cambios con OPS_DBA, que solo llama al paquete.
 from __future__ import annotations
 
 import hashlib
+import time
 import uuid
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -40,6 +41,38 @@ class MotorBD:
 
     def __init__(self, cfg, almacen: Almacen, inventario: Inventario, secretos: Secretos, limites: Limites):
         self.cfg, self.a, self.inv, self.sec, self.lim = cfg, almacen, inventario, secretos, limites
+        self._lb_cache: dict[str, tuple[float, list[dict]]] = {}   # línea base por base (cambia poco)
+
+    # ------------------------------------------------------------ lecturas compartidas
+    def _leer_bloqueos(self, c) -> list[dict]:
+        """Sesiones bloqueadas y sus raíces. El nombre del objeto en espera se busca aparte y solo si hay
+        bloqueos (lo normal es que no haya: así no se toca DBA_OBJECTS en cada pasada)."""
+        filas = c.consultar("bloqueos")
+        faltan = {int(f["obj_id"]) for f in filas if f.get("obj_id") and int(f["obj_id"]) > 0 and not f.get("objeto")}
+        if faltan:
+            try:
+                nombres = {int(o["object_id"]): o["objeto"] for o in c.consultar("objetos_bloqueo")}
+            except Exception:  # noqa: BLE001 — sin el nombre del objeto el árbol igual sirve
+                nombres = {}
+            for f in filas:
+                if not f.get("objeto") and f.get("obj_id"):
+                    f["objeto"] = nombres.get(int(f["obj_id"]))
+        return filas
+
+    def _leer_invalidos(self, c) -> list[dict]:
+        """Inválidos sin los esquemas excluidos por configuración ([bd] invalidos_excluir: productos
+        instalados que Oracle no marca como propios, PUBLIC, etc.)."""
+        return snapshot.excluir(c.consultar("invalidos"), self.cfg["bd"].get("invalidos_excluir") or [])
+
+    def _leer_linea_base(self, base: str, c) -> list[dict]:
+        """La línea base cambia poco: se guarda en memoria [bd] linea_base_cache_s (6 h por defecto)."""
+        ttl = int(self.cfg["bd"].get("linea_base_cache_s", 21600))
+        hit = self._lb_cache.get(base)
+        if hit and time.time() - hit[0] < ttl:
+            return hit[1]
+        lb = c.consultar("linea_base")
+        self._lb_cache[base] = (time.time(), lb)
+        return lb
 
     # ------------------------------------------------------------ conexión
     def _base(self, nombre: str) -> Activo:
@@ -99,13 +132,23 @@ class MotorBD:
             return especiales[acc.id]()
         if acc.plantilla:
             with self.conectar(base, tipo, persona=quien, ejecucion_id=eid, motivo=motivo) as c:
-                filas = c.consultar(acc.plantilla, p)
+                if acc.plantilla == "bloqueos":
+                    filas = self._leer_bloqueos(c)
+                elif acc.plantilla == "invalidos":
+                    filas = self._leer_invalidos(c)
+                elif acc.plantilla == "linea_base":
+                    filas = c.consultar("linea_base")
+                    self._lb_cache.pop(base, None)
+                else:
+                    filas = c.consultar(acc.plantilla, p)
             emitir(f"{len(filas)} fila(s)")
             if acc.plantilla == "bloqueos":
                 r = bloqueos.arbol(filas)
                 estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", r, origen="ejecucion")
-                self._actualizar_salud(base, emitir)
+                self._actualizar_salud(base, emitir, secciones=["bloqueos"])
                 return r
+            if acc.plantilla == "invalidos":
+                filas = [o for o in filas if not snapshot.es_papelera(o)]
             return {"filas": filas}
         if acc.procedimiento:
             args = {k: ("S" if v is True else "N" if v is False else v) for k, v in p.items()
@@ -230,7 +273,7 @@ class MotorBD:
                 with self.conectar(b, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="bd del dominio") as c:
                     fila["sesiones_app"] = [f for srv in servidores
                                             for f in c.consultar("sesiones_por_maquina", {"maquina": srv})]
-                    fila["bloqueos"] = bloqueos.arbol(c.consultar("bloqueos"))["total_bloqueadas"]
+                    fila["bloqueos"] = bloqueos.arbol(self._leer_bloqueos(c))["total_bloqueadas"]
             except Exception as ex:  # noqa: BLE001
                 fila["error"] = str(ex)[:300]
                 hallazgos.append({"nivel": "rojo", "texto": f"{b}: sin respuesta ({str(ex)[:120]})"})
@@ -281,6 +324,7 @@ class MotorBD:
             pl += list(analisis.POR_ACCION[ch][0])
         with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="análisis") as c:
             datos, errores = self._consultar_varias(c, pl, {"min_segundos": u["idle_tx_amarillo_s"]}, emitir)
+        datos["invalidos"] = snapshot.excluir(datos["invalidos"], self.cfg["bd"].get("invalidos_excluir") or [])
         lbk = {snapshot.clave(o) for o in datos["linea_base"]}
         fuera = [o for o in datos["invalidos"] if snapshot.clave(o) not in lbk and not snapshot.es_papelera(o)]
         sem = salud.evaluar((datos["salud_instancia"] or [None])[0], datos["tablespaces"], datos["diskgroups"],
@@ -403,7 +447,7 @@ class MotorBD:
                        emitir: Emitir) -> dict:
         with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id,
                            motivo=f"snapshot {momento}") as c:
-            inv = c.consultar("invalidos")
+            inv = self._leer_invalidos(c)
             ts = c.consultar("tablespaces")
         s = snapshot.armar(base, cambio, momento, inv, {"tablespaces": ts})
         with self.a.tx() as con:
@@ -451,7 +495,7 @@ class MotorBD:
         aviso = None
         try:
             with self.conectar(base, "consulta", persona=persona, ejecucion_id=ejecucion_id, motivo="línea base") as c:
-                lb = c.consultar("linea_base")
+                lb = self._leer_linea_base(base, c)
         except Exception as ex:  # noqa: BLE001
             if not _es_error_linea_base(ex):
                 raise
@@ -479,13 +523,13 @@ class MotorBD:
         emitir("Snapshot FINAL automático")
         self.tomar_snapshot(base, cambio, "FINAL", persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
         final = self.comparar(base, cambio, persona=persona, ejecucion_id=ejecucion_id, emitir=emitir)
-        self._actualizar_salud(base, emitir)
+        self._actualizar_salud(base, emitir, secciones=["invalidos"])
         return {"recompilacion": r, "comparacion_final": final}
 
-    def _actualizar_salud(self, base: str, emitir: Emitir) -> None:
-        """Tras una acción que cambia lo que muestra Salud (bloqueos, inválidos), se repite la pasada
-        liviana de recolección de esa base para que el semáforo no quede con el dato anterior."""
-        r = self.recolectar_base(base, origen="ejecucion")
+    def _actualizar_salud(self, base: str, emitir: Emitir, secciones: list[str] | None = None) -> None:
+        """Tras una acción que cambia lo que muestra Salud (bloqueos, inválidos), se relee SOLO esa
+        sección de la base para que el semáforo no quede con el dato anterior."""
+        r = self.recolectar_base(base, origen="ejecucion", secciones=secciones)
         if r.get("error"):
             emitir(f"Salud no se pudo actualizar: {r['error']} (se actualizará en la próxima recolección)")
         else:
@@ -495,7 +539,7 @@ class MotorBD:
     def terminar_sesion(self, e: dict, emitir: Emitir) -> dict:
         p, base = e["params"], e["params"]["base"]
         with self.conectar(base, "consulta", persona=e["solicitante"], ejecucion_id=e["id"], motivo="verificar raíz") as c:
-            antes = bloqueos.arbol(c.consultar("bloqueos"))
+            antes = bloqueos.arbol(self._leer_bloqueos(c))
         raices = {(a["raiz"]["inst_id"], a["raiz"]["sid"]) for a in antes["arboles"]}
         objetivo = (p.get("inst_id", 1), p["sid"])
         if objetivo not in raices:
@@ -505,69 +549,99 @@ class MotorBD:
                                              "motivo": p["motivo"]})
         emitir(f"TERMINAR_SESION → {r}")
         with self.conectar(base, "consulta", persona=e["solicitante"], ejecucion_id=e["id"], motivo="verificar") as c:
-            despues = bloqueos.arbol(c.consultar("bloqueos"))
+            despues = bloqueos.arbol(self._leer_bloqueos(c))
         estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", despues, origen="ejecucion")
         sigue = any((a["raiz"]["inst_id"], a["raiz"]["sid"]) == objetivo for a in despues["arboles"])
         emitir("El bloqueo desapareció" if not sigue else "El bloqueo continúa: revisar")
-        self._actualizar_salud(base, emitir)
+        self._actualizar_salud(base, emitir, secciones=["bloqueos"])
         return {"resultado": r, "bloqueo_resuelto": not sigue, "bloqueadas_antes": antes["total_bloqueadas"],
                 "bloqueadas_despues": despues["total_bloqueadas"]}
 
-    # ------------------------------------------------------------ recolección programada
+    # ------------------------------------------------------------ recolección
     # Secciones que se pueden perder sin descartar la pasada: si fallan se anota el motivo y se sigue.
-    # La instancia (salud_instancia) es obligatoria: sin ella no hay semáforo.
-    # `bloqueos` va al final: es la que suele exceder call_timeout_s en bases grandes, y un timeout
-    # puede dejar la conexión inutilizable para las consultas que vinieran después.
+    # La instancia (salud_instancia) es obligatoria y barata: sin ella no hay semáforo.
+    # Ya NO se leen todas cada 15 min (era pesado para 180+ bases):
+    #   - periódica liviana ([bd] secciones_periodicas, cada [bd] recoleccion_periodica_s): espacio;
+    #   - por alerta de Zabbix: solo la sección que indica la alerta (bloqueos, tablespaces, inválidos…);
+    #   - diaria completa ([bd] recoleccion_completa_s) y a pedido (Refrescar, o después de una acción).
+    # Las secciones que no se releen conservan el último valor guardado, con su fecha en `leidas`.
     SECCIONES_OPCIONALES = {
         "tablespaces": "tablespaces", "diskgroups": "ASM", "invalidos": "objetos inválidos",
         "linea_base": "línea base de inválidos", "bloqueos": "bloqueos",
     }
 
-    def recolectar_base(self, base: str, *, origen: str = "recoleccion") -> dict:
-        """Una pasada liviana por base: salud, tablespaces, diskgroups, bloqueos e inválidos.
+    def recolectar_base(self, base: str, *, origen: str = "recoleccion", secciones: list[str] | None = None) -> dict:
+        """Lee la instancia y las secciones pedidas (todas si `secciones` es None) y actualiza el semáforo.
 
-        Solo la conexión y `salud_instancia` son obligatorias. Cada otra consulta va en su propio
-        try: si una falla (p. ej. `linea_base` con ORA-00942 porque falta ADMINBD.TBL_BASE_OBJETOS_INVALIDOS,
-        o `bloqueos` con DPY-4024 por timeout) se guarda lo demás y la falla queda en `datos.parciales`."""
+        Cada sección va en su propio try: si una falla (p. ej. `linea_base` con ORA-00942, o `bloqueos`
+        con DPY-4024 por timeout) se guarda lo demás y la falla queda en `datos.parciales`."""
         eid = f"rec-{utc():%Y%m%d%H%M}"
         b = self._base(base)
+        pedidas = list(self.SECCIONES_OPCIONALES) if secciones is None else \
+            [x for x in self.SECCIONES_OPCIONALES if x in secciones]
+        if "invalidos" in pedidas and "linea_base" not in pedidas:
+            pedidas.append("linea_base")          # sin línea base no se sabe cuáles son nuevos (va en caché)
+        previo = (estado.leer(self.a, f"bd:{base}:salud") or {}).get("datos") or {}
         parciales: dict[str, str] = {}
         res: dict[str, list] = {}
         try:
             with self.conectar(base, "consulta", persona="sistema", ejecucion_id=eid, motivo="recolección") as c:
                 inst = (c.consultar("salud_instancia") or [None])[0]
-                for sec in self.SECCIONES_OPCIONALES:
+                # bloqueos al final: si excede call_timeout_s la conexión puede quedar inutilizable
+                for sec in sorted(pedidas, key=lambda x: x == "bloqueos"):
                     try:
-                        res[sec] = c.consultar(sec)
+                        if sec == "bloqueos":
+                            res[sec] = self._leer_bloqueos(c)
+                        elif sec == "invalidos":
+                            res[sec] = self._leer_invalidos(c)
+                        elif sec == "linea_base":
+                            res[sec] = self._leer_linea_base(base, c)
+                        else:
+                            res[sec] = c.consultar(sec)
                     except Exception as ex:  # noqa: BLE001 — la sección se pierde, la pasada sigue
                         if sec != "diskgroups":           # sin ASM es normal: no es una falla
                             parciales[sec] = str(ex)[:500]
         except Exception as ex:
             estado.marcar_error(self.a, f"bd:{base}:salud", "bd.salud", str(ex), origen=origen)
             return {"base": base, "semaforo": "sin_dato", "error": str(ex)}
-        ts, dg, inv = res.get("tablespaces", []), res.get("diskgroups", []), res.get("invalidos")
+
+        ahora = utc().isoformat()
+        leidas = dict(previo.get("leidas") or {})
+        for sec in res:
+            leidas[sec] = ahora
+        ts = res["tablespaces"] if "tablespaces" in res else previo.get("tablespaces") or []
+        dg = res["diskgroups"] if "diskgroups" in res else previo.get("diskgroups") or []
+
         blq = bloqueos.arbol(res["bloqueos"]) if "bloqueos" in res else None
-        fuera_lb: list | None = None
-        if inv is not None and "linea_base" in res:
-            lbk = {snapshot.clave(o) for o in res["linea_base"]}
-            fuera_lb = [o for o in inv if snapshot.clave(o) not in lbk and not snapshot.es_papelera(o)]
-        sem = salud.evaluar(inst, ts, dg, bloqueadas=blq["total_bloqueadas"] if blq else 0,
-                            invalidos_nuevos=len(fuera_lb) if fuera_lb is not None else 0)
+        bloqueadas = blq["total_bloqueadas"] if blq else previo.get("bloqueadas")
+
         avisos = [f"{self.SECCIONES_OPCIONALES[k]} no disponible: {v.splitlines()[0][:160]}" for k, v in parciales.items()]
-        if inv is not None and fuera_lb is None:
-            avisos.append(f"{len(inv)} objetos inválidos (sin línea base para comparar)")
+        if "invalidos" in res:
+            inv = [o for o in res["invalidos"] if not snapshot.es_papelera(o)]
+            n_inv, fuera_n, en_lb = len(inv), None, None
+            if "linea_base" in res:
+                lbk = {snapshot.clave(o) for o in res["linea_base"]}
+                fuera_n = sum(1 for o in inv if snapshot.clave(o) not in lbk)
+                en_lb = n_inv - fuera_n
+            else:
+                avisos.append(f"{n_inv} objetos inválidos (sin línea base para comparar)")
+        else:
+            n_inv, fuera_n, en_lb = (previo.get("invalidos"), previo.get("invalidos_fuera_lb"),
+                                     previo.get("invalidos_en_lb"))
+
+        sem = salud.evaluar(inst, ts, dg, bloqueadas=bloqueadas or 0, invalidos_nuevos=fuera_n or 0)
         datos = {"base": base, "ambiente": b.ambiente, "instancia": inst, "tablespaces": ts, "diskgroups": dg,
-                 "bloqueadas": blq["total_bloqueadas"] if blq else None,
-                 "invalidos": len(inv) if inv is not None else None,
-                 "invalidos_fuera_lb": len(fuera_lb) if fuera_lb is not None else None,
-                 "parciales": parciales, **sem}
+                 "bloqueadas": bloqueadas, "invalidos": n_inv, "invalidos_fuera_lb": fuera_n,
+                 "invalidos_en_lb": en_lb, "parciales": parciales, "leidas": leidas,
+                 "ultima_pasada": {"origen": origen, "secciones": sorted(res)}, **sem}
         if avisos:
             datos["motivos"] = list(sem.get("motivos") or []) + avisos
         estado.guardar(self.a, f"bd:{base}:salud", "bd.salud", datos, origen=origen)
         if blq is not None:
             estado.guardar(self.a, f"bd:{base}:bloqueos", "bd.bloqueos", blq, origen=origen)
-        self._series(base, ts, dg)
-        return {"base": base, "semaforo": sem["semaforo"], "parcial": sorted(parciales)}
+        if "tablespaces" in res or "diskgroups" in res:
+            self._series(base, res.get("tablespaces", []), res.get("diskgroups", []))
+        return {"base": base, "semaforo": sem["semaforo"], "parcial": sorted(parciales), "secciones": sorted(res)}
 
     def _series(self, base: str, ts: list[dict], dg: list[dict]) -> None:
         hora = utc().replace(minute=0, second=0, microsecond=0)
@@ -580,11 +654,13 @@ class MotorBD:
                 if r.rowcount == 0:
                     con.execute(serie_punto.insert().values(serie=serie, ts=hora, valor=valor))
 
-    def barrido(self, ambiente: str | None, *, persona: str, ejecucion_id: str, emitir: Emitir) -> dict:
+    def barrido(self, ambiente: str | None, *, persona: str, ejecucion_id: str, emitir: Emitir,
+                secciones: list[str] | None = None) -> dict:
         bases = [b.id for b in self.inv.bases(ambiente)]
-        emitir(f"Barrido de {len(bases)} base(s) con máximo {self.cfg['bd']['max_paralelo']} en paralelo")
+        alcance = "completo" if secciones is None else ", ".join(secciones) or "solo instancia"
+        emitir(f"Barrido de {len(bases)} base(s) ({alcance}) con máximo {self.cfg['bd']['max_paralelo']} en paralelo")
         with ThreadPoolExecutor(max_workers=self.cfg["bd"]["max_paralelo"]) as ex:
-            res = list(ex.map(lambda b: self.recolectar_base(b, origen="barrido"), bases))
+            res = list(ex.map(lambda b: self.recolectar_base(b, origen="barrido", secciones=secciones), bases))
         conteo: dict[str, int] = {}
         for r in res:
             conteo[r["semaforo"]] = conteo.get(r["semaforo"], 0) + 1

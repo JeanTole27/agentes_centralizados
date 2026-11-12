@@ -55,6 +55,17 @@ verificar_tls = true
 # base = "customfield_10050"
 # host = "customfield_10051"
 
+[asistente]
+# Ventana de chat del asistente operativo (RAG de runbooks e incidentes + consultas de solo lectura).
+# Mientras habilitado = false (o url vacío) la ventana aparece y registra las preguntas, pero responde
+# "no conectado". Nunca ejecuta acciones: solo sugiere ir a la pantalla o abrir el formulario de la acción.
+habilitado = false
+url = ""                         # endpoint del motor (pendiente)
+motor = ""                       # nombre informativo del motor
+credencial_ref = "asistente/api"
+timeout_s = 60
+max_caracteres = 2000
+
 [secretos]
 proveedor = "archivo"        # archivo (solo desarrollo) | vault
 archivo = "config/secretos.dev.json"
@@ -117,6 +128,12 @@ min_puntos = 24
 
 [inventario]
 archivo = "config/inventario.json"   # lo escribe: python -m opscentral generar-inventario
+# Quién puede dar de alta, editar o dar de baja activos desde la pantalla Inventario.
+# Vacío = todos los perfiles (modo demo). Luego: editores = ["login.de.la.persona"]
+editores = []
+# Otras copias de databases.json con bases que el kit principal no tiene (p. ej. DESA). Se agregan
+# solo los alias nuevos. Relativas a ops-central.
+bases_adicionales = ["../../hoja_de_vida_portable-main/hoja_de_vida_portable-main/config/databases.json"]
 
 [inventario.insumos]
 servidores_cm = "../capa-media-ops/inventario/servidores.json"   # insumo original: solo para regenerar config/inventario.json

@@ -74,7 +74,8 @@ def sincronizar_problemas(almacen: Almacen, cola: Cola, inv: Inventario, cli: Cl
         if str(p["eventid"]) in conocidos:          # ya llegó por webhook o en una pasada anterior
             continue
         r = procesar.procesar(almacen, cola, inv, _evento(p, trig.get(p.get("objectid"), {})),
-                              ventana_min=z["ventana_episodio_min"], refresco_min_s=cfg["bd"]["refresco_min_s"])
+                              ventana_min=z["ventana_episodio_min"], refresco_min_s=cfg["bd"]["refresco_min_s"],
+                              max_bases=cfg["bd"]["max_bases_por_evento"])
         nuevos += 1
         if r.get("sugerencia"):
             sugerencias.append({"evento": p["eventid"], "accion": r["sugerencia"]})
@@ -90,7 +91,8 @@ def sincronizar_problemas(almacen: Almacen, cola: Cola, inv: Inventario, cli: Cl
         procesar.procesar(almacen, cola, inv, Evento(
             eventid=eid, host=f.host, nombre=f.nombre, severidad=f.severidad, problema=False, inicio=ahora,
             en_mantenimiento=False, etiquetas={}, crudo={"origen": "problem.get", "recuperado_por": "sincronizacion"}),
-            ventana_min=z["ventana_episodio_min"], refresco_min_s=cfg["bd"]["refresco_min_s"])
+            ventana_min=z["ventana_episodio_min"], refresco_min_s=cfg["bd"]["refresco_min_s"],
+                              max_bases=cfg["bd"]["max_bases_por_evento"])
         recuperados += 1
 
     sin_inventario = sorted({e.host for e in (_evento(p, trig.get(p.get("objectid"), {})) for p in abiertos)
@@ -171,6 +173,38 @@ def recolectar_capacidad(almacen: Almacen, inv: Inventario, cli: ClienteZabbix, 
     r = {"version": cli.version, "servidores": len(servidores), "en_zabbix": len(encontrados),
          "faltan_en_zabbix": faltan, "series": series, "puntos_nuevos": puntos, "dias": dias}
     estado.guardar(almacen, "zbx:capacidad", "zbx.capacidad", r, origen="zabbix")
+    return r
+
+
+# ====================================================================== vínculos por IP
+def vincular_hosts(almacen: Almacen, inv: Inventario, cli: ClienteZabbix, ajustes, *, por: str = "zabbix") -> dict:
+    """Completa el zabbix_host de los servidores del inventario buscando su IP en Zabbix.
+
+    La mayoría de los servidores de BD llegan del kit solo con IP (BD-10.x.x.x): sin el nombre del
+    host de Zabbix sus alertas no se pueden asociar a ninguna base. El vínculo se guarda como ajuste
+    del inventario (visible y editable en Inventario), no en el archivo generado."""
+    por_ip: dict[str, str] = {}
+    for h in cli.hosts_con_ip():
+        for i in h.get("interfaces") or []:
+            if i.get("ip"):
+                por_ip.setdefault(i["ip"], h["host"])
+    vinculados, sin_match = [], []
+    for a in sorted(inv.activos.values(), key=lambda x: x.id):
+        if a.tipo != "servidor" or a.datos.get("zabbix_host"):
+            continue
+        host = por_ip.get(a.datos.get("ip") or "")
+        if host:
+            ajustes.editar("servidor", a.id, {"zabbix_host": host}, por)
+            vinculados.append({"servidor": a.id, "ip": a.datos.get("ip"), "zabbix_host": host.upper()})
+        else:
+            sin_match.append(a.id)
+    sin_vinculo = sorted(a.id for a in inv.activos.values() if a.tipo == "servidor" and not a.datos.get("zabbix_host"))
+    bases_sin = sorted(b.id for b in inv.bases() if not b.datos.get("zabbix_host") and
+                       not (inv.servidor(b.datos.get("servidor") or "") and
+                            inv.servidor(b.datos.get("servidor") or "").datos.get("zabbix_host")))
+    r = {"hosts_zabbix": len(por_ip), "vinculados": vinculados, "servidores_sin_vinculo": sin_vinculo,
+         "bases_sin_vinculo": bases_sin}
+    estado.guardar(almacen, "zbx:vinculos", "zbx.vinculos", r, origen="zabbix")
     return r
 
 

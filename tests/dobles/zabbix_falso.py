@@ -65,6 +65,7 @@ class SimuladorZabbix:
                                     "_nivel": nivel, "_pend": pend, "_ruido": ruido}
         self.problemas = [p for p in _problemas_iniciales(self.ahora) if p["host"] in self.hosts]
         self.llamadas: list[tuple[str, dict]] = []
+        self.ips: dict[str, str] = {}          # host → IP de su interfaz principal (vincular por IP)
 
     # ------------------------------------------------------------------ control para pruebas/demo
     def resolver(self, eventid: str) -> None:
@@ -95,7 +96,11 @@ class SimuladorZabbix:
 
     def _m_host_get(self, p):
         nombres = {n.upper() for n in (p.get("filter") or {}).get("host", self.hosts)}
-        return [{"hostid": hid, "host": h, "name": h, "status": "0"} for h, hid in self.hosts.items() if h in nombres]
+        out = [{"hostid": hid, "host": h, "name": h, "status": "0"} for h, hid in self.hosts.items() if h in nombres]
+        if p.get("selectInterfaces"):
+            for h in out:
+                h["interfaces"] = [{"ip": self.ips.get(h["host"], "127.0.0.1"), "main": "1"}]
+        return out
 
     def _m_item_get(self, p):
         hids = set(p.get("hostids") or [])

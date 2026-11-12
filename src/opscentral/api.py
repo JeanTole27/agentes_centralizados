@@ -27,6 +27,8 @@ from .ejecuciones import Conflicto, EstadoInvalido, RequiereStepUp
 from .almacen import ejecucion as t_ejecucion, usuario_demo
 from .bd.reportes import REPORTES
 from .identidad import NOMBRES_PERFIL, PERFILES_DEMO, SinPerfil, Usuario, construir_usuario, ingreso_demo, ingreso_dev
+from .asistente import Asistente, PreguntaInvalida
+from .inventario_ajustes import CAMPOS as CAMPOS_INV, OPCIONES as OPCIONES_INV, ErrorInventario
 from .jira import ErrorJira, JiraNoConfigurado, ServicioCasos
 from .limites import pedir_refresco
 from .nucleo import Nucleo, crear
@@ -73,6 +75,35 @@ class Feedback(BaseModel):
     valor: str
 
 
+class ActivoInventario(BaseModel):
+    id: str = ""
+    datos: dict[str, Any] = Field(default_factory=dict)
+
+
+class PublicarEvidencia(BaseModel):
+    base: str
+    grupo: str
+
+
+class ComentarEjecucion(BaseModel):
+    ejecucion_id: str
+
+
+class Transicion(BaseModel):
+    id: str
+
+
+class PreguntaAsistente(BaseModel):
+    pregunta: str
+    contexto: dict[str, Any] = Field(default_factory=dict)
+
+
+class ValoracionAsistente(BaseModel):
+    respuesta_id: str
+    util: bool
+    comentario: str = ""
+
+
 def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAPI:
     cfg = cfg or cargar()
     n = nucleo or crear("api", cfg)
@@ -80,6 +111,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     app = FastAPI(title="Ops Central", version=VERSION, docs_url=None if cfg.es_produccion else "/api/docs",
                   openapi_url=None if cfg.es_produccion else "/api/openapi.json")
     casos = ServicioCasos(cfg, n.secretos, n.inventario, n.catalogo)
+    asistente = Asistente(cfg)
     app.state.n, app.state.ses, app.state.casos = n, ses, casos
     seguro = cfg.es_produccion
     sin_auth = cfg["auth"]["proveedor"] in ("dev", "demo") and not cfg.es_produccion
@@ -101,7 +133,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
 
     for tipo, cod in ((ErrorValidacion, 422), (PermisoDenegado, 403), (SinPerfil, 403), (Conflicto, 409),
                       (EstadoInvalido, 409), (RequiereStepUp, 428), (KeyError, 404), (JiraNoConfigurado, 503),
-                      (ErrorJira, 502)):
+                      (ErrorJira, 502), (PreguntaInvalida, 422), (ErrorInventario, 422)):
         app.add_exception_handler(tipo, _err(cod))
 
     # -------------------------------------------------------------- seguridad de cada pedido
@@ -122,6 +154,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
         if not u:
             raise HTTPException(401, "sesión inexistente o vencida")
         u.ip = request.client.host if request.client else ""
+        if n.inv_ajustes:
+            n.inv_ajustes.sincronizar()      # otro proceso pudo editar el inventario
         return u
 
     def con_perfil(*perfiles: str):
@@ -252,6 +286,27 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
                             "bloqueo": a.bloqueo_impl})
         return out
 
+    # ============================================================== asistente (ventana de chat)
+    # Disponible para todos los perfiles. Solo lectura: nunca ejecuta; las acciones que sugiere llevan a
+    # la pantalla o al formulario normal de la acción. Mientras no haya motor responde "no_conectado".
+    @app.get("/api/asistente/estado")
+    def asistente_estado(u: Usuario = Depends(usuario)):
+        return asistente.estado(sorted(u.perfiles))
+
+    @app.post("/api/asistente/preguntar")
+    def asistente_preguntar(p: PreguntaAsistente, u: Usuario = Depends(usuario)):
+        q, ctx = asistente.validar(p.pregunta, p.contexto)
+        r = asistente.preguntar(q, ctx, sorted(u.perfiles))
+        n.auditoria.registrar("asistente_pregunta", u.login, respuesta=r.id, estado=r.estado, contexto=ctx,
+                              pregunta=q[:500])
+        return r.a_dict()
+
+    @app.post("/api/asistente/valorar")
+    def asistente_valorar(v: ValoracionAsistente, u: Usuario = Depends(usuario)):
+        n.auditoria.registrar("asistente_valoracion", u.login, respuesta=v.respuesta_id[:20], util=v.util,
+                              comentario=v.comentario[:500])
+        return {"ok": True}
+
     # ============================================================== casos (Jira, opcionales)
     @app.get("/api/casos")
     def buscar_casos(q: str = "", u: Usuario = Depends(usuario)):
@@ -265,6 +320,57 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             raise ErrorValidacion(str(e)) from None
         n.auditoria.registrar("caso_consultado", u.login, caso=c["clave"], accion=accion)
         return c
+
+    @app.post("/api/casos/{clave}/comentar")
+    def caso_comentar(clave: str, p: ComentarEjecucion, u: Usuario = Depends(usuario)):
+        """Deja en el caso de Jira el resultado de una ejecución de Ops Central."""
+        e = _visible(p.ejecucion_id, u)
+        try:
+            r = casos.comentar_ejecucion(clave, e, u.login)
+        except ValueError as ex:
+            raise ErrorValidacion(str(ex)) from None
+        n.auditoria.registrar("caso_comentado", u.login, caso=r["clave"], ejecucion=e["id"])
+        return r
+
+    @app.post("/api/casos/{clave}/evidencia-snapshot")
+    def caso_evidencia(clave: str, p: PublicarEvidencia, u: Usuario = Depends(usuario)):
+        """Adjunta al caso el ZIP de evidencia del snapshot y comenta el resultado."""
+        _exigir_ver(u, "bd.snap.comparar")
+        contenido, nombre, resumen, comp = _evidencia_snapshot(p.base, p.grupo, u)
+        rr = (comp or {}).get("resumen") or {}
+        if not comp:
+            linea = "Todavía sin comparación: se adjuntan los snapshots."
+        elif resumen["veredicto"] == "sin_nuevos":
+            linea = "Resultado: el cambio no dejó objetos inválidos nuevos."
+        else:
+            linea = f"Resultado: {rr.get('nuevos', '?')} objeto(s) inválido(s) nuevo(s)."
+        parrafos = [f"Ops Central · evidencia de objetos inválidos en {p.base.upper()} ({p.grupo.upper()})", linea,
+                    (f"Nuevos {rr.get('nuevos', '-')} · corregidos {rr.get('corregidos', '-')} · persistentes "
+                     f"{rr.get('persistentes', '-')} · en línea base {rr.get('en_linea_base', '-')}") if comp else "",
+                    f"Adjunto {nombre} (SHA-256 {resumen['sha256_zip']}). Publicado por {u.login}."]
+        try:
+            r = casos.publicar_evidencia(clave, nombre, contenido, parrafos)
+        except ValueError as ex:
+            raise ErrorValidacion(str(ex)) from None
+        n.auditoria.registrar("caso_evidencia_publicada", u.login, caso=r["clave"], base=p.base.upper(),
+                              grupo=p.grupo.upper(), sha256=resumen["sha256_zip"])
+        return {**r, "sha256": resumen["sha256_zip"]}
+
+    @app.get("/api/casos/{clave}/transiciones")
+    def caso_transiciones(clave: str, u: Usuario = Depends(usuario)):
+        try:
+            return casos.transiciones(clave)
+        except ValueError as ex:
+            raise ErrorValidacion(str(ex)) from None
+
+    @app.post("/api/casos/{clave}/transicion")
+    def caso_transicion(clave: str, t: Transicion, u: Usuario = Depends(usuario)):
+        try:
+            r = casos.transicionar(clave, t.id)
+        except ValueError as ex:
+            raise ErrorValidacion(str(ex)) from None
+        n.auditoria.registrar("caso_transicion", u.login, caso=r["clave"], transicion=t.id)
+        return r
 
     @app.post("/api/acciones/{accion_id}/evaluar")
     def evaluar(accion_id: str, s: SolicitudEjecucion, u: Usuario = Depends(usuario)):
@@ -586,6 +692,25 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             raise HTTPException(404, "todavía no hay comparación para ese cambio")
         return f
 
+    def _evidencia_snapshot(base: str, grupo: str, u: Usuario):
+        from .bd import evidencia_snapshot
+        comp = (estado.leer(n.almacen, f"bd:{base.upper()}:snapshot:{grupo.upper()}") or {}).get("datos")
+        contenido, nombre, resumen = evidencia_snapshot.paquete(n.almacen, base.upper(), grupo.upper(), comp,
+                                                                quien=f"{u.nombre} ({u.login})")
+        return contenido, nombre, resumen, comp
+
+    @app.get("/api/estado/bd/{base}/snapshot/{cambio}/evidencia")
+    def snapshot_evidencia(base: str, cambio: str, u: Usuario = Depends(usuario)):
+        """ZIP de evidencia del grupo de snapshot: HTML legible, JSON de cada snapshot, comparación,
+        ejecuciones con su salida y manifiesto SHA-256."""
+        _exigir_ver(u, "bd.snap.comparar")
+        contenido, nombre, resumen, _ = _evidencia_snapshot(base, cambio, u)
+        n.auditoria.registrar("snapshot_evidencia_descargada", u.login, base=base.upper(), grupo=cambio.upper(),
+                              sha256=resumen["sha256_zip"])
+        return Response(contenido, media_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{nombre}"', "Cache-Control": "no-store",
+                                 "X-Evidencia-Sha256": resumen["sha256_zip"]})
+
     @app.post("/api/refresco", status_code=202)
     def refrescar(p: PedidoRefresco, u: Usuario = Depends(usuario)):
         if not permiso_de(u, n.catalogo["com.refresco"]) == "ejecuta":
@@ -613,7 +738,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             raise HTTPException(401, "firma inválida") from None
         ev = wh.normalizar(json.loads(cuerpo))
         r = procesar.procesar(n.almacen, n.cola, n.inventario, ev, ventana_min=cfg["zabbix"]["ventana_episodio_min"],
-                              refresco_min_s=cfg["bd"]["refresco_min_s"])
+                              refresco_min_s=cfg["bd"]["refresco_min_s"],
+                              max_bases=cfg["bd"]["max_bases_por_evento"])
         n.auditoria.registrar("evento_zabbix", "zabbix", eventid=ev.eventid, host=ev.host, episodio=r.get("episodio"),
                               problema=ev.problema)
         return r
@@ -691,7 +817,74 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             d = {k: v for k, v in a.datos.items() if k not in ("dsn",)}
             por_tipo[a.tipo].append({"id": a.id, "ambiente": a.ambiente, **d,
                                      "relacionados": sorted(n.inventario.relacionados(a.clave, 1) - {a.clave})})
-        return {"servidores": por_tipo["servidor"], "dominios": por_tipo["dominio"], "bases": por_tipo["base"]}
+        return {"servidores": por_tipo["servidor"], "dominios": por_tipo["dominio"], "bases": por_tipo["base"],
+                "editable": n.inv_ajustes.puede_editar(u.login) if n.inv_ajustes else False}
+
+    # ---- CRUD del inventario (ajustes sobre el archivo generado). Por ahora: todos los perfiles que ven
+    # el inventario ([inventario] editores vacío); luego se restringe a una persona con esa lista.
+    def _editor(u: Usuario) -> None:
+        _exigir_ver(u, "com.inv.servidores")
+        if not n.inv_ajustes.puede_editar(u.login):
+            raise HTTPException(403, "no estás en la lista de editores del inventario ([inventario] editores)")
+
+    def _tipo(tipo: str) -> str:
+        t = {"servidores": "servidor", "dominios": "dominio", "bases": "base"}.get(tipo, tipo)
+        if t not in CAMPOS_INV:
+            raise ErrorValidacion("tipo de activo inválido: servidor, dominio o base")
+        return t
+
+    @app.get("/api/inventario/esquema")
+    def inventario_esquema(u: Usuario = Depends(usuario)):
+        _exigir_ver(u, "com.inv.servidores")
+        return {"campos": {t: [{"campo": c, "etiqueta": e, "tipo": k, "obligatorio": o} for c, (e, k, o) in cs.items()]
+                           for t, cs in CAMPOS_INV.items()},
+                "opciones": OPCIONES_INV, "editable": n.inv_ajustes.puede_editar(u.login)}
+
+    @app.get("/api/inventario/ajustes")
+    def inventario_ajustes(u: Usuario = Depends(usuario)):
+        _exigir_ver(u, "com.inv.servidores")
+        return n.inv_ajustes.ajustes()
+
+    @app.post("/api/inventario/vincular-zabbix", status_code=202)
+    def inventario_vincular(u: Usuario = Depends(usuario)):
+        _editor(u)
+        tid = n.cola.encolar("ingesta", "zbx_vincular", {}, clave_unica="plan:zbx_vincular")
+        n.auditoria.registrar("inventario_vincular_zabbix", u.login)
+        return {"estado": "encolado", "trabajo_id": tid}
+
+    @app.post("/api/inventario/{tipo}", status_code=201)
+    def inventario_crear(tipo: str, a: ActivoInventario, u: Usuario = Depends(usuario)):
+        _editor(u)
+        t = _tipo(tipo)
+        d = n.inv_ajustes.crear(t, a.id, a.datos, u.login)
+        n.auditoria.registrar("inventario_alta", u.login, tipo=t, id=d["id"], datos=a.datos)
+        return d
+
+    @app.put("/api/inventario/{tipo}/{id_activo}")
+    def inventario_editar(tipo: str, id_activo: str, a: ActivoInventario, u: Usuario = Depends(usuario)):
+        _editor(u)
+        t = _tipo(tipo)
+        d = n.inv_ajustes.editar(t, id_activo, a.datos, u.login)
+        n.auditoria.registrar("inventario_cambio", u.login, tipo=t, id=id_activo, datos=a.datos)
+        return d
+
+    @app.delete("/api/inventario/{tipo}/{id_activo}")
+    def inventario_baja(tipo: str, id_activo: str, u: Usuario = Depends(usuario)):
+        _editor(u)
+        t = _tipo(tipo)
+        n.inv_ajustes.eliminar(t, id_activo, u.login)
+        n.auditoria.registrar("inventario_baja", u.login, tipo=t, id=id_activo)
+        return {"ok": True}
+
+    @app.post("/api/inventario/{tipo}/{id_activo}/restaurar")
+    def inventario_restaurar(tipo: str, id_activo: str, u: Usuario = Depends(usuario)):
+        """Quita el ajuste: el activo vuelve a como viene del archivo generado (o desaparece si era un alta)."""
+        _editor(u)
+        t = _tipo(tipo)
+        if not n.inv_ajustes.deshacer(t, id_activo):
+            raise HTTPException(404, "ese activo no tiene ajustes")
+        n.auditoria.registrar("inventario_restaurado", u.login, tipo=t, id=id_activo)
+        return {"ok": True}
 
     @app.get("/api/estado/bd/bloqueos")
     def bloqueos_flota(u: Usuario = Depends(usuario)):

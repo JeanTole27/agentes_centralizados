@@ -99,14 +99,16 @@ class ConexionFalsa:
                     "machine": "AP23SBCC04", "program": "JDBC Thin Client", "module": "BatchCierre",
                     "sql_id": None, "event": "SQL*Net message from client", "seconds_in_wait": 0,
                     "last_call_et": 840, "blocking_instance": None, "blocking_session": None,
-                    "final_blocking_instance": None, "final_blocking_session": None, "objeto": None}
+                    "final_blocking_instance": None, "final_blocking_session": None, "obj_id": -1}
             hijos = [{"inst_id": 1, "sid": 2000 + i, "serial": 100 + i, "username": "APP_WEB", "status": "ACTIVE",
                       "machine": "AP23SBCC09", "program": "JDBC Thin Client", "module": "ClientesWeb",
                       "sql_id": "7h35uxf5uhmm1", "event": "enq: TX - row lock contention",
                       "seconds_in_wait": 300 - i * 40, "last_call_et": 300 - i * 40, "blocking_instance": 1,
                       "blocking_session": 1234, "final_blocking_instance": 1, "final_blocking_session": 1234,
-                      "objeto": "APP_CORE.CLIENTES"} for i in range(4)]
+                      "obj_id": 74001} for i in range(4)]
             return [raiz] + hijos
+        if plantilla == "objetos_bloqueo":
+            return [{"object_id": 74001, "objeto": "APP_CORE.CLIENTES"}] if e["bloqueo"] else []
         if plantilla == "sesiones_activas":
             return [{"inst_id": 1, "sid": 2000 + i, "serial": 100 + i, "username": "APP_WEB", "machine": "AP23SBCC09",
                      "module": "ClientesWeb", "sql_id": "7h35uxf5uhmm1", "event": "CPU", "last_call_et": i}

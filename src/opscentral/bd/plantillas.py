@@ -53,16 +53,25 @@ PLANTILLAS: dict[str, str] = {
     "linea_base": """
         SELECT owner, object_name, object_type, fecha_registro
           FROM adminbd.tbl_base_objetos_invalidos""",
+    # Una sola lectura de GV$SESSION (materializada) y sin unir a DBA_OBJECTS: el nombre del objeto en
+    # espera se trae con `objetos_bloqueo` solo cuando hay bloqueos (servicio._leer_bloqueos).
     "bloqueos": """
-        SELECT s.inst_id, s.sid, s.serial# AS serial, s.username, s.status, s.machine, s.program, s.module,
-               s.sql_id, s.event, s.seconds_in_wait, s.last_call_et,
-               s.blocking_instance, s.blocking_session, s.final_blocking_instance, s.final_blocking_session,
-               o.owner || '.' || o.object_name AS objeto
-          FROM gv$session s
-          LEFT JOIN dba_objects o ON o.object_id = s.row_wait_obj#
+        WITH s AS (
+            SELECT /*+ MATERIALIZE */ inst_id, sid, serial# AS serial, username, status, machine, program, module,
+                   sql_id, event, seconds_in_wait, last_call_et, blocking_instance, blocking_session,
+                   final_blocking_instance, final_blocking_session, row_wait_obj# AS obj_id
+              FROM gv$session)
+        SELECT s.*
+          FROM s
          WHERE s.blocking_session IS NOT NULL
             OR (s.inst_id, s.sid) IN (SELECT b.blocking_instance, b.blocking_session
-                                        FROM gv$session b WHERE b.blocking_session IS NOT NULL)""",
+                                        FROM s b WHERE b.blocking_session IS NOT NULL)""",
+    "objetos_bloqueo": """
+        SELECT o.object_id, o.owner || '.' || o.object_name AS objeto
+          FROM dba_objects o
+         WHERE o.object_id IN (SELECT DISTINCT s.row_wait_obj#
+                                 FROM gv$session s
+                                WHERE s.blocking_session IS NOT NULL AND s.row_wait_obj# > 0)""",
     "sesiones_activas": """
         SELECT inst_id, sid, serial# AS serial, username, machine, module, sql_id, event, last_call_et
           FROM gv$session

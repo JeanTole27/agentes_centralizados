@@ -1,8 +1,10 @@
 """Planificador: tareas periódicas (una sola instancia por ambiente).
 
-- Recolección de la flota cada 15 min (protegida por los límites de 04 §3).
+- BD liviana cada [bd] recoleccion_periodica_s (1 h): instancia + espacio ([bd] secciones_periodicas).
+- BD completa cada [bd] recoleccion_completa_s (1 día): incluye inválidos y bloqueos.
+  Bloqueos, inválidos y tablespaces se actualizan además por alerta de Zabbix (refresco dirigido).
 - Scoring de predicciones cada hora (en sombra).
-- Zabbix: problemas abiertos cada 5 min y trends de capacidad cada hora.
+- Zabbix: problemas abiertos cada 5 min, trends de capacidad cada hora y vínculo de hosts por IP diario.
 - Vence aprobaciones sin respuesta y libera trabajos de workers caídos.
 """
 from __future__ import annotations
@@ -15,12 +17,19 @@ from .nucleo import Nucleo, crear
 
 log = logging.getLogger("opscentral.planificador")
 
-TAREAS = {  # nombre: (cada_s, cola, tipo)
-    "recolectar": (900, "bd", "recolectar"),
-    "scoring": (3600, "ml", "scoring"),
-    "zbx_problemas": (300, "ingesta", "zbx_problemas"),    # respaldo del webhook
-    "zbx_capacidad": (3600, "ingesta", "zbx_capacidad"),   # trends → series de capacidad → scoring
-}
+
+def tareas(cfg) -> dict[str, tuple[int, str, str, dict]]:
+    """nombre: (cada_s, cola, tipo, payload)"""
+    bd, z = cfg["bd"], cfg["zabbix"]
+    return {
+        "recolectar": (int(bd["recoleccion_periodica_s"]), "bd", "recolectar",
+                       {"secciones": list(bd["secciones_periodicas"])}),
+        "recolectar_completo": (int(bd["recoleccion_completa_s"]), "bd", "recolectar", {}),
+        "scoring": (3600, "ml", "scoring", {}),
+        "zbx_problemas": (300, "ingesta", "zbx_problemas", {}),    # respaldo del webhook
+        "zbx_capacidad": (3600, "ingesta", "zbx_capacidad", {}),   # trends → series de capacidad → scoring
+        "zbx_vincular": (int(z["vincular_s"]), "ingesta", "zbx_vincular", {}),
+    }
 
 
 class Planificador:
@@ -31,9 +40,9 @@ class Planificador:
     def tic(self, ahora: float | None = None) -> list[str]:
         ahora = ahora or time.time()
         hechas = []
-        for nombre, (cada, cola, tipo) in TAREAS.items():
+        for nombre, (cada, cola, tipo, payload) in tareas(self.n.cfg).items():
             if ahora - self._ultimo.get(nombre, 0) >= cada:
-                self.n.cola.encolar(cola, tipo, {}, clave_unica=f"plan:{nombre}")
+                self.n.cola.encolar(cola, tipo, payload, clave_unica=f"plan:{nombre}")
                 self._ultimo[nombre] = ahora
                 hechas.append(nombre)
         vencidas = self.n.ejecuciones.vencer_pendientes()
