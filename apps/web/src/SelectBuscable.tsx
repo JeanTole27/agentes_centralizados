@@ -14,14 +14,18 @@ type Op = { value: string; label: string; grupo: string; disabled: boolean; busc
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const compacto = (s: string) => norm(s).replace(/[^a-z0-9]/g, "");
 
-/** Menor distancia de edición entre `t` y cualquier tramo de `h` (búsqueda aproximada de subcadena). */
+/** Menor distancia de edición entre `t` y cualquier tramo de `h` (búsqueda aproximada de subcadena).
+ *  Dos letras intercambiadas ("torn" por "tron") cuentan como un solo error. */
 function distanciaTramo(t: string, h: string): number {
+  let ant: number[] = [];
   let prev = new Array(h.length + 1).fill(0);
   for (let i = 1; i <= t.length; i++) {
     const cur = [i];
     for (let j = 1; j <= h.length; j++) {
       cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (t[i - 1] === h[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && t[i - 1] === h[j - 2] && t[i - 2] === h[j - 1]) cur[j] = Math.min(cur[j], ant[j - 2] + 1);
     }
+    ant = prev;
     prev = cur;
   }
   return Math.min(...prev);
@@ -64,6 +68,21 @@ function parecido(a: string, b: string): number {
   let comun = 0;
   x.forEach((g) => { if (y.has(g)) comun++; });
   return (2 * comun) / (x.size + y.size);
+}
+
+/** Marca en negrita el tramo de `texto` que coincide con alguna palabra de `q` (sin acentos/mayúsculas). */
+function resaltar(texto: string, q: string): ReactNode {
+  const palabras = norm(q).split(/[^a-z0-9]+/).filter((p) => p.length >= 2);
+  if (!palabras.length) return texto;
+  const t = norm(texto);
+  let mejor: [number, number] | null = null;
+  for (const p of palabras) {
+    const i = t.indexOf(p);
+    if (i >= 0 && (!mejor || p.length > mejor[1])) mejor = [i, p.length];
+  }
+  if (!mejor) return texto;
+  const [i, n] = mejor;
+  return <>{texto.slice(0, i)}<mark className="sb-marca">{texto.slice(i, i + n)}</mark>{texto.slice(i + n)}</>;
 }
 
 export function SelectBuscable({ value, onChange, children, disabled, id, className = "f", placeholder }: {
@@ -135,12 +154,17 @@ export function SelectBuscable({ value, onChange, children, disabled, id, classN
 
   // Al buscar se muestran planas (ordenadas por coincidencia) con su grupo como etiqueta; sin búsqueda, por grupo.
   const conGrupos = !q.trim();
+  // "— elegir —" no dice que se puede escribir: sin selección real se muestra una invitación a buscar.
+  const sinElegir = !actual || (actual.value === "" && /^\s*[—–-]/.test(actual.label));
+  const invitacion = placeholder || (ops.length > 12 ? "Escribe para buscar (nombre, alias o servidor)…" : "Buscar…");
+  const elegibles = ops.filter((o) => o.value !== "" && !o.disabled).length;
   let grupoPrevio = "";
   return (
     <div className="sb">
+      <svg className="sb-lupa" viewBox="0 0 16 16" aria-hidden><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M10.4 10.4 14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
       <input id={id} className={className + " sb-in"} role="combobox" aria-expanded={abierto} aria-controls={idLista}
         aria-autocomplete="list" autoComplete="off" disabled={disabled}
-        placeholder={actual?.label || placeholder || "Buscar…"}
+        placeholder={sinElegir ? invitacion : actual!.label}
         value={abierto ? q : (actual && actual.value !== "" ? actual.label : "")}
         onFocus={() => { setAbierto(true); setQ(""); setActivo(Math.max(0, ops.findIndex((o) => o.value === v))); }}
         onBlur={() => setTimeout(() => { setAbierto(false); setQ(""); }, 120)}
@@ -149,6 +173,8 @@ export function SelectBuscable({ value, onChange, children, disabled, id, classN
       <span className="sb-flecha" aria-hidden>▾</span>
       {abierto && !disabled && (
         <ul ref={lista} id={idLista} className="sb-lista" role="listbox">
+          {!q.trim() && elegibles > 12 && <li className="sb-ayuda">Escribe para filtrar entre {elegibles} opciones · no hace falta el nombre exacto</li>}
+          {q.trim() && !sugeridas && filtradas.length > 0 && <li className="sb-ayuda">{filtradas.length} coincidencia{filtradas.length === 1 ? "" : "s"} con “{q}”</li>}
           {filtradas.length === 0 && <li className="sb-vacio">Nada parecido a “{q}”</li>}
           {sugeridas && filtradas.length > 0 && <li className="sb-grupo">Sin coincidencia exacta · parecidos a “{q}”</li>}
           {filtradas.map((o, i) => {
@@ -158,7 +184,7 @@ export function SelectBuscable({ value, onChange, children, disabled, id, classN
               <li key={o.value + i} data-i={i} role="option" aria-selected={o.value === v} aria-disabled={o.disabled}
                 className={"sb-op" + (i === activo ? " act" : "") + (o.value === v ? " sel" : "") + (o.disabled ? " dis" : "")}
                 onMouseDown={(e) => { e.preventDefault(); elegir(o); }} onMouseEnter={() => setActivo(i)}>
-                <span>{o.label}</span>
+                <span>{resaltar(o.label, q)}</span>
                 {!conGrupos && (o.grupo || o.buscar) && <span className="sb-extra">{[o.grupo.replace(/^Ambiente /, ""), o.buscar].filter(Boolean).join(" · ")}</span>}
               </li>];
           })}
