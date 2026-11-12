@@ -64,7 +64,7 @@ acciones:
     cm: ejecuta
     lid: ejecuta
     con: ejecuta
-  estado: catalogada
+  estado: implementada
 - id: com.itsm.detalle
   nombre: Detalle, comentarios e historial de un ticket
   motor: itsm
@@ -74,7 +74,7 @@ acciones:
     cm: ejecuta
     lid: ejecuta
     con: ejecuta
-  estado: catalogada
+  estado: implementada
 - id: com.itsm.comentar
   nombre: Publicar evidencia o resumen en el ticket
   motor: itsm
@@ -83,7 +83,7 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+  estado: implementada
 - id: com.itsm.transicion
   nombre: Mover el ticket de estado
   motor: itsm
@@ -92,7 +92,7 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+  estado: implementada
 - id: com.cmdb.activo
   nombre: Resolver activo afectado del CMDB
   motor: itsm
@@ -111,7 +111,8 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+    con: ve
+  estado: implementada
 - id: com.vc.paso
   nombre: Ejecutar / marcar un paso de la ventana
   motor: portal
@@ -120,7 +121,8 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+    con: ve
+  estado: implementada
 - id: com.vc.cerrar
   nombre: Cerrar la ventana y consolidar evidencia
   motor: portal
@@ -129,7 +131,8 @@ acciones:
     dba: ejecuta
     cm: ejecuta
     lid: ejecuta
-  estado: catalogada
+    con: ve
+  estado: implementada
 - id: com.evidencia.exportar
   nombre: Paquete de evidencia (ZIP/PDF) por número de cambio
   motor: portal

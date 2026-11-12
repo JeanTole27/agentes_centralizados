@@ -104,6 +104,41 @@ bloqueo_destino = Table(
     TS("desde", nullable=False),
 )
 
+# ----------------------------------------------------------------- ventana de cambio (com.vc.*)
+ventana_cambio = Table(
+    "ejec_ventana", meta,
+    Column("id", String(16), primary_key=True),
+    Column("cambio", String(40), nullable=False, index=True),
+    Column("titulo", String(200), nullable=False),
+    Column("plantilla", String(40), nullable=False),
+    Column("ambiente", String(20)),
+    Column("base", String(60)),
+    Column("hosts", String(400)),
+    Column("dominios", String(400)),
+    TS("inicio"), TS("fin"),
+    Column("estado", String(24), nullable=False, index=True),     # en_curso | cerrada | cerrada_incompleta
+    Column("creada_por", String(120), nullable=False),
+    TS("creada", nullable=False), TS("cerrada"),
+    Column("cerrada_por", String(120)),
+    Column("resumen", Text),
+)
+
+ventana_paso = Table(
+    "ejec_ventana_paso", meta,
+    Column("ventana_id", String(16), primary_key=True),
+    Column("orden", Integer, primary_key=True),
+    Column("equipo", String(8), nullable=False),                  # BD | CM | AMBOS
+    Column("titulo", String(200), nullable=False),
+    Column("accion", String(60), nullable=False),                 # id del catálogo o "manual"
+    Column("params", JSONV, nullable=False),
+    Column("nota", Text),
+    Column("estado", String(16), nullable=False),                 # pendiente | hecho | omitido
+    Column("ejecucion_id", String(32)),
+    Column("hecho_por", String(120)),
+    TS("hecho_en"),
+    Column("comentario", Text),
+)
+
 # ----------------------------------------------------------------- cola de trabajos
 trabajo = Table(
     "ops_trabajo", meta,

@@ -15,8 +15,8 @@ from typing import Any
 RAIZ = Path(__file__).resolve().parents[2]
 
 DEFECTOS: dict[str, Any] = {
-    # pantallas_ocultas: fuera del menú mientras sean "próxima etapa" (vaciar la lista para mostrarlas)
-    "general": {"modo": "desarrollo", "pantallas_ocultas": ["ventana", "incidentes"]},
+    # pantallas_ocultas: pantallas que se quieren sacar del menú (p. ej. ["ventana"])
+    "general": {"modo": "desarrollo", "pantallas_ocultas": []},
     "almacen": {"url": "sqlite:///datos/ops-central.db"},
     "evidencia": {"ruta": "datos/evidencia"},
     "reportes": {"ruta": "datos/reportes"},

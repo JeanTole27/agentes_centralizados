@@ -988,17 +988,9 @@ export function Admin() {
   );
 }
 
-// ======================================================================== ETAPAS POSTERIORES
-function Proxima({ titulo, etapa, texto }: { titulo: string; etapa: string; texto: string }) {
-  return (
-    <>
-      <Cabecera titulo={titulo} />
-      <div className="card"><Vacio><span className="tag t-acc">{etapa}</span><p className="mt">{texto}</p></Vacio></div>
-    </>
-  );
-}
-export const Ventana = () => <Proxima titulo="Ventana de cambios" etapa="Etapa E5" texto="Guion de la ventana con pasos de Capa Media y Base de Datos encadenados por número de cambio." />;
-export const Incidentes = () => <Proxima titulo="Incidentes" etapa="Etapa E6" texto="Vista por incidente con la línea de tiempo de eventos Zabbix, ejecuciones y evidencias." />;
+// ======================================================================== VENTANA DE CAMBIO E INCIDENTES
+export { Ventana } from "./Ventana";
+export { Incidentes } from "./Incidentes";
 // ======================================================================== REPORTES (HTML generados por script)
 // Diseño: demo-ops-central.html (V.reportes / App.report). Los textos, el alcance y las etapas
 // vienen de /api/reportes/tipos; las etapas se marcan con las líneas "Etapa i/n: …" del script.

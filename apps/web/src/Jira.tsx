@@ -9,7 +9,7 @@ import { SelectBuscable } from "./SelectBuscable";
 const RE_JIRA = /^[A-Z][A-Z0-9_]+-\d+$/;
 export const pareceJira = (s?: string | null) => Boolean(s && RE_JIRA.test(s.toUpperCase()));
 
-function Transiciones({ clave }: { clave: string }) {
+export function Transiciones({ clave }: { clave: string }) {
   const { avisar } = useSesion();
   const [ts, setTs] = useState<{ id: string; nombre: string; a: string }[] | null>(null);
   const [sel, setSel] = useState("");

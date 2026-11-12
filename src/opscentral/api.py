@@ -103,6 +103,33 @@ class ComentarEjecucion(BaseModel):
     ejecucion_id: str
 
 
+class AbrirVentana(BaseModel):
+    cambio: str
+    plantilla: str
+    titulo: str = ""
+    ambiente: str = ""
+    base: str = ""
+    hosts: str = ""
+    dominios: str = ""
+
+
+class MarcarPaso(BaseModel):
+    estado: str                    # hecho | omitido
+    nota: str = ""
+
+
+class VincularPaso(BaseModel):
+    ejecucion_id: str
+
+
+class CerrarVentana(BaseModel):
+    nota: str = ""                 # obligatoria solo si quedan pasos pendientes
+
+
+class NotaCaso(BaseModel):
+    texto: str = Field(min_length=3, max_length=4000)
+
+
 class Transicion(BaseModel):
     id: str
 
@@ -125,6 +152,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     app = FastAPI(title="Ops Central", version=VERSION, docs_url=None if cfg.es_produccion else "/api/docs",
                   openapi_url=None if cfg.es_produccion else "/api/openapi.json")
     casos = ServicioCasos(cfg, n.secretos, n.inventario, n.catalogo)
+    from .ventanas import ErrorVentana, ServicioVentanas, plantillas as plantillas_vc
+    ventanas = ServicioVentanas(n.almacen, n.inventario)
     asistente = Asistente(cfg)
     app.state.n, app.state.ses, app.state.casos = n, ses, casos
     seguro = cfg.es_produccion
@@ -133,7 +162,7 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
     # Pantallas fuera del menú: Aprobaciones con ejecución directa y las que aún son "próxima etapa"
     # ([general] pantallas_ocultas, por defecto Ventana de cambio e Incidentes): nadie entra a una vacía.
     ocultar = frozenset(({"aprobaciones"} if directa else set())
-                        | set(cfg["general"].get("pantallas_ocultas", ["ventana", "incidentes"]) or []))
+                        | set(cfg["general"].get("pantallas_ocultas") or []))
     oidc = None
     if cfg["auth"]["proveedor"] == "oidc":
         from .oidc import ClienteOIDC
@@ -150,7 +179,8 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
 
     for tipo, cod in ((ErrorValidacion, 422), (PermisoDenegado, 403), (SinPerfil, 403), (Conflicto, 409),
                       (EstadoInvalido, 409), (RequiereStepUp, 428), (KeyError, 404), (JiraNoConfigurado, 503),
-                      (ErrorJira, 502), (PreguntaInvalida, 422), (ErrorInventario, 422)):
+                      (ErrorJira, 502), (PreguntaInvalida, 422), (ErrorInventario, 422), (ErrorVentana, 422),
+                      (PermissionError, 403)):
         app.add_exception_handler(tipo, _err(cod))
 
     # -------------------------------------------------------------- seguridad de cada pedido
@@ -388,6 +418,166 @@ def crear_app(cfg: Config | None = None, nucleo: Nucleo | None = None) -> FastAP
             raise ErrorValidacion(str(ex)) from None
         n.auditoria.registrar("caso_transicion", u.login, caso=r["clave"], transicion=t.id)
         return r
+
+    @app.post("/api/casos/{clave}/nota")
+    def caso_nota(clave: str, p: NotaCaso, u: Usuario = Depends(usuario)):
+        """Comentario libre en el caso (com.itsm.comentar), firmado con quien lo escribe."""
+        if permiso_de(u, n.catalogo["com.itsm.comentar"]) != "ejecuta":
+            raise HTTPException(403, "tu perfil no puede comentar casos")
+        try:
+            k = casos._clave(clave)
+        except ValueError as ex:
+            raise ErrorValidacion(str(ex)) from None
+        casos.cliente().comentar(k, [p.texto.strip(), f"Publicado por {u.login} desde Ops Central."])
+        n.auditoria.registrar("caso_nota", u.login, caso=k)
+        return {"clave": k, "comentado": True}
+
+    # ============================================================== incidentes y cambios
+    @app.get("/api/incidentes")
+    def incidentes(q: str = "", u: Usuario = Depends(usuario)):
+        """Casos de Jira (si está configurado) y, siempre, las referencias que ya usa Ops Central: cada número
+        de cambio o incidente con sus ejecuciones y ventanas, aunque no exista Jira."""
+        _exigir_ver(u, "com.itsm.listar")
+        jira_err, de_jira = None, []
+        if casos.habilitado:
+            try:
+                de_jira = casos.buscar(q)
+            except (JiraNoConfigurado, ErrorJira) as ex:
+                jira_err = str(ex)
+        locales: dict[str, dict] = {}
+
+        def nueva(ref, amb, cuando):
+            return {"clave": ref, "ejecuciones": 0, "fallidas": 0, "ventanas": 0, "ambiente": amb, "ultima": cuando,
+                    "equipos": set(), "titulo": ""}
+        for e in n.ejecuciones.listar(u, limite=500):
+            ref = e.get("cambio")
+            if not ref:
+                continue
+            r = locales.setdefault(ref, nueva(ref, e.get("ambiente"), e["creada"]))
+            r["ejecuciones"] += 1
+            r["fallidas"] += int(e["estado"] == "fallida")
+            r["ultima"] = max(r["ultima"], e["creada"])
+            r["equipos"].add({"bd": "BD", "cm": "Capa Media"}.get(e.get("motor") or "", "Portal"))
+        for v in ventanas.listar():
+            r = locales.setdefault(v["cambio"], nueva(v["cambio"], v.get("ambiente"), v["creada"]))
+            r["ventanas"] += 1
+            r["titulo"] = r["titulo"] or v["titulo"]
+        t = q.strip().lower()
+
+        def iso(x):
+            return x.isoformat() if hasattr(x, "isoformat") else x
+        filas = sorted(({**r, "equipos": sorted(r["equipos"]), "ultima": iso(r["ultima"])}
+                        for r in locales.values() if not t or t in (r["clave"] + " " + r["titulo"]).lower()),
+                       key=lambda r: r["ultima"] or "", reverse=True)
+        return {"jira": casos.habilitado, "jira_error": jira_err, "casos": de_jira, "referencias": filas[:100]}
+
+    @app.get("/api/incidentes/{clave}")
+    def incidente(clave: str, u: Usuario = Depends(usuario)):
+        """Todo lo que Ops Central sabe de un caso: el ticket (si hay Jira), sus ejecuciones (línea de tiempo con
+        evidencia), ventanas de cambio, activos afectados con su estado y casos parecidos."""
+        _exigir_ver(u, "com.itsm.detalle")
+        ref = clave.strip().upper()
+        caso_j, similares, jira_err = None, [], None
+        if casos.habilitado:
+            try:
+                caso_j = casos.caso(ref)
+                if caso_j.get("resumen"):
+                    similares = [c for c in casos.buscar(caso_j["resumen"][:80]) if c["clave"] != ref][:5]
+            except (JiraNoConfigurado, ErrorJira, ValueError) as ex:
+                jira_err = str(ex)
+        ejs = n.ejecuciones.listar(u, cambio=ref, limite=200)
+        vcs = [v for v in ventanas.listar() if v["cambio"] == ref]
+        # activos: los que nombra el caso (inventario) y los destinos de sus ejecuciones y ventanas
+        nombres: set[str] = set()
+        sug = (caso_j or {}).get("sugeridos") or {}
+        for k in ("base", "hosts", "dominios"):
+            nombres |= {x.strip().upper() for x in str(sug.get(k) or "").split(",") if x.strip()}
+        for e in ejs:
+            nombres |= {x.strip().upper() for x in str(e.get("destino") or "").split(",") if x.strip()}
+        for v in vcs:
+            nombres |= {x.strip().upper() for x in [v.get("base") or "", *(v.get("hosts") or "").split(",")]
+                        if x.strip()}
+        activos = []
+        suyas = _bases_visibles(u)
+        ve_salud = puede_ver(u, n.catalogo["bd.salud.flota"])
+        for nm in sorted(nombres):
+            a = n.inventario.buscar(nm)
+            if not a:
+                continue
+            fila = {"id": a.id, "tipo": a.tipo, "ambiente": a.ambiente}
+            if a.tipo == "base" and ve_salud and (suyas is None or a.id in suyas):
+                s_ = estado.leer(n.almacen, f"bd:{a.id}:salud")
+                if s_:
+                    fila["semaforo"] = (s_.get("datos") or {}).get("semaforo")
+                    fila["motivos"] = ((s_.get("datos") or {}).get("motivos") or [])[:3]
+            activos.append(fila)
+        ids = {a["id"].upper() for a in activos}
+        with n.almacen.tx() as con:
+            eps = [dict(f._mapping) for f in con.execute(select(episodio).where(episodio.c.estado == "abierto"))]
+        eps = [{"id": x["id"], "titulo": x.get("titulo"), "activo_raiz": x.get("activo_raiz"),
+                "severidad": x.get("severidad")} for x in eps if str(x.get("activo_raiz") or "").upper() in ids]
+        if not (caso_j or ejs or vcs):
+            raise HTTPException(404, f"{ref}: no hay ejecuciones, ventanas ni caso de Jira con esa referencia")
+        return {"clave": ref, "jira": casos.habilitado, "jira_error": jira_err, "caso": caso_j,
+                "ejecuciones": ejs, "ventanas": vcs, "activos": activos, "episodios": eps, "similares": similares}
+
+    # ============================================================== ventana de cambio
+    def _vc_permiso(u: Usuario, accion_id: str) -> None:
+        if permiso_de(u, n.catalogo[accion_id]) != "ejecuta":
+            raise HTTPException(403, "tu perfil no puede operar ventanas de cambio")
+
+    @app.get("/api/ventanas/plantillas")
+    def vc_plantillas(u: Usuario = Depends(usuario)):
+        _exigir_ver(u, "com.vc.abrir")
+        return plantillas_vc()
+
+    @app.get("/api/ventanas")
+    def vc_listar(estado_v: str | None = Query(None, alias="estado"), u: Usuario = Depends(usuario)):
+        _exigir_ver(u, "com.vc.abrir")
+        return ventanas.listar(estado_v)
+
+    @app.get("/api/ventanas/{vid}")
+    def vc_obtener(vid: str, u: Usuario = Depends(usuario)):
+        _exigir_ver(u, "com.vc.abrir")
+        return ventanas.obtener(vid)
+
+    @app.post("/api/ventanas")
+    def vc_abrir(p: AbrirVentana, u: Usuario = Depends(usuario)):
+        _vc_permiso(u, "com.vc.abrir")
+        v = ventanas.abrir(u, **p.model_dump())
+        n.auditoria.registrar("ventana_abierta", u.login, ventana=v["id"], cambio=v["cambio"], plantilla=p.plantilla)
+        return v
+
+    @app.post("/api/ventanas/{vid}/pasos/{orden}/marcar")
+    def vc_marcar(vid: str, orden: int, p: MarcarPaso, u: Usuario = Depends(usuario)):
+        _vc_permiso(u, "com.vc.paso")
+        v = ventanas.marcar(vid, orden, u, estado=p.estado, nota=p.nota)
+        n.auditoria.registrar("ventana_paso", u.login, ventana=vid, paso=orden, estado=p.estado)
+        return v
+
+    @app.post("/api/ventanas/{vid}/pasos/{orden}/vincular")
+    def vc_vincular(vid: str, orden: int, p: VincularPaso, u: Usuario = Depends(usuario)):
+        _vc_permiso(u, "com.vc.paso")
+        e = n.ejecuciones.obtener(p.ejecucion_id)
+        if not n.ejecuciones.visible_para(u, e):
+            raise HTTPException(404)
+        v = ventanas.vincular(vid, orden, u, p.ejecucion_id)
+        n.auditoria.registrar("ventana_paso", u.login, ventana=vid, paso=orden, ejecucion=p.ejecucion_id)
+        return v
+
+    @app.post("/api/ventanas/{vid}/cerrar")
+    def vc_cerrar(vid: str, p: CerrarVentana, u: Usuario = Depends(usuario)):
+        _vc_permiso(u, "com.vc.cerrar")
+        v = ventanas.cerrar(vid, u, forzar_nota=p.nota)
+        n.auditoria.registrar("ventana_cerrada", u.login, ventana=vid, estado=v["estado"])
+        comentado = False
+        if casos.habilitado and v.get("resumen"):
+            try:      # si el cambio es una clave de Jira, el resumen queda en el caso
+                casos.cliente().comentar(casos._clave(v["cambio"]), v["resumen"].splitlines())
+                comentado = True
+            except (ValueError, JiraNoConfigurado, ErrorJira):
+                pass
+        return {**v, "comentado_jira": comentado}
 
     @app.post("/api/acciones/{accion_id}/evaluar")
     def evaluar(accion_id: str, s: SolicitudEjecucion, u: Usuario = Depends(usuario)):

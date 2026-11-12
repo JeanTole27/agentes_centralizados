@@ -101,10 +101,14 @@ def _cliente(cfg, api_n, login):
     return c
 
 
-def test_menu_oculta_pantallas_sin_implementar(cfg, api_n):
+def test_menu_oculta_las_pantallas_configuradas(cfg, api_n):
     c = _cliente(cfg, api_n, "lider.demo")
     ids = {p["id"] for g in c.get("/api/auth/yo").json()["menu"] for p in g["pantallas"]}
-    assert "ventana" not in ids and "incidentes" not in ids and "prevencion" in ids
+    assert {"ventana", "incidentes", "prevencion"} <= ids          # ya implementadas: visibles
+    cfg["general"]["pantallas_ocultas"] = ["ventana"]
+    c = _cliente(cfg, api_n, "lider.demo")
+    ids = {p["id"] for g in c.get("/api/auth/yo").json()["menu"] for p in g["pantallas"]}
+    assert "ventana" not in ids and "incidentes" in ids
 
 
 def test_inicio_filtra_por_equipo_y_agrupa_repetidas(cfg, api_n):
