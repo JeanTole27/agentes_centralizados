@@ -658,7 +658,7 @@ export function Salud() {
       {visibles.length > 0 && (
         <div className="card tbl-wrap">
           <table className="hm">
-            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th title="FRA, último respaldo RMAN y Data Guard">Protección</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Último dato</th><th>Último intento</th>{puedeRefrescar && <th />}</tr></thead>
+            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th title="FRA, último respaldo RMAN y Data Guard">Protección</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Último dato</th>{puedeRefrescar && <th />}</tr></thead>
             <tbody>
               {visibles.map((f) => {
                 const d = f.datos ?? {};
@@ -683,8 +683,7 @@ export function Salud() {
                         title={d.proteccion ? undefined : "Se lee al abrir esta vista y en la pasada diaria"}>{resumenProteccion(d.proteccion)}</td>
                     <td className={"cell " + (d.bloqueadas == null ? "c-na" : d.bloqueadas > 5 ? "c-crit" : d.bloqueadas > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.bloqueadas ?? "—"}</td>
                     <td className={"cell " + (d.invalidos_fuera_lb == null ? "c-na" : d.invalidos_fuera_lb > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.invalidos_fuera_lb ?? "—"}</td>
-                    <td className="nm"><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
-                    <td className="nm"><Hace s={f.intento_s} titulo={f.intentado ?? f.origen} /></td>
+                    <td className="nm" title={`Último intento: ${f.intentado ?? f.actualizado ?? "—"}`}><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
                     {puedeRefrescar && <td className="nm"><button className="btn sm" title={`Refrescar ${base}`} aria-label={`Refrescar ${base}`} onClick={() => refrescar(base)}>↻<span className="btn-txt"> Refrescar</span></button></td>}
                   </tr>
                 );
