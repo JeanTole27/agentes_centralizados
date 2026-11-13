@@ -15,11 +15,12 @@ import type { Ejecucion, EstadoObj, Inventario } from "./tipos";
 export function Inicio() {
   const nav = useNavigate();
   const { yo } = useSesion();
-  const q = useQuery({ queryKey: ["inicio"], queryFn: () => api.get<any>("/api/inicio"), refetchInterval: 30_000 });
+  const [todas, setTodas] = useState(false);
+  const q = useQuery({ queryKey: ["inicio", todas], queryFn: () => api.get<any>(`/api/inicio${todas ? "?todas=true" : ""}`), refetchInterval: 30_000 });
   if (!q.data) return <Cargando q={q} />;
   const k = q.data.kpis;
   const sem = k.bases ?? {};
-  const ultimas: Ejecucion[] = q.data.ultimas;
+  const ultimas: (Ejecucion & { veces?: number })[] = q.data.ultimas;
   return (
     <>
       <Cabecera titulo={`Hola, ${yo.nombre.split(" ")[0]}`} sub="Lo que necesita tu atención ahora. Todo sale del almacén de Ops Central." />
@@ -53,17 +54,21 @@ export function Inicio() {
           )}
         </div>
         <div className="card">
-          <h3>Últimas ejecuciones</h3>
-          {ultimas.length === 0 ? <Vacio>Todavía no hay ejecuciones.</Vacio> : (
+          <h3>Últimas ejecuciones <span className="sub">{todas ? "de todos los equipos" : "de tu equipo"}</span></h3>
+          {ultimas.length === 0 ? <Vacio>Todavía no hay ejecuciones{todas ? "" : " de tu equipo"}.</Vacio> : (
             <div className="list">
-              {ultimas.map((e: Ejecucion) => (
-                <div key={e.id} className="li">
-                  <div className="grow"><b className="mono-sm">{e.accion}</b>
+              {ultimas.map((e) => (
+                <button key={e.id} className="li li-btn" onClick={() => nav("/ejecuciones?id=" + e.id)} title="Ver el detalle y el error">
+                  <div className="grow"><b className="mono-sm">{e.accion}</b>{(e.veces ?? 1) > 1 && <span className="tag t-warn" style={{ marginLeft: 6 }}>×{e.veces}</span>}
                     <div className="muted small">{e.destino} · ambiente {e.ambiente} · {e.solicitante} · {fecha(e.creada)}</div></div>
                   <EstadoEj e={e.estado} />
-                </div>
+                </button>
               ))}
             </div>
+          )}
+          {(q.data.otras_equipos > 0 || todas) && (
+            <label className="chk small mt"><input type="checkbox" checked={todas} onChange={(ev) => setTodas(ev.target.checked)} />
+              {" "}Ver también las de otros equipos{!todas && ` (${q.data.otras_equipos})`}</label>
           )}
         </div>
       </div>
@@ -175,6 +180,7 @@ export function Prevencion() {
       {q.data?.en_sombra && <div className="warnbox" style={{ marginBottom: 14 }}>{q.data.nota}.</div>}
       <Cargando q={q} />
       {q.data && filas.length === 0 && <div className="card"><Vacio>Sin predicciones vigentes.</Vacio></div>}
+      <Anomalias equipo={equipo} />
       {filas.length > 0 && (
         <div className="g21">
           <div className="card">
@@ -223,6 +229,29 @@ export function Prevencion() {
         </div>
       )}
     </>
+  );
+}
+
+/** M3: lo que hoy se sale de lo normal para ese día y hora de la semana (mismo horario de semanas anteriores). */
+function Anomalias({ equipo }: { equipo: string }) {
+  const q = useQuery({ queryKey: ["anomalias", equipo], queryFn: () => api.get<any>(`/api/prevencion/anomalias${equipo ? "?equipo=" + equipo : ""}`), refetchInterval: 300_000 });
+  const filas: any[] = q.data?.anomalias ?? [];
+  if (!q.data) return null;
+  return (
+    <div className="card">
+      <h3>Anomalías <span className="sub">valor actual frente a lo normal para el mismo día y hora · {filas.length} serie(s){q.data.calculada ? ` · calculado ${fecha(q.data.calculada)}` : ""}</span></h3>
+      {filas.length === 0 ? <Vacio>Nada fuera de lo normal{q.data.calculada ? "" : " (todavía no hay historia suficiente: hacen falta 3 semanas)"}.</Vacio> : (
+        <div className="tbl-wrap"><table className="tbl-std">
+          <thead><tr><th>Serie</th><th className="num">Actual</th><th className="num">Normal</th><th>Qué pasa</th><th className="num">Puntaje</th></tr></thead>
+          <tbody>{filas.map((a) => (
+            <tr key={a.serie}>
+              <td className="mono-sm">{a.serie}</td><td className="num">{Number(a.valor).toFixed(1)}</td><td className="num">{Number(a.normal).toFixed(1)}</td>
+              <td><span className={"tag " + (Math.abs(a.z) >= 6 ? "t-crit" : "t-warn")}>{a.z > 0 ? "alto" : "bajo"}</span> {a.explicacion}</td>
+              <td className="num">{a.z}</td>
+            </tr>))}</tbody>
+        </table></div>
+      )}
+    </div>
   );
 }
 
@@ -526,6 +555,51 @@ function Hace({ s, nunca, titulo }: { s?: number | null; nunca?: boolean; titulo
   return <Antiguedad s={s ?? undefined} origen={titulo} />;
 }
 
+/** "FRA 62 % · resp. 20 h · DG ok" para la celda de la flota. */
+function resumenProteccion(p: any): string {
+  if (!p) return "—";
+  const partes: string[] = [];
+  const fra = (p.fra ?? []).find((f: any) => f.name && f.pct_usado != null);
+  if (fra) partes.push(`FRA ${Number(fra.pct_usado).toFixed(0)} %`);
+  const bd = (p.respaldo ?? []).filter((r: any) => String(r.input_type ?? "").startsWith("DB") && r.horas != null).map((r: any) => Number(r.horas));
+  if (p.respaldo) partes.push(bd.length ? `resp. ${Math.min(...bd).toFixed(0)} h` : "sin resp.");
+  const dg = p.dataguard;
+  if (dg && (dg.destinos?.length || Object.keys(dg.lag ?? {}).length)) partes.push("DG");
+  return partes.join(" · ") || "—";
+}
+
+function Proteccion({ p }: { p: any }) {
+  const fra = (p.fra ?? []).filter((f: any) => f.name);
+  const dg = p.dataguard ?? {};
+  return (
+    <>
+      <h3 className="small mt">Protección</h3>
+      <div className="kpis">
+        {fra.map((f: any) => (
+          <div key={f.name} className={"k " + (f.pct_usado >= 95 ? "crit" : f.pct_usado >= 85 ? "warn" : "ok")}>
+            <small>FRA {f.name} (sin lo recuperable)</small><b>{f.pct_usado ?? "—"} %</b>
+            <span className="muted small">{f.usado_mb} de {f.limite_mb} MB · recuperable {f.recuperable_mb} MB</span>
+          </div>))}
+        {(p.respaldo ?? []).map((r: any) => (
+          <div key={r.input_type} className="k"><small>Último {r.input_type} correcto</small><b>hace {r.horas} h</b>
+            <span className="muted small">{fecha(r.ultimo_ok)}</span></div>))}
+        {p.respaldo && p.respaldo.length === 0 && <div className="k warn"><small>Respaldos RMAN</small><b>ninguno en 30 días</b></div>}
+      </div>
+      {(dg.destinos?.length > 0 || Object.keys(dg.lag ?? {}).length > 0) && (
+        <div className="tbl-wrap mt"><table className="tbl-std">
+          <thead><tr><th>Data Guard ({dg.rol ?? "—"})</th><th>Estado</th><th>Gap / desfase</th><th>Error</th></tr></thead>
+          <tbody>
+            {(dg.destinos ?? []).map((d: any) => (
+              <tr key={d.dest_id}><td>{d.dest_name}</td><td>{d.status}</td><td>{d.gap_status ?? "—"}</td><td>{d.error ?? "—"}</td></tr>))}
+            {Object.entries(dg.lag ?? {}).map(([k, v]) => (
+              <tr key={k}><td>{k}</td><td>—</td><td>{String(v ?? "—")}</td><td>—</td></tr>))}
+          </tbody>
+        </table></div>
+      )}
+    </>
+  );
+}
+
 export function Salud() {
   const ambiente = useAmbiente();
   const inv = useInventario();
@@ -557,7 +631,7 @@ export function Salud() {
   return (
     <>
       <Cabecera titulo="Salud de bases de datos"
-        sub="Semáforo por base: instancia, tablespaces, ASM, bloqueos e inválidos fuera de la línea base. Al abrir se leen datos actuales de espacio y bloqueos; inválidos, a diario y por alerta." />
+        sub="Semáforo por base: instancia, espacio real (UNDO activo, TEMP en uso, ASM sin el espejo), protección (FRA, respaldos RMAN, Data Guard), bloqueos e inválidos fuera de la línea base. Al abrir se leen datos actuales; inválidos, a diario y por alerta." />
       <div className="card"><div className="fgrid"><CampoAmbiente id="salud-amb" items={inv.data?.bases ?? []} alCambiar={() => setFiltro("")} /></div></div>
       <ActualizandoVista vista="salud" />
       <Cargando q={q} />
@@ -584,7 +658,7 @@ export function Salud() {
       {visibles.length > 0 && (
         <div className="card tbl-wrap">
           <table className="hm">
-            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Último dato</th><th>Último intento</th>{puedeRefrescar && <th />}</tr></thead>
+            <thead><tr><th>Base</th><th>Ambiente</th><th>Semáforo</th><th>Tablespace máx.</th><th>ASM máx.</th><th title="FRA, último respaldo RMAN y Data Guard">Protección</th><th>Bloqueadas</th><th>Inválidos nuevos</th><th>Último dato</th>{puedeRefrescar && <th />}</tr></thead>
             <tbody>
               {visibles.map((f) => {
                 const d = f.datos ?? {};
@@ -605,10 +679,11 @@ export function Salud() {
                     </td>
                     <td className={"cell " + cls(tsMax)} onClick={() => setSel(f)}>{tsMax == null ? "—" : tsMax.toFixed(0) + " %"}</td>
                     <td className={"cell " + cls(dgMax)} onClick={() => setSel(f)}>{dgMax == null ? "—" : dgMax.toFixed(0) + " %"}</td>
+                    <td className={"cell " + (semCls[d.proteccion_semaforo] ?? "c-na")} onClick={() => setSel(f)}
+                        title={d.proteccion ? undefined : "Se lee al abrir esta vista y en la pasada diaria"}>{resumenProteccion(d.proteccion)}</td>
                     <td className={"cell " + (d.bloqueadas == null ? "c-na" : d.bloqueadas > 5 ? "c-crit" : d.bloqueadas > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.bloqueadas ?? "—"}</td>
                     <td className={"cell " + (d.invalidos_fuera_lb == null ? "c-na" : d.invalidos_fuera_lb > 0 ? "c-warn" : "c-ok")} onClick={() => setSel(f)}>{d.invalidos_fuera_lb ?? "—"}</td>
-                    <td className="nm"><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
-                    <td className="nm"><Hace s={f.intento_s} titulo={f.intentado ?? f.origen} /></td>
+                    <td className="nm" title={`Último intento: ${f.intentado ?? f.actualizado ?? "—"}`}><Hace s={f.antiguedad_s} nunca={!f.con_dato} titulo={f.actualizado} /></td>
                     {puedeRefrescar && <td className="nm"><button className="btn sm" title={`Refrescar ${base}`} aria-label={`Refrescar ${base}`} onClick={() => refrescar(base)}>↻<span className="btn-txt"> Refrescar</span></button></td>}
                   </tr>
                 );
@@ -659,6 +734,7 @@ export function Salud() {
               {sel.datos.ultima_pasada && <> · última pasada: {sel.datos.ultima_pasada.origen === "evento" ? "alerta de Zabbix" : sel.datos.ultima_pasada.origen}
                 ({(sel.datos.ultima_pasada.secciones as string[]).join(", ") || "solo instancia"})</>}</p>
           )}
+          {sel.datos?.proteccion && <Proteccion p={sel.datos.proteccion} />}
           {sel.datos?.instancia && <><h3 className="small mt">Instancia</h3><TablaFilas filas={[sel.datos.instancia]} /></>}
           {sel.datos?.tablespaces?.length > 0 && <><h3 className="small mt">Tablespaces</h3><TablaFilas filas={sel.datos.tablespaces} /></>}
           {sel.datos?.diskgroups?.length > 0 && <><h3 className="small mt">Diskgroups</h3><TablaFilas filas={sel.datos.diskgroups} /></>}
@@ -776,7 +852,8 @@ const ESTADOS = ["", "pendiente_aprobacion", "en_cola", "ejecutando", "exitosa",
 export function Ejecuciones() {
   const [estado, setEstado] = useState("");
   const [cambio, setCambio] = useState("");
-  const [sel, setSel] = useState<string | null>(null);
+  // ?id=<ejecución> (desde el Inicio) abre directamente su detalle
+  const [sel, setSel] = useState<string | null>(() => new URLSearchParams(window.location.search).get("id"));
   const ambiente = useAmbiente();
   const qs = new URLSearchParams({ ...(estado ? { estado } : {}), ...(cambio ? { cambio } : {}), ...(ambiente ? { ambiente } : {}) }).toString();
   const q = useQuery({ queryKey: ["ejecuciones", estado, cambio, ambiente], queryFn: () => api.get<Ejecucion[]>(`/api/ejecuciones${qs ? "?" + qs : ""}`), refetchInterval: 15_000 });
@@ -911,17 +988,9 @@ export function Admin() {
   );
 }
 
-// ======================================================================== ETAPAS POSTERIORES
-function Proxima({ titulo, etapa, texto }: { titulo: string; etapa: string; texto: string }) {
-  return (
-    <>
-      <Cabecera titulo={titulo} />
-      <div className="card"><Vacio><span className="tag t-acc">{etapa}</span><p className="mt">{texto}</p></Vacio></div>
-    </>
-  );
-}
-export const Ventana = () => <Proxima titulo="Ventana de cambios" etapa="Etapa E5" texto="Guion de la ventana con pasos de Capa Media y Base de Datos encadenados por número de cambio." />;
-export const Incidentes = () => <Proxima titulo="Incidentes" etapa="Etapa E6" texto="Vista por incidente con la línea de tiempo de eventos Zabbix, ejecuciones y evidencias." />;
+// ======================================================================== VENTANA DE CAMBIO E INCIDENTES
+export { Ventana } from "./Ventana";
+export { Incidentes } from "./Incidentes";
 // ======================================================================== REPORTES (HTML generados por script)
 // Diseño: demo-ops-central.html (V.reportes / App.report). Los textos, el alcance y las etapas
 // vienen de /api/reportes/tipos; las etapas se marcan con las líneas "Etapa i/n: …" del script.

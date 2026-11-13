@@ -13,6 +13,7 @@ from sqlalchemy import and_, select, update
 
 from .. import estado
 from ..almacen import Almacen, prediccion, serie_punto, utc
+from .anomalias import evaluar as evaluar_anomalia
 from .llenado import Punto, predecir
 
 CAPACIDAD = ("ts:", "asm:", "fs:", "fra:")
@@ -21,6 +22,28 @@ CAPACIDAD = ("ts:", "asm:", "fs:", "fra:")
 def _activo(serie: str) -> str:
     partes = serie.split(":")
     return partes[1] if len(partes) > 1 else serie
+
+
+def _anomalias(almacen: Almacen, cfg, series: list[str]) -> list[dict]:
+    """M3: compara el último punto de cada serie con lo normal para ese día y hora de la semana
+    (las semanas anteriores). Solo series con historia suficiente; las demás se omiten."""
+    semanas = int(cfg["ml"].get("anomalias_semanas", 6))
+    umbral = float(cfg["ml"].get("anomalias_umbral_z", 3.5))
+    desde = utc() - timedelta(days=7 * semanas + 1)
+    zona = utc().tzinfo
+    out = []
+    for s in series:
+        with almacen.tx() as con:
+            filas = con.execute(select(serie_punto.c.ts, serie_punto.c.valor).where(and_(
+                serie_punto.c.serie == s, serie_punto.c.ts >= desde)).order_by(serie_punto.c.ts)).all()
+        if len(filas) < 2:
+            continue
+        pts = [(t if t.tzinfo else t.replace(tzinfo=zona), float(v)) for t, v in filas]
+        r = evaluar_anomalia(s, pts[:-1], pts[-1], umbral_z=umbral)
+        if r.get("estado") == "ok" and r["anomalo"]:
+            out.append({**r, "activo": _activo(s), "momento": pts[-1][0].isoformat(), "en_sombra": True})
+    out.sort(key=lambda x: -abs(x["z"]))
+    return out
 
 
 def scoring(almacen: Almacen, cfg, *, dias_historia: int = 30) -> dict:
@@ -56,4 +79,6 @@ def scoring(almacen: Almacen, cfg, *, dias_historia: int = 30) -> dict:
                             "en_sombra": True})
     riesgos.sort(key=lambda x: x["dias_100"])
     estado.guardar(almacen, "ml:riesgos", "ml.riesgos", {"riesgos": riesgos, "en_sombra": True}, origen="ml")
-    return {"series": hechas, "riesgos": len(riesgos)}
+    anomalias = _anomalias(almacen, cfg, series)
+    estado.guardar(almacen, "ml:anomalias", "ml.anomalias", {"anomalias": anomalias, "en_sombra": True}, origen="ml")
+    return {"series": hechas, "riesgos": len(riesgos), "anomalias": len(anomalias)}

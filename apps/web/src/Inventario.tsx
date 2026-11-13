@@ -16,11 +16,8 @@ const TABS: [Tipo, string, "servidores" | "dominios" | "bases"][] = [
 const COLUMNAS: Record<Tipo, [string, string][]> = {
   servidor: [["id", "Servidor"], ["ip", "IP"], ["ambiente", "Ambiente"], ["equipo", "Equipo"], ["zabbix_host", "Host Zabbix"], ["relacionados", "Relacionados"]],
   dominio: [["id", "Dominio"], ["servidores", "Servidores"], ["ambiente", "Ambiente"], ["relacionados", "Relacionados"]],
-  base: [["id", "Base"], ["alias", "Alias"], ["servidor", "Servidor"], ["ambiente", "Ambiente"], ["criticidad", "Criticidad"], ["zabbix_host", "Host Zabbix"], ["dsn", "DSN"], ["origen", "Origen"]],
+  base: [["id", "Base"], ["alias", "Alias"], ["servidor", "Servidor"], ["ambiente", "Ambiente"], ["criticidad", "Criticidad"], ["zabbix_host", "Host Zabbix"], ["dsn", "DSN"]],
 };
-// Origen de cada base: el kit principal, la fuente adicional (p. ej. la hoja de vida con las bases DESA)
-// o un alta manual hecha aquí. Así se sabe por qué aumentó el número de bases.
-const origenDe = (x: any) => x._ajuste === "alta" ? "alta manual (Ops Central)" : x.origen || "kit principal";
 const texto = (v: unknown) => Array.isArray(v) ? v.join(", ") : v == null ? "" : String(v);
 
 export function InventarioP() {
@@ -32,7 +29,6 @@ export function InventarioP() {
   const [params] = useSearchParams();
   const [tab, setTab] = useState<Tipo>((["servidor", "dominio", "base"].includes(params.get("tab") ?? "") ? params.get("tab") : "servidor") as Tipo);
   const [q, setQ] = useState(params.get("q") ?? "");
-  const [origen, setOrigen] = useState("");
   useEffect(() => {          // el buscador del encabezado vuelve a esta pantalla con otro activo
     const t = params.get("tab"), b = params.get("q");
     if (t && ["servidor", "dominio", "base"].includes(t)) setTab(t as Tipo);
@@ -43,12 +39,10 @@ export function InventarioP() {
   const lista = TABS.find((t) => t[0] === tab)![2];
 
   const filas = useMemo(() => {
-    const todas = ((inv.data?.[lista] ?? []) as any[]).filter((x) => enAmb(x.ambiente))
-      .filter((x) => !origen || origenDe(x) === origen);
+    const todas = ((inv.data?.[lista] ?? []) as any[]).filter((x) => enAmb(x.ambiente));
     // sin "relacionados": listan otros activos y harían coincidir filas que no son la buscada
     return filtrarSimilares(q, todas, (x) => Object.entries(x).filter(([k]) => k !== "relacionados").map(([, v]) => texto(v)).join(" "));
-  }, [inv.data, lista, q, enAmb, origen]);
-  const origenes = useMemo(() => Array.from(new Set(((inv.data?.bases ?? []) as any[]).map(origenDe))).sort(), [inv.data]);
+  }, [inv.data, lista, q, enAmb]);
   const cuenta = (l: "servidores" | "dominios" | "bases") => ((inv.data?.[l] ?? []) as any[]).filter((x) => enAmb(x.ambiente)).length;
 
   const recargar = () => { qc.invalidateQueries({ queryKey: ["inventario"] }); };
@@ -82,14 +76,6 @@ export function InventarioP() {
           <label className="lb">Buscar
             <input className="f" value={q} placeholder="Nombre, alias, IP, DSN, servidor, host de Zabbix…" onChange={(e) => setQ(e.target.value)} />
           </label>
-          {tab === "base" && (
-            <label className="lb">Origen
-              <SelectBuscable value={origen} onChange={(e) => setOrigen(e.target.value)}>
-                <option value="">Todos los orígenes</option>
-                {origenes.map((o) => <option key={o} value={o}>{o}</option>)}
-              </SelectBuscable>
-            </label>
-          )}
         </div>
         <div className="tabs">
           {TABS.map(([t, nombre, l]) => (
@@ -106,7 +92,7 @@ export function InventarioP() {
               <tbody>
                 {filas.slice(0, 500).map((f) => (
                   <tr key={f.id}>
-                    {COLUMNAS[tab].map(([c]) => <td key={c} className={c === "id" || c === "dsn" ? "nw" : ""}>{c === "id" ? <b>{f.id}</b> : c === "origen" ? origenDe(f) : texto(f[c]) || <span className="muted">—</span>}</td>)}
+                    {COLUMNAS[tab].map(([c]) => <td key={c} className={c === "id" || c === "dsn" ? "nw" : ""}>{c === "id" ? <b>{f.id}</b> :texto(f[c]) || <span className="muted">—</span>}</td>)}
                     <td className="col-tag">{f._ajuste && <span className={"tag " + (f._ajuste === "alta" ? "t-ok" : "t-acc")}>{f._ajuste === "alta" ? "agregado" : "editado"}</span>}</td>
                     {editable && (
                       <td className="col-acc">

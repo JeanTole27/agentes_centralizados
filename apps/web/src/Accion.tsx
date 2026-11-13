@@ -12,6 +12,7 @@ type Props = {
   etiqueta?: string;
   compacto?: boolean;
   alTerminar?: (e: Ejecucion) => void;
+  referencia?: string; // caso o cambio que se asocia de entrada (p. ej. desde una ventana de cambio)
 };
 
 const NOMBRES: Record<string, string> = {
@@ -31,7 +32,7 @@ const RE_CLAVE_JIRA = /^[A-Z][A-Z0-9_]{1,19}-[0-9]{1,9}$/;
 /** Formulario genérico: se construye con el esquema de parámetros del catálogo.
  *  Flujo: (caso opcional de Jira) → evaluar → confirmar → ejecutar directo → consola en vivo.
  *  Cada ejecución queda en el log de ejecuciones con su evidencia. */
-export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta, compacto, alTerminar }: Props) {
+export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta, compacto, alTerminar, referencia: refInicial }: Props) {
   const acc = useAccion(accion);
   const { yo, avisar } = useSesion();
   const qc = useQueryClient();
@@ -40,7 +41,7 @@ export default function Accion({ accion, iniciales = {}, ocultos = [], etiqueta,
   const salud = useQuery({ queryKey: ["salud"], queryFn: () => api.get<{ jira?: boolean }>("/api/salud"), staleTime: 300_000 });
   const [valores, setValores] = useState<Record<string, unknown>>(() => ({ ...iniciales }));
   const [ev, setEv] = useState<Evaluacion | null>(null);
-  const [cambio, setCambio] = useState("");
+  const [cambio, setCambio] = useState(refInicial ?? "");
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);

@@ -18,7 +18,7 @@ from typing import Any
 
 from ..credenciales import CredencialBD
 from ..inventario import Activo
-from .plantillas import BINDS, PLANTILLAS
+from .plantillas import BINDS, PLANTILLAS, sql_para
 from .politica import validar_lectura, validar_procedimiento
 
 
@@ -63,6 +63,7 @@ class ConexionOracle:
         self.base, self.cred, self.persona, self.eid = base, cred, persona, ejecucion_id
         self.paquete, self.timeout = paquete, call_timeout_s
         self._con = None
+        self.version: str | None = None
 
     def __enter__(self):
         import oracledb  # import diferido: la API no lo necesita
@@ -77,6 +78,7 @@ class ConexionOracle:
         self._con.module = "OpsCentral"
         self._con.action = self.eid[:32]
         self._con.clientinfo = f"opscentral:{self.cred.tipo}"
+        self.version = getattr(self._con, "version", None)   # versión del servidor: elige la variante de SQL
         return self
 
     def __exit__(self, *exc):
@@ -87,7 +89,9 @@ class ConexionOracle:
                 self._con = None
 
     def consultar(self, plantilla: str, params: dict | None = None) -> list[dict[str, Any]]:
-        sql = PLANTILLAS[plantilla]
+        if plantilla not in PLANTILLAS:
+            raise ErrorBD(f"plantilla desconocida: {plantilla}")
+        sql = sql_para(plantilla, self.version)
         ok, msg = validar_lectura(sql)
         if not ok:
             raise ErrorBD(msg)

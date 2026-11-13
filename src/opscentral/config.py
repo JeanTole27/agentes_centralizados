@@ -15,7 +15,8 @@ from typing import Any
 RAIZ = Path(__file__).resolve().parents[2]
 
 DEFECTOS: dict[str, Any] = {
-    "general": {"modo": "desarrollo"},
+    # pantallas_ocultas: pantallas que se quieren sacar del menú (p. ej. ["ventana"])
+    "general": {"modo": "desarrollo", "pantallas_ocultas": []},
     "almacen": {"url": "sqlite:///datos/ops-central.db"},
     "evidencia": {"ruta": "datos/evidencia"},
     "reportes": {"ruta": "datos/reportes"},
@@ -49,18 +50,25 @@ DEFECTOS: dict[str, Any] = {
            # Al abrir Bloqueos o Salud se pide una lectura actual del ambiente visible, como mucho cada
            # refresco_vista_s por vista y ambiente (aunque la abran varias personas).
            "refresco_vista_s": 300,
+           # Protección (FRA, RMAN, Data Guard): ambientes donde la falta de respaldo RMAN pinta el semáforo
+           # (en DESA/TEST suele no haber RMAN y sería ruido) y umbrales que reemplazan a bd/salud.UMBRALES.
+           "respaldo_ambientes": ["PROD"], "umbrales_salud": {},
            # Esquemas que no cuentan como inválidos propios (comodín %): Oracle no los marca como suyos.
            "invalidos_excluir": ["PUBLIC", "SYS", "SYSTEM", "DBSNMP", "OUTLN", "ORACLE_OCM", "APPQOSSYS", "AUDSYS",
                                  "DBSFWUSER", "REMOTE_SCHEDULER_AGENT", "SYS$UMF","APEX_%", "FLOWS_%", "ORDS_METADATA", "ORDS_PUBLIC_USER", "GGSYS",
                                  "GSMADMIN_INTERNAL", "GSMCATUSER", "GSMUSER", "SYSMAN", "MGMT_VIEW", "XDB",
                                  "OJVMSYS", "DVSYS", "LBACSYS", "MDSYS", "OLAPSYS", "WMSYS", "CTXSYS", "ORDSYS",
                                  "ORDDATA", "SI_INFORMTN_SCHEMA", "EXFSYS", "OWBSYS%", "SQLTXPLAIN", "SQLTXADMIN"]},
-    "cm": {"ruta_cmops": "capa-media-ops", "python_cmops": "python", "ttl_certificado_min": 10, "timeout_s": 3600},
+    # frm_lote_max: tope de procesos frmweb por lote al mitigar, por ambiente (la API lo aplica aunque se pida más)
+    "cm": {"ruta_cmops": "capa-media-ops", "python_cmops": "python", "ttl_certificado_min": 10, "timeout_s": 3600,
+           "frm_lote_max": {"PROD": 10, "DRP": 10, "*": 40}},
     "zabbix": {"ventana_episodio_min": 15, "secreto_webhook_ref": "zabbix/secreto_webhook",
                "token_ref": "zabbix/token_lectura", "puerto_trapper": 10051, "url": "",
                "verificar_tls": True, "timeout_s": 30, "user_agent": "OpsCentral/0.1",
                "severidad_min": 2, "dias_trends": 30, "max_items_host": 40, "vincular_s": 86400},
-    "ml": {"umbrales": [85, 95, 100], "ventana_dias": 14, "min_puntos": 24},
+    # anomalías (M3): semanas de historia por día/hora y puntaje robusto mínimo para marcar
+    "ml": {"umbrales": [85, 95, 100], "ventana_dias": 14, "min_puntos": 24, "anomalias_semanas": 6,
+           "anomalias_umbral_z": 3.5},
     "inventario": {"archivo": "config/inventario.json", "editores": [], "bases_adicionales": [],
                    "insumos": {"servidores_cm": "../capa-media-ops/inventario/servidores.json",
                                "bases": "../oracle-agent-kiro-master/config/databases.json",
